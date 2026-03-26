@@ -1,3 +1,4 @@
+import { Text } from '@react-three/drei'
 import { useState } from 'react'
 import { useControls } from 'leva'
 
@@ -5,10 +6,14 @@ function SelectableTarget({
   position,
   color,
   size,
+  pointerType,
+  label,
 }: {
   position: [number, number, number]
   color: string
   size: number
+  pointerType: 'ray' | 'touch' | 'grab'
+  label: string
 }) {
   const [hovered, setHovered] = useState(false)
   const [selected, setSelected] = useState(false)
@@ -17,14 +22,26 @@ function SelectableTarget({
     <mesh
       position={position}
       scale={hovered ? 1.15 : 1}
-      onClick={() => setSelected((s) => !s)}
+      pointerEventsType={{ allow: pointerType }}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
+      onPointerDown={() => setSelected((s) => !s)}
     >
       <boxGeometry args={[size, size, size]} />
       <meshStandardMaterial
         color={selected ? '#22c55e' : hovered ? '#f59e0b' : color}
       />
+      <Text
+        position={[0, size / 2 + 0.12, 0]}
+        fontSize={0.12}
+        color="#e5e7eb"
+        anchorX="center"
+        anchorY="middle"
+        outlineWidth={0.01}
+        outlineColor="#000000"
+      >
+        {label}
+      </Text>
     </mesh>
   )
 }
@@ -37,24 +54,25 @@ export function SelectionLab() {
   return (
     <group>
       <SelectableTarget
-        position={[-0.5, 1.2, -2]}
+        position={[-0.45, 1.25, -1.25]}
         color="#3b82f6"
         size={targetSize}
+        pointerType="ray"
+        label="Ray (controller)"
       />
       <SelectableTarget
-        position={[0, 1.5, -2.5]}
-        color="#8b5cf6"
-        size={targetSize}
-      />
-      <SelectableTarget
-        position={[0.5, 1.2, -2]}
-        color="#ef4444"
-        size={targetSize}
-      />
-      <SelectableTarget
-        position={[0, 0.8, -1.5]}
+        position={[0, 1.45, -0.9]}
         color="#06b6d4"
         size={targetSize}
+        pointerType="touch"
+        label="Direct touch (hands)"
+      />
+      <SelectableTarget
+        position={[0.45, 1.25, -1.25]}
+        color="#d946ef"
+        size={targetSize}
+        pointerType="grab"
+        label="Hand pinch (grab)"
       />
     </group>
   )
