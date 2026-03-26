@@ -1,4 +1,4 @@
-# WebXR Prototype
+# XR-interaction-playground
 
 Interaction-design playground for fast WebXR prototyping in Cursor, optimized for Meta Quest 3 development on macOS across both VR and AR.
 

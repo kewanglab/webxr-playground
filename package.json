@@ -1,5 +1,5 @@
 {
-  "name": "webxr-prototype",
+  "name": "xr-interaction-playground",
   "private": true,
   "type": "module",
   "scripts": {

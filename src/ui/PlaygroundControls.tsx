@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { useEffect, useState } from 'react'
 import { xrStore } from '../xr/core/xrStore'
 import { usePlaygroundStore } from '../app/store'
 import { labs } from '../config/labs'
@@ -32,6 +33,15 @@ const xrButton: CSSProperties = {
 export function PlaygroundControls() {
   const currentLab = usePlaygroundStore((s) => s.currentLab)
   const setLab = usePlaygroundStore((s) => s.setLab)
+  const [xrMode, setXrMode] = useState(() => xrStore.getState().mode)
+
+  useEffect(() => {
+    // xrStore is usable outside <XR>. We poll mode to prevent double "enter session" calls.
+    const t = setInterval(() => setXrMode(xrStore.getState().mode), 250)
+    return () => clearInterval(t)
+  }, [])
+
+  const inSession = xrMode != null
 
   return (
     <div
@@ -45,10 +55,22 @@ export function PlaygroundControls() {
         zIndex: 10,
       }}
     >
-      <button style={xrButton} onClick={() => xrStore.enterVR()}>
+      <button
+        style={xrButton}
+        disabled={inSession}
+        onClick={() => {
+          if (xrStore.getState().mode == null) xrStore.enterVR()
+        }}
+      >
         Enter VR
       </button>
-      <button style={xrButton} onClick={() => xrStore.enterAR()}>
+      <button
+        style={xrButton}
+        disabled={inSession}
+        onClick={() => {
+          if (xrStore.getState().mode == null) xrStore.enterAR()
+        }}
+      >
         Enter AR
       </button>
       <div

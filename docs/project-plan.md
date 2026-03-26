@@ -76,6 +76,18 @@ Hand tracking works out of the box. Request `hand-tracking` as a session feature
 
 Teleportation is built-in. `<TeleportTarget>` handles the common case. Custom locomotion systems extend the built-in rather than replacing it.
 
+### Pointer types describe interaction mechanism, not input device
+
+`pointerEventsType` filters by *how* the user interacted, not *what device* they used. The available pointer types are:
+
+- `ray` — distance pointing. Both controllers AND hands use this when aiming from afar. A hand pinch-at-distance is a `ray` event, not a `grab` event.
+- `touch` — direct physical contact. A finger physically poking an object surface.
+- `grab` — near-field grab. A hand physically closing around an object at close range.
+
+This means `pointerEventsType={{ allow: 'ray' }}` accepts input from both controllers and hands. To separate controller input from hand input, check the event's input source — do not filter by pointer type.
+
+Use `pointerEventsType` when comparing interaction *mechanisms* (e.g., SelectionLab testing ray vs touch vs grab). Do not use it to separate *devices* (e.g., trying to make something "controller-only" or "hand-only").
+
 ### Lab routing
 
 Labs use state-based routing, not URL routing. A zustand value like `currentLab: 'selection'` determines which lab content renders inside the XR scene. Switching labs is a state change — the XR session, player rig, and scene scaffolding stay mounted, only the lab-specific content swaps. This avoids XR session disruption on navigation.
