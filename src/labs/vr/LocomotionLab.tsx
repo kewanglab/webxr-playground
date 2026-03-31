@@ -2,11 +2,14 @@ import { Text } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { IfInSessionMode, TeleportTarget, useXRInputSourceState } from '@react-three/xr'
 import { useControls } from 'leva'
+import { stepperNumber } from '../../ui/levaPlugins/stepperNumber'
 import { useRef } from 'react'
 import { Vector3 } from 'three'
 import { usePlaygroundStore } from '../../app/store'
+import { tuningPresets } from '../../config/labs'
 
 export function LocomotionLab() {
+  const defaults = tuningPresets.controller.locomotion
   const {
     stickHand,
     moveSpeed,
@@ -16,14 +19,34 @@ export function LocomotionLab() {
     snapTurnAngleDeg,
     smoothTurnSpeedDeg,
   } = useControls('Locomotion', {
-    stickHand: { value: 'right' as 'left' | 'right', options: ['left', 'right'] },
-    moveSpeed: { value: 1.8, min: 0.2, max: 4, step: 0.1 },
-    moveDeadzone: { value: 0.2, min: 0.05, max: 0.5, step: 0.05 },
+    stickHand: { value: defaults.stickHand, options: ['left', 'right'] },
+    moveSpeed: stepperNumber({ value: defaults.moveSpeed, min: 0.2, max: 4, step: 0.1 }),
+    moveDeadzone: stepperNumber({
+      value: defaults.moveDeadzone,
+      min: 0.05,
+      max: 0.5,
+      step: 0.05,
+    }),
     // Keep turn threshold stricter than movement to avoid accidental turning.
-    turnDeadzone: { value: 0.5, min: 0.2, max: 0.95, step: 0.05 },
-    turnMode: { value: 'snap' as 'snap' | 'smooth' },
-    snapTurnAngleDeg: { value: 45, min: 15, max: 90, step: 15 },
-    smoothTurnSpeedDeg: { value: 90, min: 30, max: 220, step: 10 },
+    turnDeadzone: stepperNumber({
+      value: defaults.turnDeadzone,
+      min: 0.2,
+      max: 0.95,
+      step: 0.05,
+    }),
+    turnMode: { value: defaults.turnMode as 'snap' | 'smooth' },
+    snapTurnAngleDeg: stepperNumber({
+      value: defaults.snapTurnAngleDeg,
+      min: 15,
+      max: 90,
+      step: 15,
+    }),
+    smoothTurnSpeedDeg: stepperNumber({
+      value: defaults.smoothTurnSpeedDeg,
+      min: 30,
+      max: 220,
+      step: 10,
+    }),
   })
 
   const leftController = useXRInputSourceState('controller', 'left')

@@ -6,6 +6,9 @@ import { VRScene } from '../scene/VRScene'
 import { ARScene } from '../scene/ARScene'
 import { LabContent } from '../../app/LabContent'
 import { usePlaygroundStore } from '../../app/store'
+import { InXRLogger } from '../hud/InXRLogger'
+import { InXRStats } from '../hud/InXRStats'
+import { TagAlongHUD } from '../hud/TagAlongHUD'
 
 function XRScene() {
   const mode = useXRMode()
@@ -28,6 +31,10 @@ export function XRRoot() {
   return (
     <XR store={xrStore}>
       <XRScene />
+      <TagAlongHUD>
+        <InXRStats />
+        <InXRLogger />
+      </TagAlongHUD>
     </XR>
   )
 }

@@ -5,13 +5,30 @@ import {
   useXRInputSourceState,
 } from '@react-three/xr'
 import { useControls } from 'leva'
+import { stepperNumber } from '../../ui/levaPlugins/stepperNumber'
 import { useMemo, useRef, useState } from 'react'
 import { Matrix4, Quaternion, Vector3, type Mesh } from 'three'
+import { useHapticPulse } from '../../xr/feedback/haptics/useHapticPulse'
+import { useConfirmTone } from '../../xr/feedback/audio/useConfirmTone'
+import { tuningPresets } from '../../config/labs'
 
 export function PlacementLab() {
-  const { objectSize, previewOpacity } = useControls('Placement', {
-    objectSize: { value: 0.12, min: 0.05, max: 0.3, step: 0.01 },
-    previewOpacity: { value: 0.4, min: 0, max: 1, step: 0.05 },
+  const defaults = tuningPresets.controller.placement
+  const { objectSize, previewOpacity, enableHaptics, enableAudio } = useControls('Placement', {
+    objectSize: stepperNumber({
+      value: defaults.objectSize,
+      min: 0.05,
+      max: 0.3,
+      step: 0.01,
+    }),
+    previewOpacity: stepperNumber({
+      value: defaults.previewOpacity,
+      min: 0,
+      max: 1,
+      step: 0.05,
+    }),
+    enableHaptics: defaults.enableHaptics,
+    enableAudio: defaults.enableAudio,
   })
 
   type Placed = {
@@ -53,6 +70,8 @@ export function PlacementLab() {
             }}
             objectSize={objectSize}
             mode="controller"
+            enableHaptics={enableHaptics}
+            enableAudio={enableAudio}
           />
 
           <PlacementPreview
@@ -71,6 +90,8 @@ export function PlacementLab() {
             }}
             objectSize={objectSize}
             mode="hand"
+            enableHaptics={enableHaptics}
+            enableAudio={enableAudio}
           />
 
           {placed.map((p) => (
@@ -105,11 +126,15 @@ function PlacementPreview({
   onPlace,
   objectSize,
   mode,
+  enableHaptics,
+  enableAudio,
 }: {
   color: string
   opacity: number
   objectSize: number
   mode: 'controller' | 'hand'
+  enableHaptics: boolean
+  enableAudio: boolean
   onPlace: (transform: { position: Vector3; quaternion: Quaternion }) => void
 }) {
   const previewRef = useRef<Mesh>(null)
@@ -119,6 +144,8 @@ function PlacementPreview({
 
   const controllerState = useXRInputSourceState('controller', 'right')
   const handState = useXRInputSourceState('hand', 'right')
+  const pulse = useHapticPulse()
+  const playTone = useConfirmTone()
 
   const activeSpace =
     mode === 'controller'
@@ -134,6 +161,8 @@ function PlacementPreview({
           const m = previewRef.current
           if (!m) return
           onPlace({ position: m.position, quaternion: m.quaternion })
+          if (enableHaptics) pulse('right', 0.4, 45)
+          if (enableAudio) playTone(520, 60)
         }}
       >
         <sphereGeometry args={[objectSize * 0.55, 16, 16]} />

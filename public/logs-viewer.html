@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XR Session Logs Viewer</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: #0b0f16;
+        color: #e5e7eb;
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .top {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+      .muted {
+        color: #94a3b8;
+        font-size: 13px;
+      }
+      button {
+        background: #1f2937;
+        color: #e5e7eb;
+        border: 1px solid #374151;
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #243041;
+      }
+      .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border: 1px solid #374151;
+        border-radius: 999px;
+        font-size: 12px;
+        color: #cbd5e1;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #0f172a;
+        border: 1px solid #1e293b;
+      }
+      th, td {
+        border-bottom: 1px solid #1e293b;
+        text-align: left;
+        vertical-align: top;
+        padding: 10px;
+        font-size: 13px;
+      }
+      th {
+        color: #93c5fd;
+        font-weight: 600;
+        background: #0b1220;
+      }
+      .empty {
+        border: 1px dashed #334155;
+        border-radius: 8px;
+        padding: 24px;
+        text-align: center;
+        color: #94a3b8;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h2>XR Session Logs Viewer</h2>
+      <p class="muted">Reads data from <code>/api/logs</code> written by the logger panel.</p>
+
+      <div class="top">
+        <button id="refreshBtn">Refresh</button>
+        <button id="downloadBtn">Download JSON</button>
+        <span class="pill" id="countPill">Entries: 0</span>
+      </div>
+
+      <div class="muted" id="meta"></div>
+      <div style="height: 10px"></div>
+      <div id="tableMount"></div>
+    </div>
+
+    <script>
+      let lastPayload = { entries: [], updatedAt: null, path: null }
+
+      function renderTable(entries) {
+        const mount = document.getElementById('tableMount')
+        if (!entries.length) {
+          mount.innerHTML = '<div class="empty">No log entries yet. Use the in-app Session Logger to add notes.</div>'
+          return
+        }
+        const rows = entries
+          .slice()
+          .reverse()
+          .map((entry) => {
+            const note = (entry.note || '').replace(/</g, '&lt;')
+            return `
+              <tr>
+                <td><code>${entry.timestamp ?? ''}</code></td>
+                <td>${entry.labId ?? ''}</td>
+                <td>${entry.mode ?? ''}</td>
+                <td>${entry.inputSource ?? ''}</td>
+                <td>${note}</td>
+              </tr>
+            `
+          })
+          .join('')
+        mount.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 220px;">Timestamp</th>
+                <th style="width: 120px;">Lab</th>
+                <th style="width: 140px;">Mode</th>
+                <th style="width: 120px;">Input</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `
+      }
+
+      async function refresh() {
+        const countPill = document.getElementById('countPill')
+        const meta = document.getElementById('meta')
+        try {
+          const res = await fetch('/api/logs', { cache: 'no-store' })
+          const json = await res.json()
+          if (!res.ok || !json.ok) {
+            throw new Error(json.error || `HTTP ${res.status}`)
+          }
+          lastPayload = json
+          countPill.textContent = `Entries: ${json.entries.length}`
+          meta.textContent = `Updated: ${json.updatedAt || '-'} | File: ${json.path || '-'}`
+          renderTable(json.entries)
+        } catch (err) {
+          countPill.textContent = 'Entries: ?'
+          meta.textContent = `Failed to load logs: ${err instanceof Error ? err.message : 'unknown error'}`
+          renderTable([])
+        }
+      }
+
+      function downloadJson() {
+        const blob = new Blob([JSON.stringify(lastPayload, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `xr-session-notes-view-${Date.now()}.json`
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+
+      document.getElementById('refreshBtn').addEventListener('click', refresh)
+      document.getElementById('downloadBtn').addEventListener('click', downloadJson)
+      refresh()
+    </script>
+  </body>
+  </html>

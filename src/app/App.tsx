@@ -3,6 +3,7 @@ import { Stats } from '@react-three/drei'
 import { XRRoot } from '../xr/core/XRRoot'
 import { PlaygroundControls } from '../ui/PlaygroundControls'
 import { DebugPanel } from '../ui/DebugPanel'
+import { TestLoggerPanel } from '../ui/TestLoggerPanel'
 
 export function App() {
   return (
@@ -13,6 +14,7 @@ export function App() {
       </Canvas>
       <PlaygroundControls />
       <DebugPanel />
+      <TestLoggerPanel />
     </>
   )
 }
