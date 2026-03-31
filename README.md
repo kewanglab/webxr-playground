@@ -1,8 +1,21 @@
 # XR-interaction-playground
 
+## Purpose of this document
+
+This **README** is the repository entry point: how to orient, run, and extend the playground, with links to deeper docs.
+
+| Doc | Role |
+|-----|------|
+| [docs/overview.md](docs/overview.md) | Stable reference: goals, stack, architecture, directories, conventions, device testing. |
+| [docs/roadmap.md](docs/roadmap.md) | Phased deliverables and editable near-term focus. |
+| [docs/pitfalls.md](docs/pitfalls.md) | Bugs and footguns we have already hit. |
+| [docs/project-plan.md](docs/project-plan.md) | Short index of the above (for old bookmarks). |
+
+---
+
 Interaction-design playground for fast WebXR prototyping in Cursor, optimized for Meta Quest 3 development on macOS across both VR and AR.
 
-## Purpose
+## What this project is
 
 This project is an XR interaction playground, not a single product app. The goal is to explore, compare, and refine interaction patterns quickly before committing them into a larger experience.
 
@@ -25,7 +38,7 @@ The playground is composed of small, focused labs. Each lab isolates one interac
 Directories are created as needed, not pre-emptively. The intended layout:
 
 ```text
-docs/                         # architecture and planning
+docs/                         # overview.md, roadmap.md, pitfalls.md, project-plan.md (index)
 public/assets/                # static models, audio clips
 src/
   app/                        # playground shell, zustand store, lab switcher
@@ -69,6 +82,14 @@ When creating a new lab, ask:
 - Test in desktop emulation first, then validate on Quest 3 via `adb reverse`.
 - Optimize for clarity and iteration speed before visual polish.
 
-## Next Step
+## Session Log Workflow
 
-The full implementation plan lives in `docs/project-plan.md`.
+- Use the in-app Session Logger panel to record test notes while running labs.
+- Entries sync to desktop via `/api/logs` and persist in `logs/session-notes.json`.
+- Open `http://localhost:5173/logs-viewer.html` (or current dev port) to review/filter/export logs from your Mac.
+
+## Documentation
+
+- **Architecture and conventions:** [docs/overview.md](docs/overview.md)
+- **What to build next:** [docs/roadmap.md](docs/roadmap.md)
+- **Avoid repeat mistakes:** [docs/pitfalls.md](docs/pitfalls.md)
