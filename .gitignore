@@ -4,3 +4,9 @@ dist
 .DS_Store
 logs/*.json
 tsconfig.tsbuildinfo
+
+# Cursor — keep shared rules, ignore local plans/metadata
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+.cursor/plans/

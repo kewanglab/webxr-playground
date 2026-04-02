@@ -1,0 +1,17 @@
+---
+description: XR Interaction Playground — project context and doc pointers
+alwaysApply: true
+---
+
+# XR Interaction Playground
+
+- Architecture and stack: `docs/overview.md`
+- Roadmap: `docs/roadmap.md`
+- Known bugs and footguns: `docs/pitfalls.md`
+- Lab registry and routing: `src/config/labs.ts`
+
+Prefer small, focused changes and match existing patterns in touched files.
+
+Before changing custom Leva plugins, drei `Text` layout, or geometry driven by Leva values, read `docs/pitfalls.md` first.
+
+Shared project guidance should live in repo docs; keep Cursor rules short and use them to point at canonical documentation.
