@@ -297,7 +297,7 @@ Structural state that determines what the playground is doing: current lab, curr
 
 Ephemeral debug controls for parameters you tweak while testing: selection radius, hover delay, haptic intensity, grab threshold, movement speed. Leva controls are defined inside each lab or interaction primitive using `useControls()`. Default values come from `src/config/`.
 
-When presets are needed (Phase 3), they work by loading a config object into Leva's initial values — not by duplicating state into zustand.
+When cross-lab A/B presets land (Phase 5), they work by loading a config object into Leva's initial values — not by duplicating state into zustand.
 
 Desktop ergonomics:
 
