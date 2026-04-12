@@ -1,6 +1,6 @@
 # Style templates (specs)
 
-Implementable visual specifications for the XR Interaction Playground. These are the **source of truth for look-and-feel** until values are mirrored in code (`playgroundTheme` or equivalent).
+Implementable visual specifications for the XR Interaction Playground. These are the **source of truth for look-and-feel** until values are mirrored in code (`playgroundTheme` or equivalent). Each spec opens with an **Inspiration** section (film/culture +, for XR, WebXR links).
 
 | Template | Use | Spec |
 |----------|-----|------|
@@ -9,4 +9,4 @@ Implementable visual specifications for the XR Interaction Playground. These are
 
 **Related:** [Spatial polish plan](../spatial-polish-plan.md), [Pitfalls](../pitfalls.md), [Overview](../overview.md).
 
-**Note:** Film/TV references in the specs are **mood guides only**, not IP or asset targets.
+**Note:** Film/TV references are **mood guides only**, not IP or asset targets (spelled out in each template’s Inspiration section).

@@ -6,6 +6,28 @@
 
 ---
 
+## Inspiration
+
+**Fictional references** (*The Fifth Element*, *Loki*) are **mood guides only**—palette, layout energy, shape language—not IP, likenesses, or literal set recreations.
+
+### Film / culture: *The Fifth Element* + *Loki* (TVA)
+
+**XR environments + in-world chrome** (scene, props, TagAlong HUD, lab staging):
+
+- **Fifth Element energy:** dense future-city **vertical rhythm** as *layout* inspiration—stacked bands, strong **orange / amber / cyan** accents, **neon rim reads** on interactive props, playful legibility at a glance (still low-poly and cheap materials).
+- **Loki / TVA discipline:** **institutional** mustard, tan stone, and deep brown-red; **circular seal / stamp** motifs for HUD frames and mode badges; **monospace or narrow** type for “instrument” lines (FPS, logs); **brutalist** slabs and corridors translated into simple boxes and arches in the lab stages.
+
+### Web / industry (performance & spatial craft)
+
+- [Meta WebXR performance best practices](https://developers.meta.com/horizon/documentation/web/webxr-perf-bp/) — reduce overdraw, avoid per-frame allocations/GC hot paths, validate on device.
+- [MDN WebXR performance guide](https://developer.mozilla.org/en-US/docs/Web/API/WebXR_Device_API/Performance) — balance quality, depth precision, materials, and scene complexity vs frame rate.
+- **Spatial UI** — hierarchy uses depth, reach, and motion; avoid flat 2D UI pasted into 3D without comfortable placement and clear states.
+- [Mozilla Hello WebXR — visual development](https://blog.mozvr.com/visualdev-hello-webxr/) — readable **simple materials**, **limited textures**, **art-directed color** over heavy shader stacks.
+
+**Desktop shell mood** (*Her*-like) lives in **[shell-2d.md](./shell-2d.md)**. Execution plan: [spatial polish plan](../spatial-polish-plan.md).
+
+---
+
 ## Principles
 
 1. **Readable silhouettes** — props read at a glance; rim/emissive only where interaction demands it.
