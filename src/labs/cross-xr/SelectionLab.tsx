@@ -5,6 +5,7 @@ import { getLabTitle, tuningPresets } from '../../config/labs'
 import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
 import { useHapticPulse } from '../../xr/feedback/haptics/useHapticPulse'
 import { useConfirmTone } from '../../xr/feedback/audio/useConfirmTone'
+import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
 import { LabHeading } from '../LabHeading'
 
 function SelectableTarget({
@@ -26,6 +27,7 @@ function SelectableTarget({
   pointerType: 'ray' | 'touch' | 'grab'
   label: string
 }) {
+  const { xr } = usePlaygroundTheme()
   const [hovered, setHovered] = useState(false)
   const [selected, setSelected] = useState(false)
   const pulse = useHapticPulse()
@@ -35,6 +37,15 @@ function SelectableTarget({
 
   return (
     <group position={position} scale={hovered ? 1 + confirmScaleBoost : 1}>
+      <mesh position={[0, -s * 0.42, 0]}>
+        <cylinderGeometry args={[s * 0.38, s * 0.42, s * 0.12, 20]} />
+        <meshStandardMaterial
+          color={xr.accent.stone}
+          emissive={xr.accent.mustard}
+          emissiveIntensity={0.18}
+          roughness={0.85}
+        />
+      </mesh>
       <mesh
         pointerEventsType={{ allow: pointerType }}
         onPointerEnter={() => setHovered(true)}
@@ -53,11 +64,11 @@ function SelectableTarget({
       <Text
         position={[0, s / 2 + 0.12, 0]}
         fontSize={0.12}
-        color="#e5e7eb"
+        color={xr.hud.textPrimary}
         anchorX="center"
         anchorY="middle"
         outlineWidth={0.01}
-        outlineColor="#000000"
+        outlineColor={xr.void.clear}
       >
         {label}
       </Text>
@@ -66,6 +77,7 @@ function SelectableTarget({
 }
 
 export function SelectionLab() {
+  const { labAccents, xr } = usePlaygroundTheme()
   const defaults = tuningPresets.controller.selection
   const { targetSize, confirmScaleBoost, enableHaptics, enableAudio } = useControls('Selection', {
     // Plain sliders here — Leva’s custom stepper plugin was unreliable for this folder (size could collapse).
@@ -86,7 +98,7 @@ export function SelectionLab() {
       />
       <SelectableTarget
         position={[-0.45, 1.25, -1.25]}
-        color="#3b82f6"
+        color={labAccents.selection.primary}
         size={size}
         confirmScaleBoost={boost}
         enableHaptics={enableHaptics}
@@ -96,7 +108,7 @@ export function SelectionLab() {
       />
       <SelectableTarget
         position={[0, 1.45, -0.9]}
-        color="#06b6d4"
+        color={labAccents.selection.secondary}
         size={size}
         confirmScaleBoost={boost}
         enableHaptics={enableHaptics}
@@ -106,7 +118,7 @@ export function SelectionLab() {
       />
       <SelectableTarget
         position={[0.45, 1.25, -1.25]}
-        color="#d946ef"
+        color={xr.accent.cyan}
         size={size}
         confirmScaleBoost={boost}
         enableHaptics={enableHaptics}

@@ -8,8 +8,10 @@ import { usePlaygroundStore } from '../../app/store'
 import { getLabTitle, tuningPresets } from '../../config/labs'
 import { LabHeading } from '../LabHeading'
 import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
+import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
 
 export function LocomotionLab() {
+  const { labAccents, xr } = usePlaygroundTheme()
   const defaults = tuningPresets.controller.locomotion
   const {
     stickHand,
@@ -144,10 +146,26 @@ export function LocomotionLab() {
 
       {markers.map((pos, i) => (
         <mesh key={i} position={pos} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[0.5, 32]} />
-          <meshStandardMaterial color="#22d3ee" transparent opacity={0.3} />
+          <circleGeometry args={[0.5, 28]} />
+          <meshStandardMaterial
+            color={labAccents.locomotion.primary}
+            transparent
+            opacity={0.32}
+            emissive={labAccents.locomotion.primary}
+            emissiveIntensity={0.12}
+          />
         </mesh>
       ))}
+
+      <mesh position={[0, 0.5, -8]}>
+        <boxGeometry args={[0.35, 1.2, 0.35]} />
+        <meshStandardMaterial
+          color={xr.accent.stone}
+          emissive={xr.accent.amber}
+          emissiveIntensity={0.08}
+          roughness={0.88}
+        />
+      </mesh>
     </group>
   )
 }
