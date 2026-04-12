@@ -6,7 +6,7 @@ This document captures the agreed direction for elevating visual polish across t
 
 **Execution readiness:** This plan is **ready to implement** when you treat [shell-2d.md](./style-templates/shell-2d.md) and [xr-3d.md](./style-templates/xr-3d.md) as the numeric/component source of truth and follow the [Execution guide](#execution-guide) below (file manifest, state wiring, acceptance checks).
 
-**Related:** [Overview](./overview.md), [Pitfalls](./pitfalls.md) (Leva, drei `Text`), lab registry in [`src/config/labs.ts`](../src/config/labs.ts). **Visual specs:** [Shell 2D](./style-templates/shell-2d.md), [XR 3D](./style-templates/xr-3d.md), [style templates index](./style-templates/README.md).
+**Related:** [Overview](./overview.md), [Pitfalls](./pitfalls.md) (Leva, drei `Text`), lab registry in [`src/config/labs.ts`](../src/config/labs.ts). **Visual specs:** [Shell 2D](./style-templates/shell-2d.md), [XR 3D](./style-templates/xr-3d.md), [style templates index](./style-templates/README.md). **Deeper XR set-dressing track (phased):** [xr-scene-enhancement-plan.md](./xr-scene-enhancement-plan.md).
 
 ---
 
@@ -101,6 +101,8 @@ flowchart TD
 | **Manipulation** | Shared object silhouette + target gizmo palette | Grab highlight lerp, avoid busy continuous shaders |
 
 **Implementation:** Small `src/xr/visual/` (or similar) that imports **`xr`** tokens from the theme preset (not hardcoded hex), plus shared materials and reused geometries.
+
+**Detailed phased rollout** (staging → environment → materials → optional glTF/textures/shaders, with performance gates): [xr-scene-enhancement-plan.md](./xr-scene-enhancement-plan.md).
 
 ---
 

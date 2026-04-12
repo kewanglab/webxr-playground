@@ -4,6 +4,7 @@ import { usePlaygroundStore, type SessionLogEntry } from '../app/store'
 import { labs } from '../config/labs'
 import { xrStore } from '../xr/core/xrStore'
 import { postLogEntriesToDesktop, postLogEntryToDesktop } from './sessionLogSync'
+import { LoggerLevaTitleBar, loggerLevaPanelShell } from './loggerLevaChrome'
 
 const v = (name: string) => `var(${name})`
 
@@ -29,7 +30,7 @@ const tabButton = (active: boolean): CSSProperties => ({
 
 const inputBase: CSSProperties = {
   width: '100%',
-  marginBottom: 8,
+  marginBottom: v('--pg-shell-space-sm'),
   padding: v('--pg-shell-space-md'),
   background: v('--pg-shell-bg-canvas'),
   color: v('--pg-shell-text-primary'),
@@ -47,6 +48,7 @@ export function TestLoggerPanel() {
   const updateLogEntryNote = usePlaygroundStore((s) => s.updateLogEntryNote)
   const logEntries = usePlaygroundStore((s) => s.logEntries)
 
+  const [expanded, setExpanded] = useState(false)
   const [tab, setTab] = useState<LoggerTab>('log')
   const [inputSource, setInputSource] = useState<'controller' | 'hand' | 'mixed'>('controller')
   const [note, setNote] = useState('')
@@ -64,6 +66,7 @@ export function TestLoggerPanel() {
         const entries = usePlaygroundStore.getState().logEntries
         if (entries.some((e) => e.fromHeadset)) {
           setTab('notes')
+          setExpanded(true)
         }
       }
       prevXrModeRef.current = mode
@@ -117,151 +120,79 @@ export function TestLoggerPanel() {
     setNote('')
   }
 
+  const labName = labs.find((l) => l.id === currentLab)?.name ?? currentLab
+
   return (
     <div
       style={{
-        position: 'fixed',
-        right: v('--pg-shell-space-lg'),
-        bottom: v('--pg-shell-space-lg'),
-        width: 420,
-        maxHeight: 'calc(100vh - 32px)',
+        flex: expanded ? 1 : '0 0 auto',
+        minHeight: expanded ? 0 : undefined,
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
-        background: v('--pg-shell-bg-elevated'),
-        border: `1px solid ${v('--pg-shell-border-subtle')}`,
-        borderRadius: v('--pg-shell-radius-lg'),
-        padding: v('--pg-shell-space-md'),
-        color: v('--pg-shell-text-primary'),
-        fontFamily: v('--pg-shell-font-ui'),
-        boxShadow: `0 4px 24px ${v('--pg-shell-shadow-soft')}`,
-        zIndex: 10,
+        width: '100%',
+        pointerEvents: 'auto',
       }}
     >
-      <div style={{ fontSize: 13, marginBottom: 8, color: v('--pg-shell-text-muted') }}>
-        Session Logger ({labs.find((l) => l.id === currentLab)?.name})
-      </div>
-
-      <div
-        style={{
-          display: 'flex',
-          gap: v('--pg-shell-space-sm'),
-          marginBottom: v('--pg-shell-space-md'),
-          flexShrink: 0,
-        }}
-      >
-        <button type="button" style={tabButton(tab === 'log')} onClick={() => setTab('log')}>
-          New log
-        </button>
-        <button type="button" style={tabButton(tab === 'notes')} onClick={() => setTab('notes')}>
-          Session notes
-        </button>
-      </div>
-
-      {tab === 'log' && (
+      {!expanded ? (
+        <div style={loggerLevaPanelShell()}>
+          <LoggerLevaTitleBar
+            open={false}
+            title="Session log"
+            showBottomBorder={false}
+            ariaLabel="Expand session logger panel"
+            onToggle={() => setExpanded(true)}
+          />
+        </div>
+      ) : (
         <div
+          id="session-logger-panel"
+          role="region"
+          aria-label={`Session logger, ${labName}`}
           style={{
             flex: 1,
             minHeight: 0,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
+            color: v('--pg-shell-text-primary'),
+            fontFamily: v('--pg-shell-font-ui'),
+            ...loggerLevaPanelShell(),
           }}
         >
-          <div
-            style={{
-              fontSize: 12,
-              marginBottom: 10,
-              color: v('--pg-shell-text-muted'),
-              lineHeight: 1.4,
-            }}
-          >
-            Add an entry from the browser. This tab stays open after you click Log — switch to{' '}
-            <span style={{ color: v('--pg-shell-text-primary') }}>Session notes</span> to edit headset
-            logs or sync everything to disk.
-          </div>
-
-          <label style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>Input Source</label>
-          <select
-            value={inputSource}
-            onChange={(e) => setInputSource(e.target.value as 'controller' | 'hand' | 'mixed')}
-            style={inputBase}
-          >
-            <option value="controller">Controller</option>
-            <option value="hand">Hand</option>
-            <option value="mixed">Mixed</option>
-          </select>
-
-          <label style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>Quick Note</label>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={3}
-            placeholder="e.g. hand pinch misses on small targets"
-            style={inputBase}
+          <LoggerLevaTitleBar
+            open
+            title={`Session log · ${labName}`}
+            ariaLabel="Collapse session logger panel"
+            onToggle={() => setExpanded(false)}
           />
 
-          <button
-            type="button"
-            style={{ ...panelButton, alignSelf: 'flex-start', flexShrink: 0 }}
-            onClick={onSave}
-            disabled={isSyncing}
-          >
-            Log
-          </button>
-        </div>
-      )}
-
-      {tab === 'notes' && (
-        <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
-          <button
-            type="button"
-            style={{ ...panelButton, width: '100%', marginBottom: 10, flexShrink: 0 }}
-            onClick={() => void syncAllToDesktop()}
-            disabled={!logEntries.length || isSyncing}
-          >
-            Sync to Desktop
-          </button>
-
           <div
             style={{
-              fontSize: 12,
-              marginBottom: 10,
-              color: v('--pg-shell-text-muted'),
-              lineHeight: 1.4,
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              padding: v('--pg-shell-space-md'),
             }}
           >
-            Edit notes below, then Sync to Desktop to update{' '}
-            <code style={{ fontSize: 11, fontFamily: v('--pg-shell-font-mono') }}>
-              logs/session-notes.json
-            </code>
-            . After you leave XR, this tab opens automatically if you logged anything from the
-            headset.
+          <div
+            style={{
+              display: 'flex',
+              gap: v('--pg-shell-space-sm'),
+              marginBottom: v('--pg-shell-space-md'),
+              flexShrink: 0,
+            }}
+          >
+            <button type="button" style={tabButton(tab === 'log')} onClick={() => setTab('log')}>
+              New log
+            </button>
+            <button type="button" style={tabButton(tab === 'notes')} onClick={() => setTab('notes')}>
+              Session notes
+            </button>
           </div>
 
-          {logEntries.length === 0 ? (
-            <div
-              style={{
-                flex: 1,
-                border: `1px dashed ${v('--pg-shell-border-default')}`,
-                borderRadius: v('--pg-shell-radius-md'),
-                padding: v('--pg-shell-space-xl'),
-                textAlign: 'center',
-                color: v('--pg-shell-text-muted'),
-                fontSize: 13,
-              }}
-            >
-              No entries yet. Use Log in XR or the New log tab.
-            </div>
-          ) : (
+          {tab === 'log' && (
             <div
               style={{
                 flex: 1,
@@ -274,90 +205,220 @@ export function TestLoggerPanel() {
               <div
                 style={{
                   fontSize: 12,
+                  marginBottom: v('--pg-shell-space-sm'),
                   color: v('--pg-shell-text-muted'),
-                  marginBottom: 8,
-                  flexShrink: 0,
+                  lineHeight: 1.4,
                 }}
               >
-                {logEntries.length} {logEntries.length === 1 ? 'entry' : 'entries'} (newest first)
+                Add an entry from the browser. This tab stays open after you click Log — switch to{' '}
+                <span style={{ color: v('--pg-shell-text-primary') }}>Session notes</span> to edit
+                headset logs or sync everything to disk.
               </div>
-              <div
+
+              <label
+                htmlFor="logger-input-source"
+                style={{ fontSize: 13, display: 'block', marginBottom: v('--pg-shell-space-xs') }}
+              >
+                Input source
+              </label>
+              <select
+                id="logger-input-source"
+                value={inputSource}
+                onChange={(e) => setInputSource(e.target.value as 'controller' | 'hand' | 'mixed')}
+                style={inputBase}
+              >
+                <option value="controller">Controller</option>
+                <option value="hand">Hand</option>
+                <option value="mixed">Mixed</option>
+              </select>
+
+              <label
+                htmlFor="logger-quick-note"
+                style={{ fontSize: 13, display: 'block', marginBottom: v('--pg-shell-space-xs') }}
+              >
+                Quick note
+              </label>
+              <textarea
+                id="logger-quick-note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+                placeholder="e.g. hand pinch misses on small targets"
+                style={inputBase}
+              />
+
+              <button
+                type="button"
                 style={{
-                  overflowY: 'auto',
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 10,
-                  paddingRight: 4,
+                  ...panelButton,
+                  alignSelf: 'flex-start',
+                  flexShrink: 0,
+                  minHeight: 40,
                 }}
+                onClick={onSave}
+                disabled={isSyncing}
               >
-                {[...logEntries]
-                  .reverse()
-                  .map((entry) => (
-                    <div
-                      key={entry.id}
-                      style={{
-                        background: v('--pg-shell-bg-subtle'),
-                        border: `1px solid ${v('--pg-shell-border-subtle')}`,
-                        borderRadius: v('--pg-shell-radius-md'),
-                        padding: v('--pg-shell-space-sm'),
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: v('--pg-shell-text-muted'),
-                          marginBottom: 6,
-                          fontFamily: v('--pg-shell-font-mono'),
-                        }}
-                      >
-                        {new Date(entry.timestamp).toLocaleString()} ·{' '}
-                        {labs.find((l) => l.id === entry.labId)?.name ?? entry.labId} ·{' '}
-                        {entry.mode ?? '—'} · {entry.inputSource}
-                        {entry.fromHeadset ? (
-                          <span style={{ color: v('--pg-shell-state-success'), marginLeft: 6 }}>
-                            · headset
-                          </span>
-                        ) : null}
-                      </div>
-                      <textarea
-                        value={entry.note}
-                        onChange={(e) => updateLogEntryNote(entry.id, e.target.value)}
-                        rows={2}
-                        placeholder="Add your observation…"
-                        style={{ ...inputBase, marginBottom: 0 }}
-                      />
-                    </div>
-                  ))}
-              </div>
+                Log
+              </button>
             </div>
           )}
+
+          {tab === 'notes' && (
+            <div
+              style={{
+                flex: 1,
+                minHeight: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              }}
+            >
+              <button
+                type="button"
+                style={{
+                  ...panelButton,
+                  width: '100%',
+                  marginBottom: v('--pg-shell-space-sm'),
+                  flexShrink: 0,
+                  minHeight: 40,
+                }}
+                onClick={() => void syncAllToDesktop()}
+                disabled={!logEntries.length || isSyncing}
+              >
+                Sync to Desktop
+              </button>
+
+              <div
+                style={{
+                  fontSize: 12,
+                  marginBottom: v('--pg-shell-space-sm'),
+                  color: v('--pg-shell-text-muted'),
+                  lineHeight: 1.4,
+                }}
+              >
+                Edit notes below, then Sync to Desktop to update{' '}
+                <code style={{ fontSize: 11, fontFamily: v('--pg-shell-font-mono') }}>
+                  logs/session-notes.json
+                </code>
+                . After you leave XR, this tab opens automatically if you logged anything from the
+                headset.
+              </div>
+
+              {logEntries.length === 0 ? (
+                <div
+                  style={{
+                    flex: 1,
+                    border: `1px dashed ${v('--pg-shell-border-default')}`,
+                    borderRadius: v('--pg-shell-radius-md'),
+                    padding: v('--pg-shell-space-xl'),
+                    textAlign: 'center',
+                    color: v('--pg-shell-text-muted'),
+                    fontSize: 13,
+                  }}
+                >
+                  No entries yet. Use Log in XR or the New log tab.
+                </div>
+              ) : (
+                <div
+                  style={{
+                    flex: 1,
+                    minHeight: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: v('--pg-shell-text-muted'),
+                      marginBottom: v('--pg-shell-space-sm'),
+                      flexShrink: 0,
+                    }}
+                  >
+                    {logEntries.length} {logEntries.length === 1 ? 'entry' : 'entries'} (newest first)
+                  </div>
+                  <div
+                    style={{
+                      overflowY: 'auto',
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: v('--pg-shell-space-sm'),
+                      paddingRight: v('--pg-shell-space-xs'),
+                    }}
+                  >
+                    {[...logEntries]
+                      .reverse()
+                      .map((entry) => (
+                        <div
+                          key={entry.id}
+                          style={{
+                            background: v('--pg-shell-bg-subtle'),
+                            border: `1px solid ${v('--pg-shell-border-subtle')}`,
+                            borderRadius: v('--pg-shell-radius-md'),
+                            padding: v('--pg-shell-space-sm'),
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: v('--pg-shell-text-muted'),
+                              marginBottom: v('--pg-shell-space-xs'),
+                              fontFamily: v('--pg-shell-font-mono'),
+                            }}
+                          >
+                            {new Date(entry.timestamp).toLocaleString()} ·{' '}
+                            {labs.find((l) => l.id === entry.labId)?.name ?? entry.labId} ·{' '}
+                            {entry.mode ?? '—'} · {entry.inputSource}
+                            {entry.fromHeadset ? (
+                              <span style={{ color: v('--pg-shell-state-success'), marginLeft: 6 }}>
+                                · headset
+                              </span>
+                            ) : null}
+                          </div>
+                          <textarea
+                            aria-label={`Note for entry ${new Date(entry.timestamp).toLocaleString()}`}
+                            value={entry.note}
+                            onChange={(e) => updateLogEntryNote(entry.id, e.target.value)}
+                            rows={2}
+                            placeholder="Add your observation…"
+                            style={{ ...inputBase, marginBottom: 0 }}
+                          />
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div
+            style={{
+              marginTop: v('--pg-shell-space-sm'),
+              paddingTop: v('--pg-shell-space-sm'),
+              borderTop: `1px solid ${v('--pg-shell-border-subtle')}`,
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ fontSize: 12, color: v('--pg-shell-text-muted') }}>
+              Desktop: {desktopStatus}
+            </div>
+            <div
+              style={{
+                marginTop: v('--pg-shell-space-micro'),
+                fontSize: 11,
+                color: v('--pg-shell-text-muted'),
+                wordBreak: 'break-all',
+                fontFamily: v('--pg-shell-font-mono'),
+              }}
+            >
+              {desktopPath}
+            </div>
+          </div>
+          </div>
         </div>
       )}
-
-      <div
-        style={{
-          marginTop: 10,
-          paddingTop: 10,
-          borderTop: `1px solid ${v('--pg-shell-border-subtle')}`,
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ fontSize: 12, color: v('--pg-shell-text-muted') }}>
-          Desktop: {desktopStatus}
-        </div>
-        <div
-          style={{
-            marginTop: 2,
-            fontSize: 11,
-            color: v('--pg-shell-text-muted'),
-            wordBreak: 'break-all',
-            fontFamily: v('--pg-shell-font-mono'),
-          }}
-        >
-          {desktopPath}
-        </div>
-      </div>
     </div>
   )
 }

@@ -1,0 +1,28 @@
+/* Focus rings for bottom-left chrome (WCAG 2.4.7). Tokens come from applyShellTheme. */
+.pg-playground-controls :where(button, select, input):focus {
+  outline: none;
+}
+
+.pg-playground-controls :where(button, select, input):focus-visible {
+  outline: 2px solid var(--pg-shell-focus-ring);
+  outline-offset: 2px;
+}
+
+.pg-playground-controls select:focus-visible {
+  border-color: var(--pg-shell-accent-primary);
+}
+
+/* Session CTAs: disabled must read clearly vs enabled (lab modality + in-session). */
+.pg-playground-controls .pg-session-btn:disabled {
+  cursor: not-allowed;
+  border-style: dashed !important;
+  border-width: 2px !important;
+  border-color: var(--pg-shell-border-default) !important;
+  background-color: var(--pg-shell-bg-subtle) !important;
+  color: var(--pg-shell-text-muted) !important;
+  filter: grayscale(0.45);
+}
+
+.pg-playground-controls .pg-session-btn:disabled:focus-visible {
+  outline-color: var(--pg-shell-border-default);
+}

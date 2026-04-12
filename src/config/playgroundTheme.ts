@@ -275,18 +275,35 @@ export function levaThemeFromShell(shell: ShellTheme) {
       sm: `${shell.space.xs}px`,
       md: `${shell.space.sm}px`,
       lg: `${shell.space.md}px`,
+      /** Larger gaps so rows read as separate targets on Quest / hand ray. */
+      rowGap: `${shell.space.sm}px`,
+      colGap: `${shell.space.sm}px`,
     },
     fonts: {
       mono: shell.font.mono,
       sans: shell.font.ui,
     },
     fontSizes: {
-      root: '14px',
+      /** Slightly larger than desktop-default Leva for arm’s-length UI. */
+      root: '15px',
     },
     sizes: {
       rootWidth: '460px',
-      controlWidth: '200px',
-      rowHeight: '40px',
+      controlWidth: '248px',
+      numberInputMinWidth: '52px',
+      scrubberWidth: '14px',
+      scrubberHeight: '28px',
+      rowHeight: '48px',
+      folderTitleHeight: '36px',
+      checkboxSize: '26px',
+      titleBarHeight: '48px',
+      colorPickerWidth: '$controlWidth',
+      colorPickerHeight: '120px',
+      imagePreviewWidth: '$controlWidth',
+      imagePreviewHeight: '120px',
+      monitorHeight: '72px',
+      joystickWidth: '120px',
+      joystickHeight: '120px',
     },
   }
 }
