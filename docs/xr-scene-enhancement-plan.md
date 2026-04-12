@@ -48,17 +48,30 @@ These items are **complete** — do not redo them:
 
 All packs live under `public/assets/models/`.
 
-### Pack inventory
+### Pack inventory (trimmed repo)
 
-| Priority | Pack (folder) | Format | Best for | Size on disk |
-|----------|---------------|--------|----------|-------------|
-| **1 — Structure** | `Modular SciFi MegaKit[Standard]/` | `.gltf` + `.bin` under `glTF/` (Walls, Platforms, Props, Columns, Decals, Aliens) | Lab backdrops, walls, platforms, columns | 5.5 MB |
-| **2 — Props** | `Molten Maps SciFi Asset Pack/Assets/gtlf/` | Self-contained `.glb` (~136 files) | Consoles, screens, instruments | 26 MB |
-| **3 — Blockout** | `kenney_modular-space-kit_1.0/` | `Models/OBJ format/` + `.mtl` | Fast room/corridor layout (needs material pass) | 21 MB |
-| **4 — Fill** | `kenney_space-station-kit/Models/GLB format/` | `.glb` | Extra station clutter | 6.2 MB |
-| **Skip** | `kenney_space-kit/` | Mixed; `Isometric/` and `Side/` are 2D sprites | Not useful for XR scenes | 22 MB |
+Only the paths below are kept under `public/assets/models/`. Duplicate formats and marketing files were removed to shrink clone size (~67 MB total for models; was ~223 MB).
 
-> **Note:** The Molten Maps folder is named `gtlf/` (typo in the original pack, not `gltf/`). Do not "fix" this path — it matches what is on disk.
+| Priority | Pack (folder) | What remains on disk | Best for | ~Size |
+|----------|---------------|----------------------|----------|-------|
+| **1 — Structure** | `Modular SciFi MegaKit[Standard]/` | `glTF/` + `Textures/` + `License_Standard.txt` | Lab backdrops (convert to `xr-kit/*.glb` in Task 0) | ~33 MB |
+| **2 — Props** | `Molten Maps SciFi Asset Pack/` | `Assets/gtlf/*.glb` + `License.txt` | Consoles, screens, instruments | ~26 MB |
+| **3 — Blockout** | `kenney_modular-space-kit_1.0/` | `Models/OBJ format/` + `Models/Textures/` + `License.txt` | Fast room/corridor OBJ blockout | ~7 MB |
+| **4 — Fill** | `kenney_space-station-kit/` | `Models/GLB format/` + `Models/Textures/` + `License.txt` | Extra station props | ~1 MB |
+
+**Not in repo:** `kenney_space-kit/` (isometric/side sprites, not XR scene meshes). Do not re-add unless you have a specific mesh need from its `GLTF` folder and accept the extra weight.
+
+### What was removed (do not restore unless you need that format)
+
+| Pack | Removed |
+|------|---------|
+| **MegaKit** | `FBX/`, `FBX (Unity)/`, `OBJ/`, `Preview_*.png` — Web path uses **glTF + shared Textures** only. |
+| **Molten Maps** | `Examples/`, `Assets/fbx/`, `Assets/obj/`, `Assets/Textures + Materials/`, root `*.url` — GLBs are self-contained. |
+| **Kenney modular** | `Models/FBX format/`, `Models/GLB format/`, previews, `Overview.html`, `*.url` — keep **OBJ + Textures** for the documented blockout path. |
+| **Kenney space-station** | `Models/FBX format/`, `Models/OBJ format/`, previews, `Overview.html`, `*.url` — keep **GLB + Textures**. |
+| **Kenney space-kit** | **Entire folder** — not part of the XR kit plan. |
+
+> **Note:** The Molten Maps folder is named `gtlf/` (typo in the original pack, not `gltf/`). Do not rename it without updating any loader paths.
 
 ### Known issues with stock assets
 
