@@ -71,4 +71,27 @@ Apply hover/selection scale on the `group` if both should move together.
 
 ---
 
-<!-- Add new ## Section titles below for other domains (e.g. WebXR session, Quest browser, adb reverse). -->
+## WebXR event vocabulary
+
+### Symptom: searching for "pinch" or "grab" in @react-three/xr or @pmndrs/xr returns nothing
+
+The WebXR API uses **generic action names**, not gesture names. The same event fires for different physical gestures depending on the input source:
+
+| WebXR event | Controller gesture | Hand tracking gesture |
+|---|---|---|
+| `selectstart` / `selectend` / `select` | Trigger pull | **Pinch** (thumb + index) |
+| `squeezestart` / `squeezeend` / `squeeze` | Grip button | Not commonly mapped |
+
+**Consequence:** if you search the library code for "pinch," "isPinching," or "pinchStrength," you will find nothing — even though pinch detection is fully built-in. The Quest firmware detects the pinch gesture and fires `selectstart`/`selectend` on the `XRSession`. `@pmndrs/xr` listens for these in `input.js` and pushes them into `XRHandState.events`. The default grab pointer is bound to `'select'` via `bindPointerXRInputSourceEvent`.
+
+**Rule of thumb:** when a feature clearly works in practice (e.g., grab pointer responds to pinch), trace the working code path instead of searching for a keyword. The abstraction layer may use different vocabulary than you expect.
+
+### Related project files
+
+- `node_modules/@pmndrs/xr/dist/input.js` — sets up `selectstart`/`selectend` listeners on session
+- `node_modules/@pmndrs/xr/dist/pointer/event.js` — `bindPointerXRInputSourceEvent` routes session events to pointer down/up
+- `node_modules/@pmndrs/xr/dist/vanilla/default.js` — wires grab pointer at `index-finger-tip` with `'select'` event
+
+---
+
+<!-- Add new ## Section titles below for other domains (e.g. Quest browser, adb reverse). -->

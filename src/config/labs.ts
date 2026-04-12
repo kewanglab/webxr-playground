@@ -1,5 +1,5 @@
 export type XRMode = 'vr' | 'ar' | 'cross-xr'
-export type LabId = 'selection' | 'placement' | 'locomotion'
+export type LabId = 'selection' | 'placement' | 'locomotion' | 'manipulation'
 
 export type LabDefinition = {
   id: LabId
@@ -26,6 +26,13 @@ export const labs: LabDefinition[] = [
     name: 'Locomotion Lab',
     mode: 'vr',
     description: 'Teleport, smooth movement, and turning systems',
+  },
+  {
+    id: 'manipulation',
+    name: 'Manipulation Lab',
+    mode: 'cross-xr',
+    description:
+      'DOF-Separation for 3D object manipulation — compare Virtual Hand and Hand Ray with integrated vs separated translation/rotation',
   },
 ]
 
@@ -65,6 +72,16 @@ export const tuningPresets = {
       previewOpacity: 0.5,
       enableHaptics: false,
       enableAudio: false,
+    },
+  },
+  manipulation: {
+    objectSize: 0.125,
+    grabDistance: 0.08,
+    cdGain: 1.0,
+    shoulderOffsetRight: [-0.15, -0.35, -0.1] as [number, number, number],
+    docking: {
+      translationOffsetM: 0.3,
+      rotationOffsetDeg: 45,
     },
   },
 }

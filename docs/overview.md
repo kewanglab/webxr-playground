@@ -373,24 +373,23 @@ You should see your device listed. If it shows "unauthorized," put on the headse
 
 ### Accessing the dev server
 
-The simplest approach is to forward the Quest's localhost to your Mac's dev server. This avoids SSL certificate issues because `localhost` counts as a secure context (required for WebXR):
+Start the dev server on your Mac (`npm run dev`). Vite is pinned to port **5173** in `vite.config.ts`; if you change the port, update the `adb reverse` line below to match.
+
+The simplest approach on Quest is to forward the headset’s localhost to your Mac’s dev server. This avoids SSL certificate issues because `http://localhost` counts as a secure context (required for WebXR):
 
 ```sh
 adb reverse tcp:5173 tcp:5173
 ```
 
-This maps the Quest's `localhost:5173` to your Mac's `localhost:5173`. Now open the Quest browser and navigate to `http://localhost:5173`.
+This maps the Quest’s `localhost:5173` to your Mac’s `localhost:5173`. Open the Quest browser and go to `http://localhost:5173` (or `http://127.0.0.1:5173`).
 
-Run this command each time you reconnect the USB cable. Consider adding it as an npm script:
+Run the reverse each time you reconnect the USB cable. The repo already wraps it in npm:
 
-```json
-{
-  "scripts": {
-    "dev": "vite",
-    "quest": "adb reverse tcp:5173 tcp:5173 && echo 'Quest ready at localhost:5173'"
-  }
-}
+```sh
+npm run quest
 ```
+
+(`package.json` → `"quest": "adb reverse tcp:5173 tcp:5173 && …"`.)
 
 ### Remote debugging
 
@@ -438,7 +437,7 @@ To review logs on desktop:
 2. Click `Refresh` to fetch latest entries from `/api/logs`
 3. Use `Download JSON` to save a local snapshot
 
-The in-app Session Logger panel (desktop HTML, fixed corner) provides:
+The in-app Session Logger panel (desktop HTML, lower-right) provides:
 
 - input source and **Quick Note** fields for detailed entries
 - **Log** — append entry to zustand and POST to `/api/logs`
