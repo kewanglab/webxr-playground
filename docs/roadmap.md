@@ -8,6 +8,19 @@
 
 ---
 
+## Current status (April 2026)
+
+| Phase | State |
+|-------|--------|
+| **1 — Cross-XR skeleton** | **Done** |
+| **2 — First labs** | **Done** — Selection, Placement, Locomotion. |
+| **3 — Object Manipulation Lab** | **Done** — VHI/VHS, docking + zen, proximity + hand-ray acquisition; see Phase 3 below. |
+| **4 — Spatial polish** | **Next** — specs in [Spatial polish plan](./spatial-polish-plan.md); implementation not started. |
+| **5 — Interaction platform** | **Not started** — shared primitives (`src/xr/interactions/`), cross-lab A/B preset UI, shared feedback library. |
+| **6 — Expanded labs & AR** | **Not started** — MenuLab, UIReadabilityLab, deeper AR studies (after Phase 5 where noted). |
+
+---
+
 ## Development Priorities
 
 ### Phase 1: Cross-XR Skeleton
@@ -40,25 +53,31 @@ Deliverables:
 
 These three labs establish the core reusable interaction and feedback primitives.
 
-### Phase 3: Object Manipulation Lab + Primitive Graduation + A/B Testing
+### Phase 3: Object Manipulation Lab (complete)
 
-The next push does triple duty: build a research-backed lab, establish the pattern for extracting reusable primitives, and add A/B comparison infrastructure that all labs can use.
+This phase delivered the research-backed manipulation experience. **Shared primitive graduation, cross-lab A/B UI, and a reusable feedback layer** are **Phase 5**; **visual theming** is **Phase 4**.
 
-#### 3a. ObjectManipulationLab (cross-XR)
+#### ObjectManipulationLab (cross-XR)
+
+**Shipped today:** Integrated (VHI) vs separated (VHS) **virtual-hand** manipulation with paper-aligned mapping (wrist-driven translation + thumb-orientation rotation for separated; integrated uses pinch-point pivot). **Acquisition:** proximity pinch (OBB hit volume) or framework **hand ray** (pinch to grab, pinch release drops even when the ray leaves the mesh). **Modes:** Docking (sequential trials with measured offsets) and Zen Garden (free arrangement). Shared **LabHeading** pattern across labs.
+
+**Deferred / not in repo:** Hand-ray *manipulation* techniques **HRI/HRS** (custom stick/shoulder-ray mapping) — may return as a dedicated lab; **Gaze&Pinch** when eye tracking is available.
 
 Based on: *"DOF-Separation for 3D Manipulation in XR"* (Mikkelsen et al., ISMAR 2025). The paper investigates separating 6DOF hand movement into independent 3DOF translation (wrist position) and 3DOF rotation (wrist orientation) controls during pinch-manipulation, compared against the standard integrated 6DOF mapping.
 
 **Core interaction question:** Does separating translation and rotation control improve manipulation accuracy and feel across different acquisition techniques?
 
-**Techniques to implement (grab domain variants):**
+**Techniques (grab domain — paper + extensions):**
 
-Each technique has an Integrated (standard 6DOF) and Separated (split translation/rotation) mode:
+Each integrated vs separated pair applies to a given *acquisition* path (virtual hand vs ray-based manipulation).
 
-- **Virtual Hand Integrated (VHI)** — direct 1:1 mapping, thumb tip drives both translation and rotation
-- **Virtual Hand Separated (VHS)** — wrist joint drives translation, thumb orientation drives rotation independently; forward offset compensates reach difference
-- **Hand Ray Integrated (HRI)** — "stick" metaphor via wrist-based ray; wrist tilt displaces object along the stick
-- **Hand Ray Separated (HRS)** — shoulder-to-wrist ray for pointing/acquisition; post-pinch wrist rotation maps to object rotation without displacement (MRTK-style)
-Gaze&Pinch is a future expansion (requires eye tracking hardware — Quest Pro or similar). Current scope: **4 grab variants** (VHI, VHS, HRI, HRS) on Quest 3.
+- **Virtual Hand Integrated (VHI)** — implemented (thumb-tip mapping with pinch-point pivot for rotation feel)
+- **Virtual Hand Separated (VHS)** — implemented (wrist translation, thumb-orientation rotation)
+- **Hand Ray Integrated (HRI)** — not implemented (was scoped out; custom ray/stick mapping may be a separate lab)
+- **Hand Ray Separated (HRS)** — not implemented (same)
+- **Acquisition today:** proximity pinch vs framework **hand ray** (for targeting only; manipulation math is still VHI/VHS)
+
+Gaze&Pinch is a future expansion (requires eye tracking hardware — Quest Pro or similar).
 
 **Two modes:**
 
@@ -71,7 +90,7 @@ Faithful to the paper's evaluation design. A target object (cube with asymmetric
 A relaxed arrangement task for feeling the qualitative difference between techniques. A low wooden platform or shallow sand tray at arm's reach. Asymmetric natural objects — river stones, driftwood branches, flowers — available from a floating side shelf. Users grab objects, position and orient them freely to compose an arrangement. No "correct" answer; the point is to feel how each grab technique handles precise rotation and placement of organic shapes. Includes:
 
 - Asymmetric low-poly objects where orientation visibly matters (a flat stone tilted vs lying flat reads completely differently)
-- Technique switching via the primitive picker — swap between VHI, VHS, HRI, HRS mid-arrangement
+- Technique switching via Leva — swap integrated vs separated (and acquisition) mid-arrangement; full primitive picker / cross-lab library still TBD (Phase 5)
 - Optional harmony guides (toggle-able subtle hints for pleasing orientations)
 - Snapshot button to capture the arrangement + active technique as a log entry
 - Calm ambient lighting, minimal visual noise
@@ -85,7 +104,24 @@ The Zen Garden makes the "feel" difference between techniques immediately obviou
 - VHS should help on difficult combined tasks but may feel less natural on simple ones
 - The "stick" metaphor (HRI) should feel frustrating — a useful negative baseline
 
-#### 3b. Interaction primitive library
+### Phase 4: Spatial polish & visual implementation
+
+**Priority:** Ship the direction in [Spatial polish plan](./spatial-polish-plan.md) and the token specs in [style templates](./style-templates/README.md), optimized for Quest-class WebXR (cheap materials, few lights, no render-loop thrash).
+
+**Deliverables:**
+
+- **Theming module** — e.g. `src/config/playgroundTheme.ts` exporting `shell` (2D), `xr` (Three.js), and `levaThemeFromShell()`; presets (`default`, optional `highContrast` / shell variants) with `localStorage` + optional `?theme=` query
+- **Shell** — apply semantic tokens as CSS variables on the document root; restyle playground chrome, lab chips, session controls, logger panel ([shell-2d.md](./style-templates/shell-2d.md))
+- **XR** — fog, grid/floor, unlit skydome gradient, AR alignment cues, TagAlong HUD frame from [xr-3d.md](./style-templates/xr-3d.md); read tokens in `useEffect` / store updates, not `getComputedStyle` per frame
+- **Leva** — theme derived from shell tokens so the tuning panel matches the page
+- **Mockups** — regenerate or replace frames under `docs/mockups/spatial-polish/` once the palette is locked (existing PNGs are layout-only references)
+- **Device validation** — frame time and readability on Quest after each visual pass
+
+### Phase 5: Interaction platform (primitives, A/B, feedback)
+
+Builds on Phases 1–3. **MenuLab and broader AR labs (Phase 6) should reuse this layer** where possible.
+
+#### 5a. Interaction primitive library
 
 The playground's core value as a platform: labs **produce** graduated interaction variants and **consume** variants from other labs. Think of it as a design system, but for XR interactions.
 
@@ -113,7 +149,7 @@ Known domains and their contracts:
 |---|---|---|
 | **Locomotion** | Update the player position | LocomotionLab (teleport, smooth move, snap turn) |
 | **Selection** | Report when something is selected or deselected | SelectionLab (ray, direct touch, pinch) |
-| **Grab** | Report when an object is grabbed, where it should follow each frame, and when it's released | ObjectManipulationLab (VHI, VHS, HRI, HRS) |
+| **Grab** | Report when an object is grabbed, where it should follow each frame, and when it's released | ObjectManipulationLab (VHI, VHS; ray acquisition for targeting) |
 | **Placement** | Place an object on a surface and confirm its position | PlacementLab (hit-test placement) |
 
 New domains are added when a lab needs a new category of interchangeable behavior. The contract table above is the reference — update it as domains are defined.
@@ -128,7 +164,7 @@ New domains are added when a lab needs a new category of interchangeable behavio
 
 Also extract mature interaction logic from existing Phase 2 labs (SelectionLab, PlacementLab, LocomotionLab) as the first graduated variants.
 
-#### 3c. A/B comparison (within-domain)
+#### 5b. A/B comparison (within-domain)
 
 Add a reusable A/B testing pattern scoped to individual domains:
 
@@ -141,25 +177,23 @@ Starts with within-domain comparison (compare two grab variants, or two locomoti
 
 This keeps comparison lightweight (no timed trials or forced-choice protocol yet) while making every lab immediately useful for structured evaluation.
 
-#### 3d. Feedback and evaluation improvements
+#### 5c. Feedback and evaluation improvements
 
-Pulled forward from the original Phase 3 plan, done alongside or shortly after the manipulation lab:
+- Reusable hover and confirm feedback primitives (visual, audio, haptic)
+- Configurable target sizing across labs
+- Comfort presets for movement parameters
+- Input-source-specific parameter tuning (separate controller vs hand thresholds)
 
-- reusable hover and confirm feedback primitives (visual, audio, haptic)
-- configurable target sizing across labs
-- comfort presets for movement parameters
-- input-source-specific parameter tuning (separate controller vs hand thresholds)
+### Phase 6: Expanded labs & AR (future)
 
-### Phase 4: Menu Lab + AR Expansion
-
-Build on the graduated primitives and A/B infrastructure from Phase 3.
+New labs and studies **after** the interaction platform (Phase 5) exists where reuse is intended.
 
 Deliverables:
 
-- `MenuLab` (cross-XR) — world-space panels, wrist-anchored menus, compare input modes; reuses grab/selection primitives from Phase 3
+- `MenuLab` (cross-XR) — world-space panels, wrist-anchored menus, compare input modes; reuses grab/selection primitives from Phase 5
 - `UIReadabilityLab` (AR) — text sizing, contrast, and depth in passthrough
-- anchored AR object studies
-- additional research-driven labs as papers are identified
+- Anchored AR object studies
+- Additional research-driven labs as papers are identified (e.g. dedicated HRI/HRS manipulation experiments, Gaze&Pinch when hardware allows)
 
 ---
 
@@ -167,10 +201,10 @@ Deliverables:
 
 *Edit this section as your current sprint changes.*
 
-- **Now:** Build `ObjectManipulationLab` — implement DOF-Separation docking task (Mikkelsen et al. ISMAR 2025) with Virtual Hand + Hand Ray variants (4 grab techniques); add Gaze&Pinch when eye tracking is available
-- **Alongside:** Establish primitive graduation flow during the manipulation lab build; extract first shared primitives into `src/xr/interactions/`
-- **Alongside:** Build A/B preset infrastructure as a reusable pattern, validate it inside the manipulation lab
-- **Then:** `MenuLab`, leveraging graduated primitives and A/B presets
+- **Now (Phase 4):** Implement **spatial polish** — theme module, CSS variables + shell restyle, Leva theme from tokens, XR scene / HUD / AR cue updates per [Spatial polish plan](./spatial-polish-plan.md); validate on Quest
+- **Alongside:** Optional Quest hardening passes on **ObjectManipulationLab** (docking + zen); decide later whether **HRI/HRS** land in Phase 6 as a small dedicated lab
+- **Then (Phase 5):** **Primitive graduation** into `src/xr/interactions/`, then shared **A/B preset** UI and **feedback** primitives
+- **Then (Phase 6):** **MenuLab** and AR expansion labs once Phase 5 primitives are available where reuse matters
 - Keep [Overview](./overview.md) directory map in sync when adding new `src/` areas
 
 ---
