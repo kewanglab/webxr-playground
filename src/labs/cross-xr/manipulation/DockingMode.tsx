@@ -1,16 +1,15 @@
 import { Text } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Euler, Quaternion, Vector3 } from 'three'
-import type { ManipulationTechnique } from '../ObjectManipulationLab'
+import type { ManipulationAcquisition, ManipulationTechnique } from '../ObjectManipulationLab'
 import type { ManipulationResult } from './techniques'
 import { tuningPresets } from '../../../config/labs'
 import { useHandJoints } from './useHandJoints'
 import { useManipulation } from './useManipulation'
 import { ManipulableObject } from './ManipulableObject'
-import { RayVisual } from './RayVisual'
 
 type DockingModeProps = {
+  acquisition: ManipulationAcquisition
   technique: ManipulationTechnique
   objectSize: number
   grabDistance: number
@@ -99,9 +98,14 @@ function computeRotationalOffset(a: Quaternion, b: Quaternion): number {
   return (angleRad * 180) / Math.PI
 }
 
-export function DockingMode({ technique, objectSize, grabDistance, cdGain }: DockingModeProps) {
+export function DockingMode({
+  acquisition,
+  technique,
+  objectSize,
+  grabDistance,
+  cdGain,
+}: DockingModeProps) {
   const joints = useHandJoints('right')
-  const { camera } = useThree()
 
   const trials = useMemo(() => generateTrials(), [])
   const [trialIndex, setTrialIndex] = useState(0)
@@ -133,16 +137,14 @@ export function DockingMode({ technique, objectSize, grabDistance, cdGain }: Doc
     [currentTrial, technique],
   )
 
-  const { register, state } = useManipulation({
+  const { register, state, acquireById, releaseActive } = useManipulation({
+    acquisition,
     technique,
     joints,
     cdGain,
     grabDistance,
-    shoulderOffset: DEFAULTS.shoulderOffsetRight,
     onRelease,
   })
-
-  const isRayTechnique = technique === 'HRI' || technique === 'HRS'
 
   if (isComplete) {
     const avgPos =
@@ -221,9 +223,15 @@ export function DockingMode({ technique, objectSize, grabDistance, cdGain }: Doc
       <ManipulableObject
         id="docking-object"
         initialPosition={OBJECT_ORIGIN}
-        hitRadius={objectSize * 0.8}
+        hitHalfExtents={[
+          objectSize / 2,
+          objectSize / 2,
+          objectSize / 2,
+        ]}
         register={register}
         isActive={state.isManipulating}
+        onPointerDown={acquisition === 'ray' ? () => acquireById('docking-object') : undefined}
+        onPointerUp={acquisition === 'ray' ? () => releaseActive() : undefined}
       >
         <mesh>
           <boxGeometry args={[objectSize, objectSize, objectSize]} />
@@ -238,14 +246,6 @@ export function DockingMode({ technique, objectSize, grabDistance, cdGain }: Doc
         </mesh>
       </ManipulableObject>
 
-      {/* Ray visual for HR techniques */}
-      <RayVisual
-        joints={joints}
-        technique={technique}
-        shoulderOffset={DEFAULTS.shoulderOffsetRight}
-        headPosition={camera.position}
-        visible={isRayTechnique && !state.isManipulating}
-      />
     </group>
   )
 }

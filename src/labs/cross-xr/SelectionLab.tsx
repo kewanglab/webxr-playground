@@ -1,9 +1,11 @@
 import { Text } from '@react-three/drei'
 import { useState } from 'react'
 import { useControls } from 'leva'
+import { getLabTitle, tuningPresets } from '../../config/labs'
+import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
 import { useHapticPulse } from '../../xr/feedback/haptics/useHapticPulse'
 import { useConfirmTone } from '../../xr/feedback/audio/useConfirmTone'
-import { tuningPresets } from '../../config/labs'
+import { LabHeading } from '../LabHeading'
 
 function SelectableTarget({
   position,
@@ -63,15 +65,6 @@ function SelectableTarget({
   )
 }
 
-function readControlNumber(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value
-  if (typeof value === 'string') {
-    const parsed = parseFloat(value)
-    if (Number.isFinite(parsed)) return parsed
-  }
-  return fallback
-}
-
 export function SelectionLab() {
   const defaults = tuningPresets.controller.selection
   const { targetSize, confirmScaleBoost, enableHaptics, enableAudio } = useControls('Selection', {
@@ -82,11 +75,15 @@ export function SelectionLab() {
     enableAudio: defaults.enableAudio,
   })
 
-  const size = Math.max(0.12, readControlNumber(targetSize, defaults.targetSize))
-  const boost = readControlNumber(confirmScaleBoost, defaults.confirmScaleBoost)
+  const size = Math.max(0.12, readLevaNumber(targetSize, defaults.targetSize))
+  const boost = readLevaNumber(confirmScaleBoost, defaults.confirmScaleBoost)
 
   return (
     <group>
+      <LabHeading
+        title={getLabTitle('selection')}
+        subtitle={`Target ${size.toFixed(2)} · Confirm boost ${boost.toFixed(2)} · Haptics ${enableHaptics ? 'on' : 'off'} · Audio ${enableAudio ? 'on' : 'off'}`}
+      />
       <SelectableTarget
         position={[-0.45, 1.25, -1.25]}
         color="#3b82f6"

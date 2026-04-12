@@ -5,7 +5,9 @@ Read these first when you need project context:
 - `docs/overview.md` for architecture and system behavior
 - `docs/roadmap.md` for current priorities and planned work
 - `docs/pitfalls.md` for bugs and footguns already encountered
+- `docs/style-templates/` for 2D shell vs 3D XR visual specs (tokens, components, lighting budget)
 - `src/config/labs.ts` for the lab registry and routing
+- `src/labs/LabHeading.tsx` + `getLabTitle()` for consistent in-scene lab titles (name) and subtitles (configuration)
 
 Working norms:
 

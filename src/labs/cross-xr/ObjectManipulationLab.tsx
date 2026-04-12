@@ -1,43 +1,47 @@
-import { Text } from '@react-three/drei'
 import { useControls } from 'leva'
 import { useEffect } from 'react'
-import { tuningPresets } from '../../config/labs'
+import { getLabTitle, tuningPresets } from '../../config/labs'
+import { LabHeading } from '../LabHeading'
 import { xrStore } from '../../xr/core/xrStore'
 import { DockingMode } from './manipulation/DockingMode'
 import { ZenGardenMode } from './manipulation/ZenGardenMode'
 
-export type ManipulationTechnique = 'VHI' | 'VHS' | 'HRI' | 'HRS'
+export type ManipulationTechnique = 'integrated' | 'separated'
+export type ManipulationAcquisition = 'proximity' | 'ray'
 
 const techniqueLabels: Record<ManipulationTechnique, string> = {
-  VHI: 'Virtual Hand — Integrated',
-  VHS: 'Virtual Hand — Separated',
-  HRI: 'Hand Ray — Integrated',
-  HRS: 'Hand Ray — Separated',
+  integrated: 'Integrated (6DOF)',
+  separated: 'Separated (translation + rotation)',
+}
+const acquisitionLabels: Record<ManipulationAcquisition, string> = {
+  proximity: 'Proximity pinch',
+  ray: 'Hand ray',
+}
+
+const labModeLabels: Record<'docking' | 'zen', string> = {
+  docking: 'Docking',
+  zen: 'Zen garden',
 }
 
 export function ObjectManipulationLab() {
   const defaults = tuningPresets.manipulation
 
-  // Disable the default hand ray and teleport pointers while in this lab
-  // to avoid a duplicate ray. Our custom RayVisual handles technique-specific rays.
-  useEffect(() => {
-    xrStore.setHand({ rayPointer: false, teleportPointer: false })
-    return () => {
-      xrStore.setHand({ rayPointer: true, teleportPointer: true })
-    }
-  }, [])
-
-  const { labMode, technique, objectSize, grabDistance, cdGain } = useControls(
+  const { labMode, acquisition, technique, objectSize, grabDistance, cdGain } = useControls(
     'Manipulation',
     {
       labMode: { value: 'docking' as 'docking' | 'zen', options: ['docking', 'zen'] },
-      technique: {
-        value: 'VHI' as ManipulationTechnique,
+      acquisition: {
+        value: 'proximity' as ManipulationAcquisition,
         options: {
-          [techniqueLabels.VHI]: 'VHI',
-          [techniqueLabels.VHS]: 'VHS',
-          [techniqueLabels.HRI]: 'HRI',
-          [techniqueLabels.HRS]: 'HRS',
+          [acquisitionLabels.proximity]: 'proximity',
+          [acquisitionLabels.ray]: 'ray',
+        },
+      },
+      technique: {
+        value: 'integrated' as ManipulationTechnique,
+        options: {
+          [techniqueLabels.integrated]: 'integrated',
+          [techniqueLabels.separated]: 'separated',
         },
       },
       objectSize: { value: defaults.objectSize, min: 0.05, max: 0.3, step: 0.01 },
@@ -46,32 +50,27 @@ export function ObjectManipulationLab() {
     },
   )
 
+  useEffect(() => {
+    xrStore.setHand({
+      rayPointer: acquisition === 'ray',
+      grabPointer: false,
+      teleportPointer: false,
+    })
+    return () => {
+      xrStore.setHand({ rayPointer: true, grabPointer: true, teleportPointer: true })
+    }
+  }, [acquisition])
+
   return (
     <group>
-      <Text
-        position={[0, 1.8, -2]}
-        fontSize={0.12}
-        color="#888"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {`Manipulation Lab — ${techniqueLabels[technique as ManipulationTechnique]}`}
-      </Text>
-
-      <Text
-        position={[0, 1.65, -2]}
-        fontSize={0.07}
-        color="#666"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {labMode === 'docking'
-          ? 'Docking Mode — match target position and rotation'
-          : 'Zen Garden — free arrangement'}
-      </Text>
+      <LabHeading
+        title={getLabTitle('manipulation')}
+        subtitle={`${labModeLabels[labMode as 'docking' | 'zen']} · ${acquisitionLabels[acquisition as ManipulationAcquisition]} · ${techniqueLabels[technique as ManipulationTechnique]}`}
+      />
 
       {labMode === 'docking' ? (
         <DockingMode
+          acquisition={acquisition as ManipulationAcquisition}
           technique={technique as ManipulationTechnique}
           objectSize={objectSize}
           grabDistance={grabDistance}
@@ -79,6 +78,7 @@ export function ObjectManipulationLab() {
         />
       ) : (
         <ZenGardenMode
+          acquisition={acquisition as ManipulationAcquisition}
           technique={technique as ManipulationTechnique}
           objectSize={objectSize}
           grabDistance={grabDistance}

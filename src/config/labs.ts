@@ -36,6 +36,12 @@ export const labs: LabDefinition[] = [
   },
 ]
 
+/** Stable scene title for each lab (use with `LabHeading`). */
+export function getLabTitle(id: LabId): string {
+  const lab = labs.find((l) => l.id === id)
+  return lab?.name ?? id
+}
+
 export const tuningPresets = {
   controller: {
     selection: {
@@ -78,7 +84,6 @@ export const tuningPresets = {
     objectSize: 0.125,
     grabDistance: 0.08,
     cdGain: 1.0,
-    shoulderOffsetRight: [-0.15, -0.35, -0.1] as [number, number, number],
     docking: {
       translationOffsetM: 0.3,
       rotationOffsetDeg: 45,

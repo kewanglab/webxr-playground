@@ -1,24 +1,40 @@
-import { useFrame, useThree } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import { useCallback, useRef } from 'react'
 import { Object3D, Quaternion, Vector3 } from 'three'
-import type { ManipulationTechnique } from '../ObjectManipulationLab'
+import type { ManipulationAcquisition, ManipulationTechnique } from '../ObjectManipulationLab'
 import type { HandJointData } from './useHandJoints'
 import {
   type AcquisitionSnapshot,
   type ManipulationResult,
   computeManipulation,
   createAcquisitionSnapshot,
-  estimateShoulderPosition,
-  isWithinGrabRange,
-  rayHitsObject,
 } from './techniques'
+
+const _obbInvQuat = new Quaternion()
+const _obbLocalThumb = new Vector3()
+
+/** Shortest distance from world-space point to an OBB (center, rotation, half-extents). */
+function distancePointToObb(
+  worldPoint: Vector3,
+  center: Vector3,
+  rotation: Quaternion,
+  halfExtents: Vector3,
+): number {
+  _obbInvQuat.copy(rotation).invert()
+  _obbLocalThumb.copy(worldPoint).sub(center).applyQuaternion(_obbInvQuat)
+  const dx = Math.max(Math.abs(_obbLocalThumb.x) - halfExtents.x, 0)
+  const dy = Math.max(Math.abs(_obbLocalThumb.y) - halfExtents.y, 0)
+  const dz = Math.max(Math.abs(_obbLocalThumb.z) - halfExtents.z, 0)
+  return Math.hypot(dx, dy, dz)
+}
 
 export type ManipulableEntry = {
   id: string
   objectRef: { current: Object3D | null }
   position: Vector3
   quaternion: Quaternion
-  hitRadius: number
+  /** Half-extents along the object's local X/Y/Z (matches boxGeometry-style meshes). */
+  hitHalfExtents: Vector3
 }
 
 export type ManipulationState = {
@@ -31,22 +47,22 @@ export type ManipulationState = {
 }
 
 export type UseManipulationOptions = {
+  acquisition: ManipulationAcquisition
   technique: ManipulationTechnique
   joints: HandJointData
   cdGain: number
   grabDistance: number
-  shoulderOffset: [number, number, number]
   onAcquire?: (id: string) => void
   onRelease?: (id: string, result: ManipulationResult) => void
 }
 
 /**
  * Manages the acquire → manipulate → release cycle.
- * Register manipulable objects, then call useFrame-based updates automatically.
+ * Acquisition can be proximity-based (custom pinch near object) or
+ * ray-based (framework pointer events).
  */
 export function useManipulation(options: UseManipulationOptions) {
-  const { technique, joints, cdGain, grabDistance, shoulderOffset, onAcquire, onRelease } = options
-  const { camera } = useThree()
+  const { acquisition, technique, joints, cdGain, grabDistance, onAcquire, onRelease } = options
 
   const registryRef = useRef<Map<string, ManipulableEntry>>(new Map())
   const snapRef = useRef<AcquisitionSnapshot | null>(null)
@@ -66,36 +82,50 @@ export function useManipulation(options: UseManipulationOptions) {
     }
   }, [])
 
+  const acquireById = useCallback(
+    (id: string) => {
+      if (!joints.isTracking || stateRef.current.isManipulating) return
+      const entry = registryRef.current.get(id)
+      if (!entry) return
+      snapRef.current = createAcquisitionSnapshot(joints, entry.position, entry.quaternion)
+      activeIdRef.current = id
+      stateRef.current.isManipulating = true
+      stateRef.current.targetId = id
+      onAcquire?.(id)
+    },
+    [joints, onAcquire],
+  )
+
+  const releaseActive = useCallback(() => {
+    if (!stateRef.current.isManipulating || !activeIdRef.current) return
+    const activeId = activeIdRef.current
+    const entry = registryRef.current.get(activeId)
+    if (entry) {
+      onRelease?.(activeId, {
+        position: entry.position.clone(),
+        quaternion: entry.quaternion.clone(),
+      })
+    }
+    snapRef.current = null
+    activeIdRef.current = null
+    stateRef.current.isManipulating = false
+    stateRef.current.targetId = null
+  }, [onRelease])
+
   useFrame(() => {
     if (!joints.isTracking) return
     const state = stateRef.current
-    const pinchJustStarted = joints.isPinching && !wasPinching.current
+    const pinchJustStarted =
+      acquisition === 'proximity' && joints.isPinching && !wasPinching.current
+    // Ray acquisition uses pointerdown on the mesh to grab, but release must follow
+    // WebXR selectend (pinch open) — pointerup only fires if the ray still hits the mesh.
     const pinchJustEnded = !joints.isPinching && wasPinching.current
     wasPinching.current = joints.isPinching
 
     if (pinchJustStarted && !state.isManipulating) {
-      const hit = findAcquisitionTarget(
-        technique,
-        joints,
-        registryRef.current,
-        grabDistance,
-        camera.position,
-        shoulderOffset,
-      )
+      const hit = findClosestInRange(joints, registryRef.current, grabDistance)
       if (hit) {
-        const entry = registryRef.current.get(hit)!
-        snapRef.current = createAcquisitionSnapshot(
-          joints,
-          entry.position,
-          entry.quaternion,
-          technique,
-          camera.position,
-          shoulderOffset,
-        )
-        activeIdRef.current = hit
-        state.isManipulating = true
-        state.targetId = hit
-        onAcquire?.(hit)
+        acquireById(hit)
       }
     }
 
@@ -107,8 +137,6 @@ export function useManipulation(options: UseManipulationOptions) {
           joints,
           snapRef.current,
           cdGain,
-          camera.position,
-          shoulderOffset,
         )
         entry.position.copy(result.position)
         entry.quaternion.copy(result.quaternion)
@@ -120,58 +148,29 @@ export function useManipulation(options: UseManipulationOptions) {
     }
 
     if (pinchJustEnded && state.isManipulating) {
-      const entry = registryRef.current.get(activeIdRef.current!)
-      if (entry) {
-        onRelease?.(activeIdRef.current!, {
-          position: entry.position.clone(),
-          quaternion: entry.quaternion.clone(),
-        })
-      }
-      snapRef.current = null
-      activeIdRef.current = null
-      state.isManipulating = false
-      state.targetId = null
+      releaseActive()
     }
   })
 
-  return { register, state: stateRef.current }
+  return { register, state: stateRef.current, acquireById, releaseActive }
 }
 
-function findAcquisitionTarget(
-  technique: ManipulationTechnique,
+function findClosestInRange(
   joints: HandJointData,
   registry: Map<string, ManipulableEntry>,
   grabDistance: number,
-  headPosition: Vector3,
-  shoulderOffset: [number, number, number],
 ): string | null {
-  const isRayTechnique = technique === 'HRI' || technique === 'HRS'
-
-  let rayOrigin: Vector3 | undefined
-  let rayDir: Vector3 | undefined
-
-  if (isRayTechnique) {
-    if (technique === 'HRI') {
-      rayOrigin = joints.wristPosition
-      rayDir = new Vector3(0, 0, -1).applyQuaternion(joints.wristQuaternion)
-    } else {
-      rayOrigin = estimateShoulderPosition(headPosition, joints.wristPosition, shoulderOffset)
-      rayDir = new Vector3().subVectors(joints.wristPosition, rayOrigin).normalize()
-    }
-  }
-
   let closestId: string | null = null
   let closestDist = Infinity
 
   for (const [id, entry] of registry) {
-    let dist: number
-    if (isRayTechnique) {
-      if (!rayHitsObject(rayOrigin!, rayDir!, entry.position, entry.hitRadius)) continue
-      dist = entry.position.distanceTo(rayOrigin!)
-    } else {
-      dist = joints.thumbTipPosition.distanceTo(entry.position)
-      if (dist > grabDistance) continue
-    }
+    const dist = distancePointToObb(
+      joints.thumbTipPosition,
+      entry.position,
+      entry.quaternion,
+      entry.hitHalfExtents,
+    )
+    if (dist > grabDistance) continue
     if (dist < closestDist) {
       closestDist = dist
       closestId = id
