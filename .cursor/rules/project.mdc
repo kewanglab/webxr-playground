@@ -9,6 +9,7 @@ alwaysApply: true
 - Roadmap: `docs/roadmap.md`
 - Known bugs and footguns: `docs/pitfalls.md`
 - Lab registry and routing: `src/config/labs.ts`
+- Lab scene headers: `src/labs/LabHeading.tsx` — **title** = `getLabTitle(labId)` from `src/config/labs.ts`, **subtitle** = concise Leva / mode configuration string.
 
 Prefer small, focused changes and match existing patterns in touched files.
 

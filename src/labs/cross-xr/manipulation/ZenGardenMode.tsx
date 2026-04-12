@@ -1,5 +1,4 @@
 import { Text } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
 import { useCallback, useMemo } from 'react'
 import {
   DoubleSide,
@@ -11,17 +10,17 @@ import {
   RGBAFormat,
   UnsignedByteType,
 } from 'three'
-import type { ManipulationTechnique } from '../ObjectManipulationLab'
+import type { ManipulationAcquisition, ManipulationTechnique } from '../ObjectManipulationLab'
 import { tuningPresets } from '../../../config/labs'
 import { useHandJoints } from './useHandJoints'
 import { useManipulation } from './useManipulation'
 import { ManipulableObject } from './ManipulableObject'
-import { RayVisual } from './RayVisual'
 import { CherryPetals } from './CherryPetals'
 import { usePlaygroundStore } from '../../../app/store'
 import { xrStore } from '../../../xr/core/xrStore'
 
 type ZenGardenModeProps = {
+  acquisition: ManipulationAcquisition
   technique: ManipulationTechnique
   objectSize: number
   grabDistance: number
@@ -37,6 +36,30 @@ type GardenObject = {
   rotation?: [number, number, number]
   geometry: 'stone-flat' | 'stone-tall' | 'branch' | 'pebble' | 'crystal' | 'moss-rock' | 'flower'
   color: string
+}
+
+/** Local-space AABB half-extents for pinch proximity (matches composite mesh bounds). */
+function zenGardenHitHalfExtents(
+  geometry: GardenObject['geometry'],
+  size: number,
+): [number, number, number] {
+  const s = size
+  switch (geometry) {
+    case 'stone-flat':
+      return [(1.4 * s) / 2, (0.35 * s) / 2, (1.1 * s) / 2]
+    case 'stone-tall':
+      return [(0.55 * s) / 2, (1.4 * s) / 2, (0.65 * s) / 2]
+    case 'branch':
+      return [0.42 * s, 0.95 * s, 0.2 * s]
+    case 'pebble':
+      return [0.35 * s, 0.35 * s, 0.35 * s]
+    case 'crystal':
+      return [0.45 * s, 0.45 * s, 0.45 * s]
+    case 'moss-rock':
+      return [0.52 * s, 0.58 * s, 0.52 * s]
+    case 'flower':
+      return [0.26 * s, 0.52 * s, 0.26 * s]
+  }
 }
 
 const GARDEN_OBJECTS: GardenObject[] = [
@@ -179,9 +202,14 @@ function useSandTexture() {
   }, [])
 }
 
-export function ZenGardenMode({ technique, objectSize, grabDistance, cdGain }: ZenGardenModeProps) {
+export function ZenGardenMode({
+  acquisition,
+  technique,
+  objectSize,
+  grabDistance,
+  cdGain,
+}: ZenGardenModeProps) {
   const joints = useHandJoints('right')
-  const { camera } = useThree()
   const addLogEntry = usePlaygroundStore((s) => s.addLogEntry)
   const currentLab = usePlaygroundStore((s) => s.currentLab)
   const sandTexture = useSandTexture()
@@ -200,16 +228,14 @@ export function ZenGardenMode({ technique, objectSize, grabDistance, cdGain }: Z
     [technique, addLogEntry, currentLab],
   )
 
-  const { register, state } = useManipulation({
+  const { register, state, acquireById, releaseActive } = useManipulation({
+    acquisition,
     technique,
     joints,
     cdGain,
     grabDistance,
-    shoulderOffset: DEFAULTS.shoulderOffsetRight,
     onRelease,
   })
-
-  const isRayTechnique = technique === 'HRI' || technique === 'HRS'
 
   return (
     <group>
@@ -294,9 +320,11 @@ export function ZenGardenMode({ technique, objectSize, grabDistance, cdGain }: Z
               ? new Quaternion().setFromEuler(new Euler(...def.rotation))
               : undefined
           }
-          hitRadius={objectSize * 0.8}
+          hitHalfExtents={zenGardenHitHalfExtents(def.geometry, objectSize)}
           register={register}
           isActive={state.targetId === def.id}
+          onPointerDown={acquisition === 'ray' ? () => acquireById(def.id) : undefined}
+          onPointerUp={acquisition === 'ray' ? () => releaseActive() : undefined}
         >
           <GardenObjectMesh def={def} size={objectSize} />
         </ManipulableObject>
@@ -315,13 +343,6 @@ export function ZenGardenMode({ technique, objectSize, grabDistance, cdGain }: Z
         </Text>
       )}
 
-      <RayVisual
-        joints={joints}
-        technique={technique}
-        shoulderOffset={DEFAULTS.shoulderOffsetRight}
-        headPosition={camera.position}
-        visible={isRayTechnique && !state.isManipulating}
-      />
     </group>
   )
 }

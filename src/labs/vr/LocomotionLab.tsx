@@ -1,4 +1,3 @@
-import { Text } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { IfInSessionMode, TeleportTarget, useXRInputSourceState } from '@react-three/xr'
 import { useControls } from 'leva'
@@ -6,7 +5,9 @@ import { stepperNumber } from '../../ui/levaPlugins/stepperNumber'
 import { useRef } from 'react'
 import { Vector3 } from 'three'
 import { usePlaygroundStore } from '../../app/store'
-import { tuningPresets } from '../../config/labs'
+import { getLabTitle, tuningPresets } from '../../config/labs'
+import { LabHeading } from '../LabHeading'
+import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
 
 export function LocomotionLab() {
   const defaults = tuningPresets.controller.locomotion
@@ -62,6 +63,12 @@ export function LocomotionLab() {
 
   const turnLatch = useRef(false)
 
+  const moveSpeedN = readLevaNumber(moveSpeed, defaults.moveSpeed)
+  const moveDeadN = readLevaNumber(moveDeadzone, defaults.moveDeadzone)
+  const turnDeadN = readLevaNumber(turnDeadzone, defaults.turnDeadzone)
+  const snapDegN = readLevaNumber(snapTurnAngleDeg, defaults.snapTurnAngleDeg)
+  const smoothDegN = readLevaNumber(smoothTurnSpeedDeg, defaults.smoothTurnSpeedDeg)
+
   useFrame((_, delta) => {
     if (!controller?.gamepad) return
     const thumbstick = controller.gamepad['xr-standard-thumbstick']
@@ -79,18 +86,18 @@ export function LocomotionLab() {
     yawForward.applyAxisAngle(new Vector3(0, 1, 0), originRotationY)
 
     // Smooth move (thumbstick forward/back). Forward stick is usually negative y.
-    if (Math.abs(yAxis) > moveDeadzone) {
+    if (Math.abs(yAxis) > moveDeadN) {
       const nextPos = originPosition.clone().addScaledVector(
         yawForward,
-        -yAxis * moveSpeed * delta,
+        -yAxis * moveSpeedN * delta,
       )
       setOriginPosition(nextPos)
     }
 
     // Turning (thumbstick left/right)
-    const turnActive = Math.abs(xAxis) > turnDeadzone
-    const snapAngleRad = (snapTurnAngleDeg * Math.PI) / 180
-    const smoothTurnSpeedRad = (smoothTurnSpeedDeg * Math.PI) / 180
+    const turnActive = Math.abs(xAxis) > turnDeadN
+    const snapAngleRad = (snapDegN * Math.PI) / 180
+    const smoothTurnSpeedRad = (smoothDegN * Math.PI) / 180
 
     if (turnMode === 'snap') {
       if (turnActive && !turnLatch.current) {
@@ -116,15 +123,10 @@ export function LocomotionLab() {
 
   return (
     <group>
-      <Text
-        position={[0, 1.5, -2]}
-        fontSize={0.15}
-        color="#888"
-        anchorX="center"
-        anchorY="middle"
-      >
-        Locomotion Lab — Phase 2
-      </Text>
+      <LabHeading
+        title={getLabTitle('locomotion')}
+        subtitle={`${stickHand} stick · Move ${moveSpeedN.toFixed(1)} · ${turnMode} (${turnMode === 'snap' ? `${Math.round(snapDegN)}°` : `${Math.round(smoothDegN)}°/s`})`}
+      />
 
       <IfInSessionMode allow="immersive-vr">
         <TeleportTarget

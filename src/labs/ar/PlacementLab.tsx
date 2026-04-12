@@ -10,7 +10,9 @@ import { useMemo, useRef, useState } from 'react'
 import { Matrix4, Quaternion, Vector3, type Mesh } from 'three'
 import { useHapticPulse } from '../../xr/feedback/haptics/useHapticPulse'
 import { useConfirmTone } from '../../xr/feedback/audio/useConfirmTone'
-import { tuningPresets } from '../../config/labs'
+import { getLabTitle, tuningPresets } from '../../config/labs'
+import { LabHeading } from '../LabHeading'
+import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
 
 export function PlacementLab() {
   const defaults = tuningPresets.controller.placement
@@ -40,17 +42,15 @@ export function PlacementLab() {
 
   const [placed, setPlaced] = useState<Placed[]>([])
 
+  const objSize = readLevaNumber(objectSize, defaults.objectSize)
+  const previewOp = readLevaNumber(previewOpacity, defaults.previewOpacity)
+
   return (
     <group>
-      <Text
-        position={[0, 1.5, -2]}
-        fontSize={0.15}
-        color="#888"
-        anchorX="center"
-        anchorY="middle"
-      >
-        Placement Lab — Phase 2 (Hit-test placement)
-      </Text>
+      <LabHeading
+        title={getLabTitle('placement')}
+        subtitle={`Object ${objSize.toFixed(2)} · Preview ${previewOp.toFixed(2)} · Haptics ${enableHaptics ? 'on' : 'off'} · Audio ${enableAudio ? 'on' : 'off'}`}
+      />
 
       <IfInSessionMode allow="immersive-ar">
         <group>
@@ -68,7 +68,7 @@ export function PlacementLab() {
                 },
               ])
             }}
-            objectSize={objectSize}
+            objectSize={objSize}
             mode="controller"
             enableHaptics={enableHaptics}
             enableAudio={enableAudio}
@@ -88,7 +88,7 @@ export function PlacementLab() {
                 },
               ])
             }}
-            objectSize={objectSize}
+            objectSize={objSize}
             mode="hand"
             enableHaptics={enableHaptics}
             enableAudio={enableAudio}
@@ -96,7 +96,7 @@ export function PlacementLab() {
 
           {placed.map((p) => (
             <mesh key={p.id} position={p.position} quaternion={p.quaternion}>
-              <boxGeometry args={[objectSize, objectSize, objectSize]} />
+              <boxGeometry args={[objSize, objSize, objSize]} />
               <meshStandardMaterial
                 color={p.source === 'ray' ? '#3b82f6' : '#f59e0b'}
               />

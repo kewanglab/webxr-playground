@@ -4,7 +4,7 @@
 
 **Overview** is the stable reference for *what this project is* and *how it is shaped*: goals, product intent, stack and XR patterns, architecture, directory map, state conventions, agent rules, device testing, logging, and working principles. It changes when architecture or conventions change—not every sprint.
 
-**Related docs:** [Roadmap](./roadmap.md) (phases and what to build next), [Pitfalls](./pitfalls.md) (bugs and footguns we already hit), [README](../README.md) (quick start and repo entry).
+**Related docs:** [Roadmap](./roadmap.md) (phases and what to build next), [Pitfalls](./pitfalls.md) (bugs and footguns we already hit), [Spatial polish plan](./spatial-polish-plan.md) and [style templates](./style-templates/README.md) (2D shell vs 3D XR specs), [README](../README.md) (quick start and repo entry).
 
 ---
 
@@ -339,6 +339,8 @@ The project is developed with AI coding agents as primary collaborators. The fol
 
 - **[Overview](./overview.md)** — stable architecture and conventions (this document)
 - **[Roadmap](./roadmap.md)** — phases and near-term build priorities
+- **[Spatial polish plan](./spatial-polish-plan.md)** — visual direction and configurable theming plan
+- **[Style templates](./style-templates/README.md)** — implementable specs: [Shell 2D](./style-templates/shell-2d.md), [XR 3D](./style-templates/xr-3d.md)
 - **[Pitfalls](./pitfalls.md)** — mistakes to avoid; read before risky changes (Leva plugins, R3F layout, etc.)
 - **[README](../README.md)** — repo entry and quick start
 - **[project-plan.md](./project-plan.md)** — index of the above (for old links)
