@@ -2,47 +2,21 @@
 
 This document captures the agreed direction for elevating visual polish across the XR Interaction Playground: desktop shell, shared VR/AR foundations, in-headset HUD, and per-lab staging. It is optimized for **Quest-class WebXR** (steady frame time, few lights, simple materials).
 
-**Theme note:** Fictional references below are **mood and composition guides only** (palette, typography, shape language)—not likenesses or franchise assets.
+**Mood, film references, and WebXR craft links** live in the style templates: [Shell — Inspiration](./style-templates/shell-2d.md#inspiration), [XR — Inspiration](./style-templates/xr-3d.md#inspiration).
 
-**2D review mockups** (annotated concept frames) live in [`docs/mockups/spatial-polish/`](./mockups/spatial-polish/README.md). Those frames predate the **Her / Fifth Element / Loki** direction; replace or regenerate mockups once the theme config and presets are settled.
+**Execution readiness:** This plan is **ready to implement** when you treat [shell-2d.md](./style-templates/shell-2d.md) and [xr-3d.md](./style-templates/xr-3d.md) as the numeric/component source of truth and follow the [Execution guide](#execution-guide) below (file manifest, state wiring, acceptance checks).
 
-**Related:** [Overview](./overview.md), [Pitfalls](./pitfalls.md) (Leva, drei `Text`), lab registry in [`src/config/labs.ts`](../src/config/labs.ts). **Style specs:** [Shell 2D](./style-templates/shell-2d.md), [XR 3D](./style-templates/xr-3d.md), [templates index](./style-templates/README.md).
-
-### Mockup gallery
-
-![Desktop playground shell](./mockups/spatial-polish/01-desktop-playground-shell.png)
-
-![VR environment atmosphere](./mockups/spatial-polish/02-vr-environment-atmosphere.png)
-
-![AR alignment overlay](./mockups/spatial-polish/03-ar-alignment-overlay.png)
-
-![In-XR HUD panel](./mockups/spatial-polish/04-in-xr-hud-panel.png)
-
-![Lab stages overview](./mockups/spatial-polish/05-lab-stages-overview.png)
+**Related:** [Overview](./overview.md), [Pitfalls](./pitfalls.md) (Leva, drei `Text`), lab registry in [`src/config/labs.ts`](../src/config/labs.ts). **Visual specs:** [Shell 2D](./style-templates/shell-2d.md), [XR 3D](./style-templates/xr-3d.md), [style templates index](./style-templates/README.md).
 
 ---
 
-## Inspiration (web + industry patterns)
+## Code map
 
-- [Meta WebXR performance best practices](https://developers.meta.com/horizon/documentation/web/webxr-perf-bp/) — reduce overdraw, avoid per-frame allocations/GC hot paths, validate on device.
-- [MDN WebXR performance guide](https://developer.mozilla.org/en-US/docs/Web/API/WebXR_Device_API/Performance) — balance quality, depth precision, materials, and scene complexity vs frame rate.
-- **Spatial UI** — hierarchy uses depth, reach, and motion; avoid flat 2D UI pasted into 3D without comfortable placement and clear states.
-- [Mozilla Hello WebXR — visual development](https://blog.mozvr.com/visualdev-hello-webxr/) — readable **simple materials**, **limited textures**, **art-directed color** over heavy shader stacks.
+Files that typically change for this effort:
 
-## Inspiration (film / TV — creative direction)
+[`src/app/LabContent.tsx`](../src/app/LabContent.tsx), [`src/ui/PlaygroundControls.tsx`](../src/ui/PlaygroundControls.tsx), [`src/ui/DebugPanel.tsx`](../src/ui/DebugPanel.tsx), [`src/xr/scene/SharedScene.tsx`](../src/xr/scene/SharedScene.tsx), [`src/xr/scene/VRScene.tsx`](../src/xr/scene/VRScene.tsx), [`src/xr/scene/ARScene.tsx`](../src/xr/scene/ARScene.tsx), [`src/xr/hud/TagAlongHUD.tsx`](../src/xr/hud/TagAlongHUD.tsx), and lab files under [`src/labs/`](../src/labs/).
 
-**Web page + configuration UI (Leva, controls, logger): *Her*-like**
-
-- Warm, quiet, **human** interface: paper-adjacent off-whites and dusty rose / peach / soft coral accents (not loud product red).
-- **Lots of breathing room**, soft radii, low-contrast dividers, **humanist sans** for labels; interactions feel calm and legible, not “gamer HUD.”
-- Buttons and chips: subtle elevation or hairline border—not heavy chrome.
-
-**XR environments + in-world chrome: *The Fifth Element* + *Loki* (TVA)**
-
-- **Fifth Element energy:** dense future-city **vertical rhythm** as *layout* inspiration—stacked bands, strong **orange / amber / cyan** accents, **neon rim reads** on interactive props, playful legibility at a glance (still low-poly and cheap materials).
-- **Loki / TVA discipline:** **institutional** mustard, tan stone, and deep brown-red; **circular seal / stamp** motifs for HUD frames and mode badges; **monospace or narrow** type for “instrument” lines (FPS, logs); **brutalist** slabs and corridors translated into simple boxes and arches in the lab stages.
-
-**Code touchpoints:** [`src/app/LabContent.tsx`](../src/app/LabContent.tsx), [`src/ui/PlaygroundControls.tsx`](../src/ui/PlaygroundControls.tsx), [`src/ui/DebugPanel.tsx`](../src/ui/DebugPanel.tsx), [`src/xr/scene/SharedScene.tsx`](../src/xr/scene/SharedScene.tsx), [`src/xr/scene/VRScene.tsx`](../src/xr/scene/VRScene.tsx), [`src/xr/scene/ARScene.tsx`](../src/xr/scene/ARScene.tsx), [`src/xr/hud/TagAlongHUD.tsx`](../src/xr/hud/TagAlongHUD.tsx), and lab files under [`src/labs/`](../src/labs/).
+**Creative summary:** Shell = soft, intimate control room ([shell-2d](./style-templates/shell-2d.md)); XR = playful institutional future ([xr-3d](./style-templates/xr-3d.md)); performance guardrails = template Principles + [Non-goals](#non-goals-v1) below.
 
 ---
 
@@ -82,16 +56,6 @@ flowchart TD
 
 ---
 
-## Design direction
-
-**Shell thesis (*Her*):** *Soft, intimate control room* — warm neutrals, coral/peach accent, calm typography, configuration UI feels like correspondence, not a cockpit.
-
-**XR thesis (*Fifth Element* + *Loki*):** *Playful institutional future* — bold but readable accents, circular HUD frames, vertical staging bands, monospace instrument lines; still **one skydome, one grid, few lights**.
-
-**Performance thesis:** *Cheap materials, few lights, shared meshes/materials, motion only where it teaches* — no default post-processing on Quest; cap curve segments; limit `Text` instances; reuse geometries via shared helpers. Theme switching must **not** allocate new objects every frame—apply preset changes in `useEffect` or on store update, reuse materials where possible.
-
----
-
 ## 1) Control interface (desktop + tuning)
 
 **Current:** Bottom-left inline-styled buttons; Leva with width/font tweaks only.
@@ -102,8 +66,6 @@ flowchart TD
 - **CSS design tokens:** Generated from **`shell`** preset (see [Configurable theming](#configurable-theming-do-this-first)) — surface, border, accent, muted text, radii — shared by playground chrome and the test logger panel.
 - **Leva theme:** Built from the same preset via **`levaThemeFromShell`** so the tuning panel matches the *Her*-like page.
 - **Later (optional):** Minimal 3D companion panels near TagAlong HUD; avoid heavy `Html` overlays everywhere.
-
-**Mockup:** [`mockups/spatial-polish/01-desktop-playground-shell.png`](./mockups/spatial-polish/01-desktop-playground-shell.png)
 
 ---
 
@@ -119,8 +81,6 @@ flowchart TD
 
 **AR** ([`ARScene.tsx`](../src/xr/scene/ARScene.tsx)): Passthrough-first; optional thin **alignment ring** or horizon cue, toggleable, additive/low-poly — **`xr.ar.stroke`** and **`xr.ar.opacity`** (same spec).
 
-**Mockup:** [`mockups/spatial-polish/02-vr-environment-atmosphere.png`](./mockups/spatial-polish/02-vr-environment-atmosphere.png), [`mockups/spatial-polish/03-ar-alignment-overlay.png`](./mockups/spatial-polish/03-ar-alignment-overlay.png)
-
 ---
 
 ## 3) In-headset HUD
@@ -128,8 +88,6 @@ flowchart TD
 **Current:** Bare `Text` for FPS and logger in [`TagAlongHUD`](../src/xr/hud/TagAlongHUD.tsx).
 
 **Proposed:** One shared **rounded translucent panel** behind stats + log (single shared material). **Loki/TVA** cue: subtle **circular** outer frame or corner “seal” weight; **instrument** text in **mono** from tokens. Colors from **`xr.hud`**. Validate that FPS text updates do not hitch; throttle if needed.
-
-**Mockup:** [`mockups/spatial-polish/04-in-xr-hud-panel.png`](./mockups/spatial-polish/04-in-xr-hud-panel.png)
 
 ---
 
@@ -144,8 +102,6 @@ flowchart TD
 
 **Implementation:** Small `src/xr/visual/` (or similar) that imports **`xr`** tokens from the theme preset (not hardcoded hex), plus shared materials and reused geometries.
 
-**Mockup:** [`mockups/spatial-polish/05-lab-stages-overview.png`](./mockups/spatial-polish/05-lab-stages-overview.png)
-
 ---
 
 ## 5) Validation
@@ -156,14 +112,86 @@ flowchart TD
 
 ---
 
+## Execution guide
+
+### Spec authority
+
+| Layer | Canonical doc | Code must |
+|-------|----------------|-----------|
+| 2D colors, type, **spacing grid** (`micro` + 4px multiples, `shell.space.xxl`, etc.) | [shell-2d.md](./style-templates/shell-2d.md) | Mirror tokens in `shell`; emit `--pg-shell-*` CSS variables |
+| 3D environment, lights, HUD, accents, lab routing | [xr-3d.md](./style-templates/xr-3d.md) | Mirror tokens in `xr`; use `THREE.Color` from preset in R3F |
+
+### Files to add
+
+| Path | Responsibility |
+|------|----------------|
+| [`src/config/playgroundTheme.ts`](../src/config/playgroundTheme.ts) (new) | Preset records: `id`, `shell`, `xr`; export `playgroundPresets`, `getPlaygroundPreset(id)`, `defaultPlaygroundPresetId`, `levaThemeFromShell(shell)` |
+| [`src/app/applyShellTheme.ts`](../src/app/applyShellTheme.ts) (new) | `applyShellTheme(shell: ShellTokens): void` — writes `--pg-shell-*` on `document.documentElement` |
+| [`src/xr/theme/PlaygroundThemeContext.tsx`](../src/xr/theme/PlaygroundThemeContext.tsx) (new) | React context providing active **full preset** (or `xr` + `presetId`) for R3F; `usePlaygroundTheme()` hook |
+
+Naming is flexible (`applyShellTheme` vs `applyPlaygroundTheme`) as long as there is **one** writer for CSS variables and **one** context for XR.
+
+### Files to modify
+
+| Path | Change |
+|------|--------|
+| [`src/app/store.ts`](../src/app/store.ts) | Add `themePresetId: string`, `setThemePresetId`; optional hydration helper — keep theme next to `currentLab` |
+| [`src/app/App.tsx`](../src/app/App.tsx) | On preset change: `applyShellTheme(preset.shell)`; wrap Canvas / XR tree with `PlaygroundThemeProvider` keyed by `themePresetId` |
+| [`src/main.tsx`](../src/main.tsx) | On startup: read `URLSearchParams` `theme` then `localStorage` key **`xr-playground-theme`**; if valid preset id, seed store before render (or single effect in App) |
+| [`src/ui/DebugPanel.tsx`](../src/ui/DebugPanel.tsx) | Pass `theme={levaThemeFromShell(preset.shell)}` (and existing sizes) to `<Leva />` |
+| [`src/ui/PlaygroundControls.tsx`](../src/ui/PlaygroundControls.tsx) | Layout + session/experiments groups; styles via CSS variables; theme preset `<select>` or chips; lab **mode** badge + description from [`labs`](../src/config/labs.ts) + `currentLab` |
+| [`src/ui/TestLoggerPanel.tsx`](../src/ui/TestLoggerPanel.tsx) | Same shell variables / typography as playground chrome |
+| [`src/xr/scene/SharedScene.tsx`](../src/xr/scene/SharedScene.tsx), [`VRScene.tsx`](../src/xr/scene/VRScene.tsx), [`ARScene.tsx`](../src/xr/scene/ARScene.tsx) | Consume `xr` from theme context; fog, skydome, grid, floor, optional AR ring |
+| [`src/xr/hud/InXRStats.tsx`](../src/xr/hud/InXRStats.tsx), [`InXRLogger.tsx`](../src/xr/hud/InXRLogger.tsx), [`TagAlongHUD`](../src/xr/hud/TagAlongHUD.tsx) subtree | HUD panel mesh + colors from `xr.hud`; throttle stats label updates if Quest hitches |
+| Lab files under [`src/labs/`](../src/labs/) | Staging passes; use `xr.accent.*` / per-lab map keyed by [`LabId`](../src/config/labs.ts) |
+
+Optional later: [`src/xr/visual/`](../src/xr/visual/) shared materials/helpers to avoid duplicated `useMemo` patterns.
+
+### Theme persistence (constants)
+
+- **`localStorage` key:** `xr-playground-theme` — value = preset id string (e.g. `default`, `shellCool`).
+- **URL query:** `?theme=<presetId>` — applied once on load; optional: updating the picker pushes `history.replaceState` so links are shareable (nice-to-have).
+- **Invalid id:** fall back to `defaultPlaygroundPresetId`.
+
+### XR consumption pattern
+
+- **Do not** read CSS custom properties inside `useFrame` or per render for Three materials.
+- **Do** pass the active preset (or `xr`) via **React context** from `App` / `XRRoot` so `SharedScene`, `VRScene`, labs, and HUD call `usePlaygroundTheme()` and `useMemo` colors/materials when `presetId` changes.
+- On preset switch, **dispose** or **update** reusable materials in `useEffect` to avoid leaks and stale colors.
+
+### Phase acceptance (definition of done)
+
+| Phase | Scope | Done when |
+|-------|--------|-----------|
+| **A — Theme core** | `playgroundTheme.ts`, `applyShellTheme`, context, store + persistence + URL | Switching preset updates CSS vars, Leva chrome, and XR scene colors without reload; no new per-frame allocations from theming |
+| **B — Shell UI** | `PlaygroundControls`, `TestLoggerPanel` | Session vs experiments layout; mode badges (`labs[].mode` → `VR` / `AR` / `cross-xr`); description line; spacing uses [shell spacing grid](./style-templates/shell-2d.md#spacing--layout) |
+| **C — VR foundation** | `SharedScene`, `VRScene` | Fog + skydome + grid/floor match `xr` spec defaults; Quest spot-check stable FPS |
+| **D — HUD** | TagAlong subtree | Panel + seal/circular cue; metric color from `xr.hud.textMetric` |
+| **E — AR + labs** | `ARScene` overlay; four labs | Optional ring uses `xr.ar.*`; staging uses accent routing table from [xr-3d.md](./style-templates/xr-3d.md) |
+
+### Non-goals (v1)
+
+- No **post-processing** stack (bloom, SSAO) on Quest by default.
+- No **heavy `Html`** from drei for full shell parity inside XR.
+- No new **glTF asset pipeline** unless a lab explicitly needs it; prefer primitives + tokens.
+
+### Pitfalls (mandatory read before touch)
+
+- [Leva: custom plugins, numeric defaults](./pitfalls.md) — especially geometry driven by Leva.
+- [drei `Text` not inside `mesh`](./pitfalls.md).
+- Stats: if `setState` in `useFrame` causes jank, throttle or use refs for numeric display.
+
+---
+
 ## Implementation order
 
-1. **`playgroundTheme.ts` + apply to CSS + Leva + THREE** (presets, persistence, small theme picker in shell)  
-2. Desktop shell layout (*Her*-like) using shell variables  
-3. VR atmosphere (skydome, fog, grid/floor) driven by **`xr`** tokens (*Fifth Element* mood)  
-4. HUD panel chrome (*Loki* circular / institutional cues)  
-5. Lab stages (Selection + Locomotion first, then Placement + Manipulation) consuming **`xr.accent.*`** per lab routing in [xr-3d.md](./style-templates/xr-3d.md) (Per-lab accent routing table; implement as `Record<LabId, …>` or similar in theme code)  
-6. Regenerate or replace mockups under `docs/mockups/spatial-polish/` to match the new palette
+1. **Phase A** — `playgroundTheme.ts`, `applyShellTheme`, `PlaygroundThemeContext`, store + `localStorage` + `?theme=`  
+2. **Phase B** — `PlaygroundControls` + `TestLoggerPanel` (*Her*-like) using `--pg-shell-*`  
+3. **Phase C** — `SharedScene` / `VRScene` (*Fifth Element* mood) from context `xr`  
+4. **Phase D** — TagAlong HUD panel + instrument styling (`xr.hud`)  
+5. **Phase E** — `ARScene` optional overlay; lab staging (**Selection** + **Locomotion** first, then **Placement** + **Manipulation**) via `Record<LabId, …>` + [xr-3d per-lab table](./style-templates/xr-3d.md)  
+
+This order matches the [phase acceptance](#phase-acceptance-definition-of-done) table (phases **A–E**).
 
 ```mermaid
 flowchart LR
@@ -186,16 +214,18 @@ flowchart LR
 
 ## Tracking checklist
 
-Use this list when implementing; status is manual (not synced to Cursor plans).
+Use this list when implementing; status is manual (not synced to Cursor plans). Align completed rows with [phases](#phase-acceptance-definition-of-done).
 
-- [ ] `src/config/playgroundTheme.ts` — `shell`, `xr`, presets, `levaThemeFromShell`  
-- [ ] Apply shell → CSS variables; wire `DebugPanel` / Leva to preset  
-- [ ] Theme picker + `localStorage` + optional `?theme=` query  
-- [ ] `PlaygroundControls` layout and lab metadata (*Her*-like)  
-- [ ] `SharedScene` / `VRScene`: colors from `xr` (hemisphere optional, fog, skydome, grid/floor)  
-- [ ] `ARScene`: optional alignment overlay + toggle (`xr.ar.stroke` / `xr.ar.opacity`)  
-- [ ] `TagAlongHUD`: panel + circular / institutional HUD cues (`xr.hud`)  
-- [ ] Shared `src/xr/visual/` helpers (read theme, no scattered hex)  
-- [ ] Selection / Locomotion / Placement / Manipulation staging passes  
-- [ ] Updated mockups in `docs/mockups/spatial-polish/`  
-- [ ] Quest validation notes in PR or commit message  
+- [ ] **A** `src/config/playgroundTheme.ts` — `shell`, `xr`, presets, `levaThemeFromShell`, `getPlaygroundPreset`, `defaultPlaygroundPresetId`  
+- [ ] **A** `src/app/applyShellTheme.ts` — writes `--pg-shell-*` from [shell-2d.md](./style-templates/shell-2d.md)  
+- [ ] **A** `src/xr/theme/PlaygroundThemeContext.tsx` + provider from `App.tsx` / XR tree  
+- [ ] **A** `src/app/store.ts` — `themePresetId` + setter; hydrate from `?theme=` + `localStorage` key **`xr-playground-theme`** in `main.tsx` or `App`  
+- [ ] **A** `DebugPanel.tsx` — Leva `theme` from `levaThemeFromShell(preset.shell)`  
+- [ ] **B** `PlaygroundControls.tsx` — groups, badges from `labs[].mode`, description, theme picker  
+- [ ] **B** `TestLoggerPanel.tsx` — shell CSS variables / spacing grid  
+- [ ] **C** `SharedScene.tsx` / `VRScene.tsx` — `xr` lights, fog, skydome, grid, floor  
+- [ ] **E** `ARScene.tsx` — optional overlay + toggle (`xr.ar.stroke` / `xr.ar.opacity`)  
+- [ ] **D** `TagAlongHUD` / `InXRStats` / `InXRLogger` — panel chrome, throttle stats if needed  
+- [ ] **E** Lab staging: Selection, Locomotion, Placement, Manipulation — `Record<LabId, …>` accents per [xr-3d.md](./style-templates/xr-3d.md)  
+- [ ] **E** Optional `src/xr/visual/` helpers (shared materials, no scattered hex)  
+- [ ] Quest validation + preset switch smoke test; PR / commit mentions any perf notes  

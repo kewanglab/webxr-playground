@@ -6,6 +6,24 @@
 
 ---
 
+## Inspiration
+
+**Fictional and cultural references** are **mood guides only**—palette, typography, shape language—not likenesses, franchise assets, or literal UI copies.
+
+### Film / culture: *Her*
+
+The **web page and configuration surfaces** (Leva, playground chrome, logger) lean *Her*-like:
+
+- Warm, quiet, **human** interface: paper-adjacent off-whites and dusty rose / peach / soft coral accents (not loud product red).
+- **Lots of breathing room**, soft radii, low-contrast dividers, **humanist sans** for labels; interactions feel calm and legible, not “gamer HUD.”
+- Buttons and chips: subtle elevation or hairline border—not heavy chrome.
+
+### Where the rest of the product lives
+
+In-headset worlds, HUD chrome, and lab props follow **[xr-3d.md](./xr-3d.md)** (*The Fifth Element* / *Loki* mood + WebXR craft). Cross-cutting execution plan: [spatial polish plan](../spatial-polish-plan.md).
+
+---
+
 ## Theme object shape (code)
 
 **Recommendation:** In `playgroundTheme`, put **all** 2D shell tokens—colors, type stacks, spacing, and radii—under a single **`shell`** object. That gives one mental model (“everything for HTML/CSS overlays”) and one `applyShellToCss(shell)` (or equivalent) that can emit variables for colors **and** for spacing/radius.
