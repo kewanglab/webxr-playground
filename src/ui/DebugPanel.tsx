@@ -7,11 +7,22 @@ export function DebugPanel() {
   const shell = getPlaygroundPreset(themePresetId).shell
 
   return (
-    <Leva
-      collapsed={false}
-      theme={{
-        ...levaThemeFromShell(shell),
+    <div
+      style={{
+        flex: '0 1 auto',
+        minHeight: 0,
+        overflow: 'visible',
+        width: '100%',
+        pointerEvents: 'auto',
       }}
-    />
+    >
+      <Leva
+        fill
+        collapsed={false}
+        theme={{
+          ...levaThemeFromShell(shell),
+        }}
+      />
+    </div>
   )
 }

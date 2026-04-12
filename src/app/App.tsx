@@ -3,8 +3,10 @@ import { Stats } from '@react-three/drei'
 import { useLayoutEffect } from 'react'
 import { XRRoot } from '../xr/core/XRRoot'
 import { PlaygroundControls } from '../ui/PlaygroundControls'
+import { AppearanceSettingsDock } from '../ui/AppearanceSettingsDock'
 import { DebugPanel } from '../ui/DebugPanel'
 import { TestLoggerPanel } from '../ui/TestLoggerPanel'
+import { ShellRightRail } from '../ui/ShellRightRail'
 import { getPlaygroundPreset } from '../config/playgroundTheme'
 import { applyShellTheme } from './applyShellTheme'
 import { PlaygroundThemeProvider } from '../xr/theme/PlaygroundThemeContext'
@@ -34,8 +36,11 @@ export function App() {
     <>
       <ThemedCanvas />
       <PlaygroundControls />
-      <DebugPanel />
-      <TestLoggerPanel />
+      <AppearanceSettingsDock />
+      <ShellRightRail>
+        <DebugPanel />
+        <TestLoggerPanel />
+      </ShellRightRail>
     </>
   )
 }
