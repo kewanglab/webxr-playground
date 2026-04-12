@@ -4,6 +4,7 @@ import { Euler, Quaternion, Vector3 } from 'three'
 import type { ManipulationAcquisition, ManipulationTechnique } from '../ObjectManipulationLab'
 import type { ManipulationResult } from './techniques'
 import { tuningPresets } from '../../../config/labs'
+import { usePlaygroundTheme } from '../../../xr/theme/PlaygroundThemeContext'
 import { useHandJoints } from './useHandJoints'
 import { useManipulation } from './useManipulation'
 import { ManipulableObject } from './ManipulableObject'
@@ -105,6 +106,7 @@ export function DockingMode({
   grabDistance,
   cdGain,
 }: DockingModeProps) {
+  const { labAccents, xr } = usePlaygroundTheme()
   const joints = useHandJoints('right')
 
   const trials = useMemo(() => generateTrials(), [])
@@ -166,7 +168,7 @@ export function DockingMode({
         <Text
           position={[0, 1.25, -1]}
           fontSize={0.07}
-          color="#94a3b8"
+          color={xr.hud.textMuted}
           anchorX="center"
           anchorY="middle"
         >
@@ -181,7 +183,7 @@ export function DockingMode({
       <Text
         position={[0.4, 1.6, -0.7]}
         fontSize={0.05}
-        color="#94a3b8"
+        color={xr.hud.textMuted}
         anchorX="left"
         anchorY="middle"
       >
@@ -192,7 +194,7 @@ export function DockingMode({
         <Text
           position={[0.4, 1.53, -0.7]}
           fontSize={0.04}
-          color="#64748b"
+          color={xr.accent.stone}
           anchorX="left"
           anchorY="middle"
         >
@@ -206,7 +208,11 @@ export function DockingMode({
         quaternion={currentTrial.targetQuaternion}
       >
         <boxGeometry args={[objectSize, objectSize, objectSize]} />
-        <meshStandardMaterial color="#3b82f6" transparent opacity={0.3} />
+        <meshStandardMaterial
+          color={labAccents.manipulation.primary}
+          transparent
+          opacity={0.3}
+        />
       </mesh>
       {/* Asymmetric marker on target ghost to show rotation */}
       <mesh
@@ -216,7 +222,11 @@ export function DockingMode({
         quaternion={currentTrial.targetQuaternion}
       >
         <planeGeometry args={[objectSize * 0.3, objectSize * 0.3]} />
-        <meshBasicMaterial color="#60a5fa" transparent opacity={0.4} />
+        <meshBasicMaterial
+          color={labAccents.manipulation.secondary}
+          transparent
+          opacity={0.4}
+        />
       </mesh>
 
       {/* Manipulable object */}
@@ -236,7 +246,11 @@ export function DockingMode({
         <mesh>
           <boxGeometry args={[objectSize, objectSize, objectSize]} />
           <meshStandardMaterial
-            color={state.isManipulating ? '#f59e0b' : '#e2e8f0'}
+            color={
+              state.isManipulating
+                ? labAccents.manipulation.primary
+                : xr.accent.stone
+            }
           />
         </mesh>
         {/* Asymmetric marker to show rotation */}

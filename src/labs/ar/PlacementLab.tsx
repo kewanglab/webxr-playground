@@ -13,8 +13,10 @@ import { useConfirmTone } from '../../xr/feedback/audio/useConfirmTone'
 import { getLabTitle, tuningPresets } from '../../config/labs'
 import { LabHeading } from '../LabHeading'
 import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
+import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
 
 export function PlacementLab() {
+  const { labAccents, xr } = usePlaygroundTheme()
   const defaults = tuningPresets.controller.placement
   const { objectSize, previewOpacity, enableHaptics, enableAudio } = useControls('Placement', {
     objectSize: stepperNumber({
@@ -55,7 +57,7 @@ export function PlacementLab() {
       <IfInSessionMode allow="immersive-ar">
         <group>
           <PlacementPreview
-            color="#60a5fa"
+            color={labAccents.placement.primary}
             opacity={previewOpacity}
             onPlace={(transform) => {
               setPlaced((prev) => [
@@ -75,7 +77,7 @@ export function PlacementLab() {
           />
 
           <PlacementPreview
-            color="#fbbf24"
+            color={labAccents.placement.secondary}
             opacity={previewOpacity}
             onPlace={(transform) => {
               setPlaced((prev) => [
@@ -98,7 +100,11 @@ export function PlacementLab() {
             <mesh key={p.id} position={p.position} quaternion={p.quaternion}>
               <boxGeometry args={[objSize, objSize, objSize]} />
               <meshStandardMaterial
-                color={p.source === 'ray' ? '#3b82f6' : '#f59e0b'}
+                color={
+                  p.source === 'ray'
+                    ? labAccents.placement.primary
+                    : labAccents.placement.secondary
+                }
               />
             </mesh>
           ))}
@@ -109,11 +115,11 @@ export function PlacementLab() {
         <Text
           position={[0, 1.15, -2]}
           fontSize={0.12}
-          color="#999"
+          color={xr.hud.textMuted}
           anchorX="center"
           anchorY="middle"
         >
-          Enter AR to preview placement (controllers = blue, pinch = orange)
+          Enter AR to preview placement (controller vs pinch colors follow theme)
         </Text>
       )}
     </group>

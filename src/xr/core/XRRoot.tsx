@@ -8,6 +8,7 @@ import { LabContent } from '../../app/LabContent'
 import { usePlaygroundStore } from '../../app/store'
 import { InXRLogger } from '../hud/InXRLogger'
 import { InXRStats } from '../hud/InXRStats'
+import { HUDPanel } from '../hud/HUDPanel'
 import { TagAlongHUD } from '../hud/TagAlongHUD'
 
 function XRScene() {
@@ -32,8 +33,10 @@ export function XRRoot() {
     <XR store={xrStore}>
       <XRScene />
       <TagAlongHUD>
-        <InXRStats />
-        <InXRLogger />
+        <HUDPanel>
+          <InXRStats />
+          <InXRLogger />
+        </HUDPanel>
       </TagAlongHUD>
     </XR>
   )

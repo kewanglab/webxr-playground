@@ -5,36 +5,38 @@ import { labs } from '../config/labs'
 import { xrStore } from '../xr/core/xrStore'
 import { postLogEntriesToDesktop, postLogEntryToDesktop } from './sessionLogSync'
 
+const v = (name: string) => `var(${name})`
+
 const panelButton: CSSProperties = {
-  padding: '8px 16px',
-  border: '1px solid #555',
-  borderRadius: 6,
-  background: '#1a1a1a',
-  color: '#ddd',
+  padding: `${v('--pg-shell-space-sm')} ${v('--pg-shell-space-lg')}`,
+  border: `1px solid ${v('--pg-shell-border-default')}`,
+  borderRadius: v('--pg-shell-radius-md'),
+  background: v('--pg-shell-bg-subtle'),
+  color: v('--pg-shell-text-primary'),
   cursor: 'pointer',
   fontSize: 14,
-  fontFamily: 'system-ui, sans-serif',
+  fontFamily: v('--pg-shell-font-ui'),
 }
 
 const tabButton = (active: boolean): CSSProperties => ({
   ...panelButton,
   flex: 1,
-  borderColor: active ? '#6b7280' : '#3f3f46',
-  background: active ? '#27272a' : '#18181b',
-  color: active ? '#fafafa' : '#a1a1aa',
+  borderColor: active ? v('--pg-shell-accent-primary') : v('--pg-shell-border-subtle'),
+  background: active ? v('--pg-shell-accent-soft') : v('--pg-shell-bg-elevated'),
+  color: active ? v('--pg-shell-text-primary') : v('--pg-shell-text-muted'),
   fontWeight: active ? 600 : 400,
 })
 
 const inputBase: CSSProperties = {
   width: '100%',
   marginBottom: 8,
-  padding: 10,
-  background: '#111827',
-  color: '#e5e7eb',
-  border: '1px solid #374151',
-  borderRadius: 6,
+  padding: v('--pg-shell-space-md'),
+  background: v('--pg-shell-bg-canvas'),
+  color: v('--pg-shell-text-primary'),
+  border: `1px solid ${v('--pg-shell-border-default')}`,
+  borderRadius: v('--pg-shell-radius-md'),
   fontSize: 14,
-  fontFamily: 'system-ui, sans-serif',
+  fontFamily: v('--pg-shell-font-ui'),
 }
 
 type LoggerTab = 'log' | 'notes'
@@ -119,27 +121,35 @@ export function TestLoggerPanel() {
     <div
       style={{
         position: 'fixed',
-        right: 16,
-        bottom: 16,
+        right: v('--pg-shell-space-lg'),
+        bottom: v('--pg-shell-space-lg'),
         width: 420,
         maxHeight: 'calc(100vh - 32px)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        background: 'rgba(10, 10, 14, 0.85)',
-        border: '1px solid #2f2f38',
-        borderRadius: 8,
-        padding: 12,
-        color: '#d1d5db',
-        fontFamily: 'system-ui, sans-serif',
+        background: v('--pg-shell-bg-elevated'),
+        border: `1px solid ${v('--pg-shell-border-subtle')}`,
+        borderRadius: v('--pg-shell-radius-lg'),
+        padding: v('--pg-shell-space-md'),
+        color: v('--pg-shell-text-primary'),
+        fontFamily: v('--pg-shell-font-ui'),
+        boxShadow: `0 4px 24px ${v('--pg-shell-shadow-soft')}`,
         zIndex: 10,
       }}
     >
-      <div style={{ fontSize: 13, marginBottom: 8, color: '#9ca3af' }}>
+      <div style={{ fontSize: 13, marginBottom: 8, color: v('--pg-shell-text-muted') }}>
         Session Logger ({labs.find((l) => l.id === currentLab)?.name})
       </div>
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexShrink: 0 }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: v('--pg-shell-space-sm'),
+          marginBottom: v('--pg-shell-space-md'),
+          flexShrink: 0,
+        }}
+      >
         <button type="button" style={tabButton(tab === 'log')} onClick={() => setTab('log')}>
           New log
         </button>
@@ -158,10 +168,17 @@ export function TestLoggerPanel() {
             overflow: 'hidden',
           }}
         >
-          <div style={{ fontSize: 12, marginBottom: 10, color: '#6b7280', lineHeight: 1.4 }}>
+          <div
+            style={{
+              fontSize: 12,
+              marginBottom: 10,
+              color: v('--pg-shell-text-muted'),
+              lineHeight: 1.4,
+            }}
+          >
             Add an entry from the browser. This tab stays open after you click Log — switch to{' '}
-            <span style={{ color: '#9ca3af' }}>Session notes</span> to edit headset logs or sync
-            everything to disk.
+            <span style={{ color: v('--pg-shell-text-primary') }}>Session notes</span> to edit headset
+            logs or sync everything to disk.
           </div>
 
           <label style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>Input Source</label>
@@ -214,21 +231,31 @@ export function TestLoggerPanel() {
             Sync to Desktop
           </button>
 
-          <div style={{ fontSize: 12, marginBottom: 10, color: '#6b7280', lineHeight: 1.4 }}>
+          <div
+            style={{
+              fontSize: 12,
+              marginBottom: 10,
+              color: v('--pg-shell-text-muted'),
+              lineHeight: 1.4,
+            }}
+          >
             Edit notes below, then Sync to Desktop to update{' '}
-            <code style={{ fontSize: 11 }}>logs/session-notes.json</code>. After you leave XR, this
-            tab opens automatically if you logged anything from the headset.
+            <code style={{ fontSize: 11, fontFamily: v('--pg-shell-font-mono') }}>
+              logs/session-notes.json
+            </code>
+            . After you leave XR, this tab opens automatically if you logged anything from the
+            headset.
           </div>
 
           {logEntries.length === 0 ? (
             <div
               style={{
                 flex: 1,
-                border: '1px dashed #374151',
-                borderRadius: 8,
-                padding: 20,
+                border: `1px dashed ${v('--pg-shell-border-default')}`,
+                borderRadius: v('--pg-shell-radius-md'),
+                padding: v('--pg-shell-space-xl'),
                 textAlign: 'center',
-                color: '#6b7280',
+                color: v('--pg-shell-text-muted'),
                 fontSize: 13,
               }}
             >
@@ -244,7 +271,14 @@ export function TestLoggerPanel() {
                 overflow: 'hidden',
               }}
             >
-              <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 8, flexShrink: 0 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: v('--pg-shell-text-muted'),
+                  marginBottom: 8,
+                  flexShrink: 0,
+                }}
+              >
                 {logEntries.length} {logEntries.length === 1 ? 'entry' : 'entries'} (newest first)
               </div>
               <div
@@ -263,18 +297,27 @@ export function TestLoggerPanel() {
                     <div
                       key={entry.id}
                       style={{
-                        background: '#111827',
-                        border: '1px solid #374151',
-                        borderRadius: 6,
-                        padding: 8,
+                        background: v('--pg-shell-bg-subtle'),
+                        border: `1px solid ${v('--pg-shell-border-subtle')}`,
+                        borderRadius: v('--pg-shell-radius-md'),
+                        padding: v('--pg-shell-space-sm'),
                       }}
                     >
-                      <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6 }}>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: v('--pg-shell-text-muted'),
+                          marginBottom: 6,
+                          fontFamily: v('--pg-shell-font-mono'),
+                        }}
+                      >
                         {new Date(entry.timestamp).toLocaleString()} ·{' '}
                         {labs.find((l) => l.id === entry.labId)?.name ?? entry.labId} ·{' '}
                         {entry.mode ?? '—'} · {entry.inputSource}
                         {entry.fromHeadset ? (
-                          <span style={{ color: '#22c55e', marginLeft: 6 }}>· headset</span>
+                          <span style={{ color: v('--pg-shell-state-success'), marginLeft: 6 }}>
+                            · headset
+                          </span>
                         ) : null}
                       </div>
                       <textarea
@@ -296,12 +339,22 @@ export function TestLoggerPanel() {
         style={{
           marginTop: 10,
           paddingTop: 10,
-          borderTop: '1px solid #2f2f38',
+          borderTop: `1px solid ${v('--pg-shell-border-subtle')}`,
           flexShrink: 0,
         }}
       >
-        <div style={{ fontSize: 12, color: '#9ca3af' }}>Desktop: {desktopStatus}</div>
-        <div style={{ marginTop: 2, fontSize: 11, color: '#6b7280', wordBreak: 'break-all' }}>
+        <div style={{ fontSize: 12, color: v('--pg-shell-text-muted') }}>
+          Desktop: {desktopStatus}
+        </div>
+        <div
+          style={{
+            marginTop: 2,
+            fontSize: 11,
+            color: v('--pg-shell-text-muted'),
+            wordBreak: 'break-all',
+            fontFamily: v('--pg-shell-font-mono'),
+          }}
+        >
           {desktopPath}
         </div>
       </div>

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { DoubleSide } from 'three'
 import { useConfirmTone } from '../feedback/audio/useConfirmTone'
 import { useHapticPulse } from '../feedback/haptics/useHapticPulse'
+import { usePlaygroundTheme } from '../theme/PlaygroundThemeContext'
 
 type HUDButtonProps = {
   label: string
@@ -19,10 +20,13 @@ export function HUDButton({
   position,
   width = 0.13,
   height = 0.044,
-  color = '#0f172a',
-  hoverColor = '#1d4ed8',
+  color,
+  hoverColor,
   onPress,
 }: HUDButtonProps) {
+  const { xr } = usePlaygroundTheme()
+  const base = color ?? xr.hud.panelFill
+  const hover = hoverColor ?? xr.hud.panelBorder
   const [hovered, setHovered] = useState(false)
   const pulse = useHapticPulse()
   const playTone = useConfirmTone()
@@ -41,7 +45,7 @@ export function HUDButton({
       >
         <planeGeometry args={[width, height]} />
         <meshBasicMaterial
-          color={hovered ? hoverColor : color}
+          color={hovered ? hover : base}
           transparent
           opacity={hovered ? 0.78 : 0.62}
           side={DoubleSide}
@@ -51,11 +55,11 @@ export function HUDButton({
       <Text
         position={[0, 0, 0.004]}
         fontSize={0.024}
-        color="#f8fafc"
+        color={xr.hud.textPrimary}
         anchorX="center"
         anchorY="middle"
         outlineWidth={0.003}
-        outlineColor="#020617"
+        outlineColor={xr.hud.panelFill}
       >
         {label}
       </Text>

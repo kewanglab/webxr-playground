@@ -3,12 +3,14 @@ import { useState } from 'react'
 import { usePlaygroundStore } from '../../app/store'
 import { postLogEntriesToDesktop } from '../../ui/sessionLogSync'
 import { xrStore } from '../core/xrStore'
+import { usePlaygroundTheme } from '../theme/PlaygroundThemeContext'
 import { HUDButton } from './HUDButton'
 
 /**
  * One-tap log from the headset: append in memory and replace desktop JSON with the full list.
  */
 export function InXRLogger() {
+  const { xr } = usePlaygroundTheme()
   const currentLab = usePlaygroundStore((s) => s.currentLab)
   const addLogEntry = usePlaygroundStore((s) => s.addLogEntry)
   const logEntries = usePlaygroundStore((s) => s.logEntries)
@@ -43,12 +45,12 @@ export function InXRLogger() {
       <Text
         position={[0, -0.058, 0]}
         fontSize={0.02}
-        color="#cbd5e1"
+        color={xr.hud.textMuted}
         anchorX="center"
         anchorY="middle"
         maxWidth={0.42}
         outlineWidth={0.0025}
-        outlineColor="#020617"
+        outlineColor={xr.hud.panelFill}
       >
         {`entries: ${logEntries.length}${status ? ` · ${status}` : ''}`}
       </Text>

@@ -1,18 +1,25 @@
 import { Grid } from '@react-three/drei'
+import { usePlaygroundTheme } from '../theme/PlaygroundThemeContext'
+import { Skydome } from '../visual/Skydome'
 
 export function VRScene() {
+  const { xr } = usePlaygroundTheme()
+
   return (
     <>
+      <color attach="background" args={[xr.void.clear]} />
+      <fog attach="fog" args={[xr.fog.color, xr.fog.near, xr.fog.far]} />
+      <Skydome />
       <Grid
         infiniteGrid
         fadeDistance={30}
         fadeStrength={3}
         cellSize={0.5}
         cellThickness={0.5}
-        cellColor="#444"
+        cellColor={xr.grid.cell}
         sectionSize={2}
         sectionThickness={1}
-        sectionColor="#666"
+        sectionColor={xr.grid.section}
       />
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
@@ -20,7 +27,13 @@ export function VRScene() {
         receiveShadow
       >
         <planeGeometry args={[50, 50]} />
-        <meshStandardMaterial color="#1a1a2e" />
+        <meshStandardMaterial
+          color={xr.floor.albedo}
+          emissive={xr.floor.emissive}
+          emissiveIntensity={0.12}
+          roughness={0.92}
+          metalness={0}
+        />
       </mesh>
     </>
   )
