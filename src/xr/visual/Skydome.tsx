@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import {
   BackSide,
   BufferAttribute,
@@ -35,6 +35,12 @@ export function Skydome() {
     geo.setAttribute('color', new BufferAttribute(colors, 3))
     return geo
   }, [xr.skydome.top, xr.skydome.horizon, xr.skydome.bottom])
+
+  useEffect(() => {
+    return () => {
+      geometry.dispose()
+    }
+  }, [geometry])
 
   return (
     <mesh geometry={geometry} renderOrder={-1000}>

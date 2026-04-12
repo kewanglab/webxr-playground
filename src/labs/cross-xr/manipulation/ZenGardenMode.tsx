@@ -1,15 +1,16 @@
 import { Text } from '@react-three/drei'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import {
+  Color,
   DoubleSide,
   Euler,
   Quaternion,
   RepeatWrapping,
-  Vector3,
   DataTexture,
   RGBAFormat,
   UnsignedByteType,
 } from 'three'
+import type { PlaygroundThemePreset } from '../../../config/playgroundTheme'
 import type { ManipulationAcquisition, ManipulationTechnique } from '../ObjectManipulationLab'
 import { tuningPresets } from '../../../config/labs'
 import { useHandJoints } from './useHandJoints'
@@ -18,6 +19,7 @@ import { ManipulableObject } from './ManipulableObject'
 import { CherryPetals } from './CherryPetals'
 import { usePlaygroundStore } from '../../../app/store'
 import { xrStore } from '../../../xr/core/xrStore'
+import { usePlaygroundTheme } from '../../../xr/theme/PlaygroundThemeContext'
 
 type ZenGardenModeProps = {
   acquisition: ManipulationAcquisition
@@ -36,6 +38,70 @@ type GardenObject = {
   rotation?: [number, number, number]
   geometry: 'stone-flat' | 'stone-tall' | 'branch' | 'pebble' | 'crystal' | 'moss-rock' | 'flower'
   color: string
+}
+
+type GardenObjectDef = Omit<GardenObject, 'color'>
+
+type ZenModePalette = {
+  byId: Record<string, string>
+  mossLight: string
+  mossDark: string
+  stem: string
+  flowerCenter: string
+  woodTray: string
+  woodRim: string
+  sandTint: string
+  pointLight: string
+  branchDecor: string
+  blossom: string
+  arrangeText: string
+  tinyPebbles: [string, string, string]
+}
+
+function hexFromColor(c: Color): string {
+  return '#' + c.getHexString()
+}
+
+function toneHex(hex: string, factor: number): string {
+  const c = new Color(hex)
+  c.multiplyScalar(factor)
+  return hexFromColor(c)
+}
+
+function lerpHex(a: string, b: string, t: number): string {
+  return hexFromColor(new Color().lerpColors(new Color(a), new Color(b), t))
+}
+
+function buildZenPalette(p: PlaygroundThemePreset): ZenModePalette {
+  const { xr, shell, labAccents } = p
+  const m = labAccents.manipulation
+  return {
+    byId: {
+      'stone-1': xr.accent.stone,
+      'stone-2': toneHex(xr.accent.stone, 0.78),
+      'branch-1': xr.accent.seal,
+      'pebble-1': lerpHex(xr.accent.stone, '#ffffff', 0.3),
+      'crystal-1': xr.accent.cyan,
+      'moss-1': toneHex(xr.accent.stone, 0.88),
+      'flower-1': shell.accent.soft,
+    },
+    mossLight: shell.state.success,
+    mossDark: toneHex(shell.state.success, 0.82),
+    stem: toneHex(shell.state.success, 0.62),
+    flowerCenter: xr.accent.amber,
+    woodTray: lerpHex(xr.accent.mustard, xr.accent.seal, 0.5),
+    woodRim: toneHex(xr.accent.seal, 0.88),
+    sandTint: lerpHex(xr.floor.albedo, xr.accent.stone, 0.35),
+    pointLight: shell.accent.soft,
+    branchDecor: xr.accent.seal,
+    blossom: shell.accent.soft,
+    arrangeText: m.primary,
+    tinyPebbles: [
+      lerpHex(xr.accent.stone, '#ffffff', 0.4),
+      xr.hud.textMuted,
+      lerpHex(xr.accent.stone, '#ffffff', 0.25),
+    ],
+  }
 }
 
 /** Local-space AABB half-extents for pinch proximity (matches composite mesh bounds). */
@@ -62,17 +128,25 @@ function zenGardenHitHalfExtents(
   }
 }
 
-const GARDEN_OBJECTS: GardenObject[] = [
-  { id: 'stone-1', label: 'Flat stone', position: [-0.12, 0.79, -0.75], geometry: 'stone-flat', color: '#78716c' },
-  { id: 'stone-2', label: 'Tall stone', position: [0.14, 0.83, -0.82], geometry: 'stone-tall', color: '#57534e' },
-  { id: 'branch-1', label: 'Branch', position: [0.22, 0.82, -0.70], rotation: [0, 0, 0.3], geometry: 'branch', color: '#7c2d12' },
-  { id: 'pebble-1', label: 'Pebble', position: [-0.08, 0.78, -0.68], geometry: 'pebble', color: '#a8a29e' },
-  { id: 'crystal-1', label: 'Crystal', position: [0.0, 0.80, -0.70], geometry: 'crystal', color: '#c4b5fd' },
-  { id: 'moss-1', label: 'Moss rock', position: [-0.20, 0.80, -0.85], geometry: 'moss-rock', color: '#6b7280' },
-  { id: 'flower-1', label: 'Flower', position: [0.08, 0.80, -0.90], rotation: [0.2, 0, 0], geometry: 'flower', color: '#fda4af' },
+const GARDEN_OBJECT_DEFS: GardenObjectDef[] = [
+  { id: 'stone-1', label: 'Flat stone', position: [-0.12, 0.79, -0.75], geometry: 'stone-flat' },
+  { id: 'stone-2', label: 'Tall stone', position: [0.14, 0.83, -0.82], geometry: 'stone-tall' },
+  { id: 'branch-1', label: 'Branch', position: [0.22, 0.82, -0.70], rotation: [0, 0, 0.3], geometry: 'branch' },
+  { id: 'pebble-1', label: 'Pebble', position: [-0.08, 0.78, -0.68], geometry: 'pebble' },
+  { id: 'crystal-1', label: 'Crystal', position: [0.0, 0.80, -0.70], geometry: 'crystal' },
+  { id: 'moss-1', label: 'Moss rock', position: [-0.20, 0.80, -0.85], geometry: 'moss-rock' },
+  { id: 'flower-1', label: 'Flower', position: [0.08, 0.80, -0.90], rotation: [0.2, 0, 0], geometry: 'flower' },
 ]
 
-function GardenObjectMesh({ def, size }: { def: GardenObject; size: number }) {
+function GardenObjectMesh({
+  def,
+  size,
+  zen,
+}: {
+  def: GardenObject
+  size: number
+  zen: ZenModePalette
+}) {
   switch (def.geometry) {
     case 'stone-flat':
       return (
@@ -130,11 +204,11 @@ function GardenObjectMesh({ def, size }: { def: GardenObject; size: number }) {
           {/* Moss patches */}
           <mesh position={[0, size * 0.3, size * 0.15]}>
             <sphereGeometry args={[size * 0.2, 5, 4]} />
-            <meshStandardMaterial color="#4ade80" roughness={1} />
+            <meshStandardMaterial color={zen.mossLight} roughness={1} />
           </mesh>
           <mesh position={[-size * 0.2, size * 0.15, -size * 0.1]}>
             <sphereGeometry args={[size * 0.12, 4, 3]} />
-            <meshStandardMaterial color="#22c55e" roughness={1} />
+            <meshStandardMaterial color={zen.mossDark} roughness={1} />
           </mesh>
         </group>
       )
@@ -144,7 +218,7 @@ function GardenObjectMesh({ def, size }: { def: GardenObject; size: number }) {
           {/* Stem */}
           <mesh castShadow>
             <cylinderGeometry args={[size * 0.02, size * 0.025, size * 0.8, 5]} />
-            <meshStandardMaterial color="#15803d" roughness={0.9} />
+            <meshStandardMaterial color={zen.stem} roughness={0.9} />
           </mesh>
           {/* Petals */}
           {[0, 1, 2, 3, 4].map((i) => (
@@ -165,7 +239,7 @@ function GardenObjectMesh({ def, size }: { def: GardenObject; size: number }) {
           {/* Center */}
           <mesh position={[0, size * 0.4, 0]}>
             <sphereGeometry args={[size * 0.06, 5, 4]} />
-            <meshStandardMaterial color="#fbbf24" roughness={0.7} />
+            <meshStandardMaterial color={zen.flowerCenter} roughness={0.7} />
           </mesh>
         </group>
       )
@@ -174,7 +248,7 @@ function GardenObjectMesh({ def, size }: { def: GardenObject; size: number }) {
 
 /** Procedural rake-pattern texture for the sand surface. */
 function useSandTexture() {
-  return useMemo(() => {
+  const tex = useMemo(() => {
     const w = 128
     const h = 128
     const data = new Uint8Array(w * h * 4)
@@ -195,11 +269,19 @@ function useSandTexture() {
         data[i + 3] = 255
       }
     }
-    const tex = new DataTexture(data, w, h, RGBAFormat, UnsignedByteType)
-    tex.wrapS = tex.wrapT = RepeatWrapping
-    tex.needsUpdate = true
-    return tex
+    const texture = new DataTexture(data, w, h, RGBAFormat, UnsignedByteType)
+    texture.wrapS = texture.wrapT = RepeatWrapping
+    texture.needsUpdate = true
+    return texture
   }, [])
+
+  useEffect(() => {
+    return () => {
+      tex.dispose()
+    }
+  }, [tex])
+
+  return tex
 }
 
 export function ZenGardenMode({
@@ -209,6 +291,8 @@ export function ZenGardenMode({
   grabDistance,
   cdGain,
 }: ZenGardenModeProps) {
+  const preset = usePlaygroundTheme()
+  const zen = useMemo(() => buildZenPalette(preset), [preset])
   const joints = useHandJoints('right')
   const addLogEntry = usePlaygroundStore((s) => s.addLogEntry)
   const currentLab = usePlaygroundStore((s) => s.currentLab)
@@ -240,54 +324,58 @@ export function ZenGardenMode({
   return (
     <group>
       {/* Ambient atmosphere */}
-      <pointLight position={[0.3, 1.5, -0.5]} intensity={0.4} color="#ffe4e6" distance={3} />
+      <pointLight position={[0.3, 1.5, -0.5]} intensity={0.4} color={zen.pointLight} distance={3} />
 
       {/* Platform — wooden tray with darker base */}
       <mesh position={[0, 0.73, -0.78]} receiveShadow castShadow>
         <boxGeometry args={[0.74, 0.035, 0.54]} />
-        <meshStandardMaterial color="#8B6914" roughness={0.85} />
+        <meshStandardMaterial color={zen.woodTray} roughness={0.85} />
       </mesh>
 
       {/* Sand surface with rake pattern */}
       <mesh position={[0, 0.755, -0.78]} receiveShadow>
         <boxGeometry args={[0.68, 0.008, 0.48]} />
-        <meshStandardMaterial map={sandTexture} roughness={1} />
+        <meshStandardMaterial
+          map={sandTexture}
+          color={zen.sandTint}
+          roughness={1}
+        />
       </mesh>
 
       {/* Wooden rim pieces */}
       {/* Left */}
       <mesh position={[-0.355, 0.76, -0.78]} castShadow>
         <boxGeometry args={[0.02, 0.04, 0.52]} />
-        <meshStandardMaterial color="#6B4F1D" roughness={0.9} />
+        <meshStandardMaterial color={zen.woodRim} roughness={0.9} />
       </mesh>
       {/* Right */}
       <mesh position={[0.355, 0.76, -0.78]} castShadow>
         <boxGeometry args={[0.02, 0.04, 0.52]} />
-        <meshStandardMaterial color="#6B4F1D" roughness={0.9} />
+        <meshStandardMaterial color={zen.woodRim} roughness={0.9} />
       </mesh>
       {/* Front */}
       <mesh position={[0, 0.76, -0.54]} castShadow>
         <boxGeometry args={[0.74, 0.04, 0.02]} />
-        <meshStandardMaterial color="#6B4F1D" roughness={0.9} />
+        <meshStandardMaterial color={zen.woodRim} roughness={0.9} />
       </mesh>
       {/* Back */}
       <mesh position={[0, 0.76, -1.02]} castShadow>
         <boxGeometry args={[0.74, 0.04, 0.02]} />
-        <meshStandardMaterial color="#6B4F1D" roughness={0.9} />
+        <meshStandardMaterial color={zen.woodRim} roughness={0.9} />
       </mesh>
 
       {/* Small corner accent stones (decorative, not manipulable) */}
       <mesh position={[-0.28, 0.76, -0.96]}>
         <sphereGeometry args={[0.015, 5, 4]} />
-        <meshStandardMaterial color="#d6d3d1" roughness={0.9} />
+        <meshStandardMaterial color={zen.tinyPebbles[0]} roughness={0.9} />
       </mesh>
       <mesh position={[0.26, 0.76, -0.58]}>
         <sphereGeometry args={[0.012, 5, 4]} />
-        <meshStandardMaterial color="#e7e5e4" roughness={0.9} />
+        <meshStandardMaterial color={zen.tinyPebbles[1]} roughness={0.9} />
       </mesh>
       <mesh position={[-0.25, 0.76, -0.60]}>
         <sphereGeometry args={[0.01, 4, 3]} />
-        <meshStandardMaterial color="#d6d3d1" roughness={0.9} />
+        <meshStandardMaterial color={zen.tinyPebbles[2]} roughness={0.9} />
       </mesh>
 
       {/* Cherry petals falling */}
@@ -296,7 +384,7 @@ export function ZenGardenMode({
       {/* Cherry branch hint above the scene (decorative) */}
       <mesh position={[0.25, 1.35, -0.9]} rotation={[0.1, -0.3, 0.4]}>
         <cylinderGeometry args={[0.006, 0.01, 0.4, 5]} />
-        <meshStandardMaterial color="#5c2a0a" roughness={0.95} />
+        <meshStandardMaterial color={zen.branchDecor} roughness={0.95} />
       </mesh>
       {/* Blossoms on the branch */}
       {[0, 1, 2].map((i) => (
@@ -305,37 +393,42 @@ export function ZenGardenMode({
           position={[0.22 + i * 0.04, 1.37 + Math.sin(i) * 0.02, -0.88 - i * 0.015]}
         >
           <sphereGeometry args={[0.015 + i * 0.003, 5, 4]} />
-          <meshStandardMaterial color="#fecdd3" roughness={0.6} />
+          <meshStandardMaterial color={zen.blossom} roughness={0.6} />
         </mesh>
       ))}
 
       {/* Garden objects */}
-      {GARDEN_OBJECTS.map((def) => (
-        <ManipulableObject
-          key={def.id}
-          id={def.id}
-          initialPosition={def.position}
-          initialQuaternion={
-            def.rotation
-              ? new Quaternion().setFromEuler(new Euler(...def.rotation))
-              : undefined
-          }
-          hitHalfExtents={zenGardenHitHalfExtents(def.geometry, objectSize)}
-          register={register}
-          isActive={state.targetId === def.id}
-          onPointerDown={acquisition === 'ray' ? () => acquireById(def.id) : undefined}
-          onPointerUp={acquisition === 'ray' ? () => releaseActive() : undefined}
-        >
-          <GardenObjectMesh def={def} size={objectSize} />
-        </ManipulableObject>
-      ))}
+      {GARDEN_OBJECT_DEFS.map((def) => {
+        const color = zen.byId[def.id]
+        if (!color) return null
+        const full: GardenObject = { ...def, color }
+        return (
+          <ManipulableObject
+            key={def.id}
+            id={def.id}
+            initialPosition={def.position}
+            initialQuaternion={
+              def.rotation
+                ? new Quaternion().setFromEuler(new Euler(...def.rotation))
+                : undefined
+            }
+            hitHalfExtents={zenGardenHitHalfExtents(def.geometry, objectSize)}
+            register={register}
+            isActive={state.targetId === def.id}
+            onPointerDown={acquisition === 'ray' ? () => acquireById(def.id) : undefined}
+            onPointerUp={acquisition === 'ray' ? () => releaseActive() : undefined}
+          >
+            <GardenObjectMesh def={full} size={objectSize} zen={zen} />
+          </ManipulableObject>
+        )
+      })}
 
       {/* Active object indicator */}
       {state.isManipulating && (
         <Text
           position={[0, 0.65, -0.78]}
           fontSize={0.035}
-          color="#f59e0b"
+          color={zen.arrangeText}
           anchorX="center"
           anchorY="middle"
         >
