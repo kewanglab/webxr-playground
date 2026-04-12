@@ -1,164 +1,323 @@
 # XR scene enhancement — execution plan
 
-**Goal:** Move labs from “basic primitives” toward **art-directed, film-mood space** (playful institutional future per [xr-3d.md](./style-templates/xr-3d.md)) while honoring **Quest-class WebXR** constraints: low poly, ≤2 meaningful lights, no default post stack, minimal draw calls and texture bandwidth.
+**Goal:** Replace placeholder primitives in lab staging with stock-kit models so labs feel **credible, cinematic-adjacent, and adult** — still within [xr-3d.md](./style-templates/xr-3d.md) performance guardrails (Quest-first, ≤ 2 meaningful lights, no default post stack).
 
-**Spec authority:** [xr-3d.md](./style-templates/xr-3d.md) (palette, materials policy, geometry limits, anti-patterns). **Broader program:** [spatial-polish-plan.md](./spatial-polish-plan.md) (theme context, file map, phase A–E). This document **narrows** the “cinematic set” track into implementable phases **after** shared foundations (fog, skydome, theme) exist.
-
-**Non-goals (unless explicitly scoped + Quest-off):** full-screen post (bloom, SSAO), heavy HDR environment maps everywhere, high-poly hero assets, per-object unique PBR stacks.
+**Spec authority:** [xr-3d.md](./style-templates/xr-3d.md). **Program context:** [spatial-polish-plan.md](./spatial-polish-plan.md).
 
 ---
 
-## Principles (carry into every task)
+## Current status (what is already done)
 
-1. **Composition over assets** — vertical bands (foreground / midground / background landmark) before new models.
-2. **Color + emissive first** — textures only when large surfaces still read as “debug plastic.”
-3. **Shared materials** — clone from a small library; dispose/update on preset change (see [spatial polish — XR consumption](./spatial-polish-plan.md#xr-consumption-pattern)).
-4. **Measure on device** — [Meta WebXR performance best practices](https://developers.meta.com/horizon/documentation/web/webxr-perf-bp/); watch overdraw and shadow cost.
+These items are **complete** — do not redo them:
+
+- [x] `playgroundTheme.ts` — full `shell` + `xr` tokens, presets, `levaThemeFromShell`, `getPlaygroundPreset`.
+- [x] `PlaygroundThemeContext` — React context providing `xr`, `labAccents`, `presetId` to R3F tree.
+- [x] `SharedScene.tsx` — 1 directional light + 1 hemisphere light from `xr.light.*` tokens.
+- [x] `VRScene.tsx` — fog from `xr.fog.*`, floor plane from `xr.floor.*`, infinite grid from `xr.grid.*`, `<Skydome />`.
+- [x] `Skydome.tsx` — gradient sphere (24×16 segments, vertex colors, `BackSide`, `depthWrite: false`).
+- [x] Labs consume `usePlaygroundTheme()` for accent colors. Selection lab has a simple cylinder pedestal.
+
+**What is NOT done:** Labs still use raw `BoxGeometry` / `cylinderGeometry` for staging. No stock models are loaded yet. No `useGLTF` helper exists. No `src/xr/visual/` kit infrastructure beyond `Skydome.tsx`.
 
 ---
 
-## Performance budget (default VR path)
+## Design principles (reference — do not delete)
 
-| Resource | Guideline |
+1. **Readable role at 2 m** — silhouette + scale, not labels.
+2. **Institutional, not toy** — large surfaces muted; accents thin, linear, or rim-only.
+3. **Asymmetry** — offsets, one strong vertical, cutouts.
+4. **Human-scaled** — check against ~1.7 m reference.
+5. **Performance** — ≤ 2 lights, instancing for repeats, ≤ 100 K tris per scene, ≤ 50 draw calls target.
+
+---
+
+## Performance budget
+
+| Resource | Hard limit |
 |----------|-----------|
-| Meaningful lights | **1 directional + 1 hemisphere**; no extra fill without review |
-| Shadow casters | **Off** by default; **one** directional shadow only in labs that need contact grounding; minimal casters, tuned map size |
-| Skydome | **One** unlit mesh; segment counts per [xr-3d.md](./style-templates/xr-3d.md#geometry--draw-call-discipline) |
-| Textures (if introduced) | **Few**; prefer **one trim atlas** or ≤4 small maps; consider **KTX2 / Basis** for anything &gt;512² if you add a loader path |
-| Unique materials | Cap **variants**; instanced or merged static set dressing where repeated |
-| CPU | No new `Vector3` / `Color` **per frame** in lab hot paths |
+| Lights | **1 directional + 1 hemisphere** (already in `SharedScene`) |
+| Shadows | Off by default; one shadow caster only if grounding is worth the cost |
+| Tris per scene | Target **≤ 100 K** total (validate with `renderer.info` on Quest) |
+| Draw calls | Target **≤ 50** (use instancing for repeated kit parts) |
+| Textures | **≤ 3** texture sets loaded per scene; shared across kit pieces |
+| Materials | Shared families: stone, trim, emissive accent. Do not create unique materials per mesh |
 
 ---
 
-## Phase 0 — Preconditions (already largely done)
+## Curated stock assets (in repo)
 
-Confirm before treating later phases as “done”:
+All packs live under `public/assets/models/`.
 
-- [ ] `xr` tokens flow through `PlaygroundThemeContext` (or equivalent); labs read accents from theme, not scattered hex.
-- [ ] `SharedScene` / `VRScene`: fog, skydome, grid, floor aligned with [xr-3d.md](./style-templates/xr-3d.md) defaults.
-- [ ] [Pitfalls](./pitfalls.md) reviewed before Leva-driven geometry or nested `Text`.
+### Pack inventory
 
----
+| Priority | Pack (folder) | Format | Best for | Size on disk |
+|----------|---------------|--------|----------|-------------|
+| **1 — Structure** | `Modular SciFi MegaKit[Standard]/` | `.gltf` + `.bin` under `glTF/` (Walls, Platforms, Props, Columns, Decals, Aliens) | Lab backdrops, walls, platforms, columns | 5.5 MB |
+| **2 — Props** | `Molten Maps SciFi Asset Pack/Assets/gtlf/` | Self-contained `.glb` (~136 files) | Consoles, screens, instruments | 26 MB |
+| **3 — Blockout** | `kenney_modular-space-kit_1.0/` | `Models/OBJ format/` + `.mtl` | Fast room/corridor layout (needs material pass) | 21 MB |
+| **4 — Fill** | `kenney_space-station-kit/Models/GLB format/` | `.glb` | Extra station clutter | 6.2 MB |
+| **Skip** | `kenney_space-kit/` | Mixed; `Isometric/` and `Side/` are 2D sprites | Not useful for XR scenes | 22 MB |
 
-## Phase 1 — Staging vocabulary (procedural, no glTF)
+> **Note:** The Molten Maps folder is named `gtlf/` (typo in the original pack, not `gltf/`). Do not "fix" this path — it matches what is on disk.
 
-**Outcome:** Every lab reads as a **deliberate set** using the vocabulary in [xr-3d.md](./style-templates/xr-3d.md#layout-vocabulary-labs): pedestals, backdrop arcs, path chevrons, landmark stack, rings, ghost preview language.
+### Known issues with stock assets
 
-| Track | Tasks | Acceptance |
-|-------|--------|------------|
-| **Shared building blocks** | Add or extend `src/xr/visual/` (or lab-local modules consolidated later): rounded plinth, thin torus arc, brutalist “landmark” column (stacked boxes), optional chevron instances along a path | Each primitive respects segment budgets in xr-3d; uses `xr.accent.*` |
-| **Selection lab** | Pedestal under targets + soft backdrop arc; vertical banding | Silhouette readable at 2–4 m; hover/select states not color-only |
-| **Placement lab** | Floor band + placement ring + ghost with **emissive rim** per spec | Valid/invalid palette from per-lab routing table |
-| **Locomotion lab** | Chevron or slab “runway” + **distant landmark** | User can infer direction without reading text |
-| **Manipulation lab** | Workbench slab / institutional trim + docking volume reads as “hardware” | Dock vs held object clearly separated (mustard / orange per spec) |
+**MegaKit textures are broken out of the box.** The `.gltf` files reference textures by filename (e.g. `T_Trim_03_BaseColor.png`) but the PNGs live in `Textures/` at the pack root, not next to the `.gltf` files. **Every MegaKit model will 404 on textures if loaded as-is.**
 
-**Done when:** All four labs use at least **two** vocabulary elements each; no lab is only untextured cubes on an empty plane.
+**Fix required before using MegaKit (Task 0 below):** Convert needed `.gltf` → self-contained `.glb` using `gltf-transform` so textures are embedded. Output to `public/assets/models/xr-kit/`.
 
----
-
-## Phase 2 — Environment polish (still mostly code + existing skydome)
-
-**Outcome:** The **void** feels continuous with the floor and horizon—“set inside a larger world” without new heavy assets.
-
-| Task | Notes |
-|------|--------|
-| Skydome gradient bands | Strengthen **horizon** and **institutional dusk** read (warm band + cool zenith); keep **MeshBasicMaterial**, `depthWrite` policy per xr-3d |
-| Fog / background cohesion | Ensure fog color family matches floor and skydome lower hemisphere ([Three.js fog](https://threejs.org/manual/en/fog.html) practice) |
-| Landmark scale pass | Tune landmark height/distance so it **frames** the play volume without dominating triangles |
-
-**Done when:** Quest spot-check: depth read improves vs flat void; FPS stable vs Phase 1 baseline (`InXRStats`).
+**Kenney modular is OBJ+MTL.** `useGLTF` cannot load OBJ. Either convert to `.glb` first, or use `useLoader(OBJLoader, ...)` from `three/addons`. Prefer converting to `.glb` for consistency.
 
 ---
 
-## Phase 3 — Material refinement (no new texture pipeline required)
+## Kit piece mapping (stock → lab role)
 
-**Outcome:** Surfaces feel **intentional** using `MeshStandardMaterial` tuning from [xr-3d.md](./style-templates/xr-3d.md#materials).
+Each row maps a **lab staging role** to a **specific stock model** to use. This is the shopping list.
 
-| Task | Notes |
-|------|--------|
-| Floor / large masses | High roughness, no metalness; optional **very** low emissive from tokens |
-| Interactive props | Mid roughness; emissive rims only for state |
-| Shared material factory | e.g. `createPropMaterial('stone' \| 'trim' \| 'neon')` reading `xr` | Reduces ad-hoc `useMemo` duplication |
+| Role | Lab(s) | Stock model to use | Source pack |
+|------|--------|--------------------|------------|
+| **Pedestal** | Selection | `Platform_Round1.gltf` or `Platform_Simple.gltf` | MegaKit Platforms |
+| **Backdrop wall** | Selection, Locomotion | `TopPlastic_Straight.gltf` + `BottomSimple_Straight.gltf` (stacked) | MegaKit Walls |
+| **Column / landmark** | Locomotion (far band) | `Column_Astra.gltf` or `Column_Hollow.gltf` | MegaKit Columns |
+| **Console / workbench** | Manipulation (Docking) | `Prop_Computer.glb` or `Briefing_Screen_Blue.glb` | MegaKit Props / Molten Maps |
+| **Rails / path** | Locomotion | `Prop_Rail_4.gltf` (instanced) | MegaKit Props |
+| **Clutter / detail** | Any (optional) | `Prop_Vent_Small.gltf`, `Prop_Cable_1.gltf` | MegaKit Props |
+| **Zen Garden** | Manipulation (Zen) | **Keep existing procedural staging** (wooden tray, sand, petals) — do NOT replace with sci-fi kit | N/A |
 
-**Done when:** Set pieces and props are visually distinct by **roughness + color + emissive**, not by adding lights.
-
----
-
-## Phase 4 — Optional hero assets (glTF pipeline)
-
-**Outcome:** A **small** library of Draco-compressed glTF modules replaces the noisiest procedural-only areas.
-
-| Task | Notes |
-|------|--------|
-| Authoring | Blender → glTF; **Draco** mesh compression; materials optional (Hello WebXR style: materials in code if easier) |
-| Runtime | `useGLTF` + clones; **instance** repeated parts |
-| Scope cap | 3–5 hero meshes total for v1 (e.g. seal ring, console slab, column capital) |
-
-**Done when:** Total extra VR draw/time budget documented; Quest validation passes; fallback primitives remain if load fails.
+> **Zen Garden exception:** `ZenGardenMode.tsx` already has purpose-built nature staging (wooden tray, sand texture, cherry petals, organic objects). The sci-fi stock kit is **wrong** for this context. Leave it as-is; only apply stock kit to Docking Mode and shared lab shells.
 
 ---
 
-## Phase 5 — Textures / lightmaps (only if Phase 3 insufficient)
+## Implementation tasks (ordered, sequential)
 
-**Outcome:** Large static surfaces gain weight without blowing material count.
+Each task is a single unit of work. Complete them in order. **Do not skip ahead.**
 
-| Path | When | Risk |
-|------|------|------|
-| **Single trim atlas** | Slabs + floors need micro-detail | UV discipline; one texture sample |
-| **Baked lightmaps** | TVA-style stone “weight” | Second UV, bake pipeline, larger downloads |
-| **KTX2 / Basis** | Any texture &gt;512² in production path | Loader + transcoding; test Quest browsers |
+### Task 0 — Asset preparation (run once)
 
-**Done when:** Texture count and resolution recorded; no regression on cold load or GPU memory vs Phase 3.
+**What:** Convert MegaKit `.gltf` models to self-contained `.glb` with embedded textures.
+
+**Steps:**
+
+1. Install `gltf-transform`:
+   ```bash
+   npm install --save-dev @gltf-transform/cli
+   ```
+
+2. Create the output directory:
+   ```bash
+   mkdir -p public/assets/models/xr-kit
+   ```
+
+3. For each model listed in the "Kit piece mapping" table above, run:
+   ```bash
+   npx gltf-transform copy \
+     "public/assets/models/Modular SciFi MegaKit[Standard]/glTF/<Subfolder>/<Model>.gltf" \
+     "public/assets/models/xr-kit/<model_name>.glb" \
+     --allow-http
+   ```
+   If `gltf-transform copy` cannot resolve the textures (because they are in `../Textures/`), manually copy the needed `.png` files into the same folder as the `.gltf` first, then run the command.
+
+   Models to convert (minimum set):
+   - `glTF/Platforms/Platform_Round1.gltf` → `xr-kit/platform_round.glb`
+   - `glTF/Platforms/Platform_Simple.gltf` → `xr-kit/platform_simple.glb`
+   - `glTF/Columns/Column_Astra.gltf` → `xr-kit/column_astra.glb`
+   - `glTF/Columns/Column_Hollow.gltf` → `xr-kit/column_hollow.glb`
+   - `glTF/Props/Prop_Computer.gltf` → `xr-kit/prop_computer.glb`
+   - `glTF/Props/Prop_Rail_4.gltf` → `xr-kit/prop_rail.glb`
+   - `glTF/Walls/TopPlastic_Straight.gltf` → `xr-kit/wall_top_straight.glb`
+   - `glTF/Walls/BottomSimple_Straight.gltf` → `xr-kit/wall_bottom_straight.glb`
+
+4. Copy Molten Maps props that are needed (already `.glb`, no conversion):
+   ```bash
+   cp "public/assets/models/Molten Maps SciFi Asset Pack/Assets/gtlf/Briefing_Screen_Blue.glb" \
+      public/assets/models/xr-kit/briefing_screen.glb
+   ```
+
+5. Verify all `.glb` files load without errors:
+   ```bash
+   npx gltf-transform inspect public/assets/models/xr-kit/platform_round.glb
+   ```
+
+**Done when:** `public/assets/models/xr-kit/` contains all `.glb` files listed above, each loads without texture errors.
 
 ---
 
-## Phase 6 — Advanced shading (strictly optional)
+### Task 1 — Shared `useKitModel` hook
 
-**Outcome:** Subtle premium read on **small** meshes only.
+**What:** Create a shared hook in `src/xr/visual/useKitModel.ts` that loads and optionally retints a kit `.glb`.
 
-| Allowed | Forbidden (Quest default) |
-|---------|---------------------------|
-| Thin fresnel or edge highlight on manipulables / HUD-adjacent props | Full-screen post, heavy SSAO, bloom-dependent look |
-| `onBeforeCompile` tweak on shared material | Unique shader per instance |
+**File to create:** `src/xr/visual/useKitModel.ts`
 
-**Done when:** Shader variants counted; feature flagged or desktop-only if Quest regresses.
+**Behavior:**
+```typescript
+import { useGLTF } from '@react-three/drei'
+import { useMemo } from 'react'
+import { MeshStandardMaterial, Color } from 'three'
+import type { GLTF } from 'three-stdlib'
 
----
+const KIT_BASE = '/assets/models/xr-kit/'
 
-## Suggested implementation order
+type KitModelOptions = {
+  color?: string        // override albedo
+  emissive?: string     // override emissive
+  roughness?: number    // override roughness
+}
 
-```text
-Phase 0 (verify) → Phase 1 (staging) → Phase 2 (environment) → Phase 3 (materials)
-    → Phase 4 (glTF) → Phase 5 (textures/lightmaps) → Phase 6 (shaders, optional)
+export function useKitModel(name: string, options?: KitModelOptions) {
+  const gltf = useGLTF(`${KIT_BASE}${name}.glb`) as GLTF
+  // Clone the scene so multiple instances don't share materials
+  const scene = useMemo(() => {
+    const cloned = gltf.scene.clone(true)
+    if (options) {
+      cloned.traverse((child) => {
+        if ((child as any).isMesh) {
+          const mat = ((child as any).material as MeshStandardMaterial).clone()
+          if (options.color) mat.color = new Color(options.color)
+          if (options.emissive) mat.emissive = new Color(options.emissive)
+          if (options.roughness !== undefined) mat.roughness = options.roughness
+          ;(child as any).material = mat
+        }
+      })
+    }
+    return cloned
+  }, [gltf, options?.color, options?.emissive, options?.roughness])
+
+  return scene
+}
 ```
 
-Phases **4–6** are **explicitly gated**: do not start Phase 4 until Phase 1–3 are accepted on Quest.
+**Also:** Add `useGLTF.preload` calls for commonly used models at the bottom of the file or in a separate `src/xr/visual/preloadKit.ts`.
+
+**Done when:** Importing `useKitModel('platform_round')` returns a cloned `Object3D` ready to add to the scene. A simple test component can render `<primitive object={scene} />`.
 
 ---
 
-## File map (expected touch points)
+### Task 2 — Selection Lab staging upgrade
 
-| Area | Paths |
-|------|--------|
-| Shared visuals | `src/xr/visual/*`, `SharedScene.tsx`, `VRScene.tsx` |
-| Labs | `src/labs/*` (per-lab staging compositions) |
-| Theme | `src/config/playgroundTheme.ts` — new token only when a value is reused ≥2 times |
-| Assets (Phase 4+) | e.g. `public/models/` or `src/assets/` + preload strategy |
+**What:** Replace the inline `cylinderGeometry` pedestal in `SelectionLab.tsx` with a kit model.
+
+**File to modify:** `src/labs/cross-xr/SelectionLab.tsx`
+
+**Current code (lines 40-48):** The `SelectableTarget` component has a `<mesh>` with `<cylinderGeometry>` for the pedestal.
+
+**Changes:**
+1. Import `useKitModel` from `../../xr/visual/useKitModel`.
+2. Replace the pedestal `<mesh>` with:
+   ```tsx
+   const pedestal = useKitModel('platform_round', {
+     color: xr.accent.stone,
+     emissive: xr.accent.mustard,
+     roughness: 0.85,
+   })
+   // ...
+   <primitive object={pedestal} position={[0, -size * 0.42, 0]} scale={[size * 0.8, size * 0.25, size * 0.8]} />
+   ```
+3. Adjust `scale` and `position` in headset until the pedestal reads at waist-chest height (~0.3–0.5 m) and the interactable box sits naturally on top.
+
+**Optional:** Add one or two `Column_Astra` models in the far background (z = -8 to -12) at ~3 m tall as landmarks, tinted `xr.accent.stone`.
+
+**Done when:** Selection lab renders kit-model pedestals instead of raw cylinders. Interactable boxes still work identically (pointer events, hover, select).
 
 ---
 
-## Validation checklist (each phase)
+### Task 3 — Locomotion Lab staging upgrade
 
-- [ ] **Quest:** each lab, 60–90 s session, watch `InXRStats` and subjective comfort.
-- [ ] **Preset switch:** no material leaks / wrong colors after theme change.
-- [ ] **AR (cross-xr labs):** passthrough contrast; no huge additive quads without intent.
-- [ ] **Docs:** update [xr-3d.md](./style-templates/xr-3d.md) only if tokens or policies change.
+**What:** Add backdrop and landmark to `LocomotionLab.tsx`.
+
+**File to modify:** `src/labs/vr/LocomotionLab.tsx`
+
+**Changes:**
+1. Add 2–3 `Column_Hollow` or `Column_Astra` models at varying distances (z = -6, -10, -15) as landmarks. Tint with `xr.accent.stone`. Scale tallest to ~4 m.
+2. Add `Prop_Rail_4` instanced along the teleport floor as path guides. Space at 2 m intervals along z-axis. Tint with `xr.accent.cyan`, low emissive.
+3. Optionally add one `wall_top_straight` + `wall_bottom_straight` stacked behind the start position as a "room entry" anchor.
+
+**Done when:** Locomotion lab has visible depth cues and a landmark readable at fog distance. Teleport still works. No new lights added.
 
 ---
 
-## Related links
+### Task 4 — Manipulation Lab (Docking Mode only) staging upgrade
 
-- [xr-3d.md](./style-templates/xr-3d.md) — canonical 3D spec  
-- [spatial-polish-plan.md](./spatial-polish-plan.md) — theme, HUD, AR overlay, phase A–E  
-- [Mozilla Hello WebXR — visual development](https://blog.mozvr.com/visualdev-hello-webxr/) — glTF, materials-in-code, compression mindset  
-- [MDN — WebXR performance](https://developer.mozilla.org/en-US/docs/Web/API/WebXR_Device_API/Performance) — GC / allocation discipline  
+**What:** Add a console/workbench prop behind the docking area.
+
+**File to modify:** `src/labs/cross-xr/manipulation/DockingMode.tsx`
+
+**Changes:**
+1. Add one `prop_computer` or `briefing_screen` model behind the docking target area (z ≈ -1.2, y ≈ 0.8) as a "readout console."
+2. Tint with `xr.accent.stone` base, `xr.accent.cyan` emissive at 0.15 intensity.
+3. Add one `platform_simple` under the docking origin as a workbench surface.
+
+**Do NOT modify `ZenGardenMode.tsx`** — its nature-themed staging is intentional and complete.
+
+**Done when:** Docking mode has a visible institutional backdrop. Manipulation interaction is unchanged. Zen Garden is untouched.
+
+---
+
+### Task 5 — Placement Lab staging (optional, low priority)
+
+**What:** The Placement Lab is AR-only and uses hit-test surfaces. Stock kit models are less relevant here. If desired, add a small `Platform_Round1` as a "launch pedestal" for the object being placed, visible before the user places it.
+
+**Done when:** Placement lab optionally has one kit pedestal. AR hit-test flow unchanged.
+
+---
+
+### Task 6 — Human height reference (debug toggle)
+
+**What:** Add a toggleable 1.7 m wireframe capsule to `VRScene.tsx` for scale checking.
+
+**File to modify:** `src/xr/scene/VRScene.tsx`
+
+**Changes:**
+1. Add a Leva toggle `showHeightRef` (default `false`) under a "Debug" folder.
+2. When enabled, render a wireframe capsule (cylinder + two half-spheres, or `CapsuleGeometry`) at `[1, 0.85, -1]` (standing beside the user), height 1.7 m, color `#666`, wireframe, no shadows.
+
+**Done when:** Toggling the control shows/hides the reference. It does not affect performance when hidden (conditional render, not visibility toggle).
+
+---
+
+### Task 7 — Validation (human required)
+
+These checks require a person in a headset:
+
+- [ ] **Quest frame time**: run each lab with `InXRStats` visible. Target: stable 72 fps with kit models loaded.
+- [ ] **Silhouette test**: "Can I name what that object is for from 2 m away?" If no → adjust scale or swap model.
+- [ ] **AR passthrough**: kit models (if visible in AR) don't blow out contrast.
+- [ ] **Zen Garden**: confirm it was NOT modified — still has wooden tray, sand, petals.
+- [ ] Run `renderer.info.render.triangles` and `renderer.info.render.calls` — log results. Tris ≤ 100 K, calls ≤ 50.
+
+---
+
+## File map
+
+| Area | Path | Status |
+|------|------|--------|
+| Converted kit models | `public/assets/models/xr-kit/*.glb` | **Create in Task 0** |
+| Stock packs (source) | `public/assets/models/Modular SciFi MegaKit[Standard]/`, `Molten Maps SciFi Asset Pack/`, `kenney_modular-space-kit_1.0/`, `kenney_space-station-kit/` | On disk, not loaded by app |
+| Kit loader hook | `src/xr/visual/useKitModel.ts` | **Create in Task 1** |
+| Kit preloader | `src/xr/visual/preloadKit.ts` (optional) | Create if needed |
+| Skydome | `src/xr/visual/Skydome.tsx` | Done |
+| Scene foundations | `src/xr/scene/SharedScene.tsx`, `VRScene.tsx`, `ARScene.tsx` | Done (lights, fog, grid, skydome) |
+| Theme | `src/config/playgroundTheme.ts` | Done |
+| Labs | `src/labs/*` | Modify in Tasks 2–5 |
+
+---
+
+## Quality bar (reference)
+
+| Intended vocabulary | Fails (reject) | Passes (accept) |
+|---------------------|----------------|-----------------|
+| **Pedestal** | Raw `cylinderGeometry` or `boxGeometry` | Kit model (`platform_round.glb`) tinted with `xr.accent.stone` + `mustard` rim emissive |
+| **Backdrop wall** | Nothing behind targets | At least one wall or column from kit, anchored to floor |
+| **Landmark** | No depth cue | Column visible at fog distance, taller than foreground props |
+| **Console** | Single slab | Kit prop (`prop_computer.glb` or `briefing_screen.glb`) with panel detail |
+| **Zen Garden** | Replaced with sci-fi kit | **Untouched** — keeps wooden tray, sand, petals, organic objects |
+
+**Hard rule:** If the only difference from the previous debug scene is hex colors, the task is **not done**.
+
+---
+
+## Related docs
+
+- [xr-3d.md](./style-templates/xr-3d.md) — palette, materials, geometry caps, HUD
+- [spatial-polish-plan.md](./spatial-polish-plan.md) — theme pipeline, phase acceptance
+- [pitfalls.md](./pitfalls.md) — Leva + `Text` + WebXR gotchas
+- [overview.md](./overview.md) — architecture, directory map
