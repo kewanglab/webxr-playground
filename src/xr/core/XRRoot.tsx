@@ -1,3 +1,4 @@
+import { Suspense, useEffect } from 'react'
 import { XR, XROrigin } from '@react-three/xr'
 import { xrStore } from './xrStore'
 import { useXRMode } from './hooks'
@@ -10,6 +11,7 @@ import { InXRLogger } from '../hud/InXRLogger'
 import { InXRStats } from '../hud/InXRStats'
 import { HUDPanel } from '../hud/HUDPanel'
 import { TagAlongHUD } from '../hud/TagAlongHUD'
+import { preloadXrKitModels } from '../visual/useKitModel'
 
 function XRScene() {
   const mode = useXRMode()
@@ -29,9 +31,15 @@ function XRScene() {
 }
 
 export function XRRoot() {
+  useEffect(() => {
+    preloadXrKitModels()
+  }, [])
+
   return (
     <XR store={xrStore}>
-      <XRScene />
+      <Suspense fallback={null}>
+        <XRScene />
+      </Suspense>
       <TagAlongHUD>
         <HUDPanel>
           <InXRStats />

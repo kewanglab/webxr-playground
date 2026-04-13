@@ -5,6 +5,11 @@ import type { ManipulationAcquisition, ManipulationTechnique } from '../ObjectMa
 import type { ManipulationResult } from './techniques'
 import { tuningPresets } from '../../../config/labs'
 import { usePlaygroundTheme } from '../../../xr/theme/PlaygroundThemeContext'
+import {
+  scalePlatformSimpleToWidth,
+  scalePropComputerToHeight,
+} from '../../../xr/visual/kitNative'
+import { KitInstance } from '../../../xr/visual/useKitModel'
 import { useHandJoints } from './useHandJoints'
 import { useManipulation } from './useManipulation'
 import { ManipulableObject } from './ManipulableObject'
@@ -260,6 +265,33 @@ export function DockingMode({
         </mesh>
       </ManipulableObject>
 
+      <KitInstance
+        name="platform_simple"
+        position={[
+          OBJECT_ORIGIN.x,
+          OBJECT_ORIGIN.y - objectSize * 0.52,
+          OBJECT_ORIGIN.z,
+        ]}
+        scale={scalePlatformSimpleToWidth(1.15)}
+        options={{
+          color: xr.accent.stone,
+          emissive: xr.accent.mustard,
+          emissiveIntensity: 0.06,
+          roughness: 0.88,
+        }}
+      />
+      <KitInstance
+        name="prop_computer"
+        position={[0, 0.68, -1.38]}
+        scale={scalePropComputerToHeight(1.5)}
+        rotation={[0, Math.PI * 0.12, 0]}
+        options={{
+          color: xr.accent.stone,
+          emissive: labAccents.manipulation.secondary,
+          emissiveIntensity: 0.15,
+          roughness: 0.55,
+        }}
+      />
     </group>
   )
 }

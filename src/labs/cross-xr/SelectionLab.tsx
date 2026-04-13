@@ -6,6 +6,13 @@ import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
 import { useHapticPulse } from '../../xr/feedback/haptics/useHapticPulse'
 import { useConfirmTone } from '../../xr/feedback/audio/useConfirmTone'
 import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
+import {
+  XR_KIT_NATIVE,
+  scaleColumnAstraToHeight,
+  scaleColumnHollowToHeight,
+  scalePlatformRoundForTargetCube,
+} from '../../xr/visual/kitNative'
+import { KitInstance, useKitModel } from '../../xr/visual/useKitModel'
 import { LabHeading } from '../LabHeading'
 
 function SelectableTarget({
@@ -34,18 +41,25 @@ function SelectableTarget({
   const playTone = useConfirmTone()
 
   const s = Math.max(0.12, size)
+  const pedestal = useKitModel('platform_round', {
+    color: xr.accent.stone,
+    emissive: xr.accent.mustard,
+    emissiveIntensity: 0.18,
+    roughness: 0.85,
+  })
+  const pedestalScale = scalePlatformRoundForTargetCube(s)
 
   return (
     <group position={position} scale={hovered ? 1 + confirmScaleBoost : 1}>
-      <mesh position={[0, -s * 0.42, 0]}>
-        <cylinderGeometry args={[s * 0.38, s * 0.42, s * 0.12, 20]} />
-        <meshStandardMaterial
-          color={xr.accent.stone}
-          emissive={xr.accent.mustard}
-          emissiveIntensity={0.18}
-          roughness={0.85}
-        />
-      </mesh>
+      <primitive
+        object={pedestal}
+        position={[
+          0,
+          -s / 2 - XR_KIT_NATIVE.platformRoundTopY * pedestalScale,
+          0,
+        ]}
+        scale={pedestalScale}
+      />
       <mesh
         pointerEventsType={{ allow: pointerType }}
         onPointerEnter={() => setHovered(true)}
@@ -125,6 +139,19 @@ export function SelectionLab() {
         enableAudio={enableAudio}
         pointerType="grab"
         label="Hand pinch (grab)"
+      />
+
+      <KitInstance
+        name="column_hollow"
+        position={[-2.2, 0, -9]}
+        scale={scaleColumnHollowToHeight(2.85)}
+        options={{ color: xr.accent.stone, roughness: 0.9, emissive: xr.accent.amber, emissiveIntensity: 0.06 }}
+      />
+      <KitInstance
+        name="column_astra"
+        position={[2.2, 0, -10.5]}
+        scale={scaleColumnAstraToHeight(2.95)}
+        options={{ color: xr.accent.stone, roughness: 0.88 }}
       />
     </group>
   )

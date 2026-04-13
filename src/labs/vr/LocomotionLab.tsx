@@ -9,6 +9,12 @@ import { getLabTitle, tuningPresets } from '../../config/labs'
 import { LabHeading } from '../LabHeading'
 import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
 import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
+import {
+  scaleColumnAstraToHeight,
+  scaleColumnHollowToHeight,
+  scalePropRailToLength,
+} from '../../xr/visual/kitNative'
+import { KitInstance } from '../../xr/visual/useKitModel'
 
 export function LocomotionLab() {
   const { labAccents, xr } = usePlaygroundTheme()
@@ -157,15 +163,61 @@ export function LocomotionLab() {
         </mesh>
       ))}
 
-      <mesh position={[0, 0.5, -8]}>
-        <boxGeometry args={[0.35, 1.2, 0.35]} />
-        <meshStandardMaterial
-          color={xr.accent.stone}
-          emissive={xr.accent.amber}
-          emissiveIntensity={0.08}
-          roughness={0.88}
+      {[-2, -4, -6, -8].map((z) => (
+        <KitInstance
+          key={`rail-${z}`}
+          name="prop_rail"
+          position={[0, 0.02, z]}
+          scale={scalePropRailToLength(2.35)}
+          rotation={[0, Math.PI / 2, 0]}
+          options={{
+            color: xr.accent.stone,
+            emissive: labAccents.locomotion.primary,
+            emissiveIntensity: 0.14,
+            roughness: 0.75,
+          }}
         />
-      </mesh>
+      ))}
+
+      <KitInstance
+        name="column_hollow"
+        position={[-1.4, 0, -6]}
+        scale={scaleColumnHollowToHeight(3.1)}
+        options={{ color: xr.accent.stone, roughness: 0.9 }}
+      />
+      <KitInstance
+        name="column_astra"
+        position={[0.6, 0, -10]}
+        scale={scaleColumnAstraToHeight(3.05)}
+        options={{
+          color: xr.accent.stone,
+          emissive: xr.accent.amber,
+          emissiveIntensity: 0.07,
+          roughness: 0.85,
+        }}
+      />
+      <KitInstance
+        name="column_hollow"
+        position={[-0.8, 0, -15]}
+        scale={scaleColumnHollowToHeight(3.35)}
+        options={{ color: xr.accent.stone, roughness: 0.9 }}
+      />
+
+      {/* Native wall pieces stack in kit space (bottom y≈0, top y≈3–5); offset top so they meet. */}
+      <group position={[0, 0, 2.8]} rotation={[0, Math.PI, 0]}>
+        <KitInstance
+          name="wall_bottom_straight"
+          position={[0, 0, 0]}
+          scale={1}
+          options={{ color: xr.accent.stone, roughness: 0.92 }}
+        />
+        <KitInstance
+          name="wall_top_straight"
+          position={[0, -2.98, 0]}
+          scale={1}
+          options={{ color: xr.accent.stone, roughness: 0.9 }}
+        />
+      </group>
     </group>
   )
 }
