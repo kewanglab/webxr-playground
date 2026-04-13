@@ -17,7 +17,9 @@ These items are **complete** — do not redo them:
 - [x] `Skydome.tsx` — gradient sphere (24×16 segments, vertex colors, `BackSide`, `depthWrite: false`).
 - [x] Labs consume `usePlaygroundTheme()` for accent colors. Selection lab has a simple cylinder pedestal.
 
-**What is NOT done:** Labs still use raw `BoxGeometry` / `cylinderGeometry` for staging. No stock models are loaded yet. No `useGLTF` helper exists. No `src/xr/visual/` kit infrastructure beyond `Skydome.tsx`.
+**What is done for kit staging:** `src/xr/visual/useKitModel.tsx` (`useKitModel`, `KitInstance`, `preloadXrKitModels`), `public/assets/models/xr-kit/*.glb` (run `npm run build:xr-kit`), `Suspense` + preload in `XRRoot`, Selection / Locomotion / Docking staging per Tasks 2–4, Debug height capsule in `VRScene` (Task 6).
+
+**Still optional / human:** Task 5 (Placement pedestal), Task 7 (Quest validation, tri/draw counts).
 
 ---
 
@@ -111,26 +113,20 @@ Each task is a single unit of work. Complete them in order. **Do not skip ahead.
 
 **Steps:**
 
-1. Install `gltf-transform`:
+1. Install dependencies (includes `@gltf-transform/cli`):
    ```bash
-   npm install --save-dev @gltf-transform/cli
+   npm install
    ```
 
-2. Create the output directory:
+2. Build all kit `.glb` files (copies MegaKit glTF + shared textures into a temp folder, then runs `gltf-transform copy` for each model, plus Molten `briefing_screen`):
    ```bash
-   mkdir -p public/assets/models/xr-kit
+   npm run build:xr-kit
    ```
+   Script: `scripts/build-xr-kit-glb.mjs`.
 
-3. For each model listed in the "Kit piece mapping" table above, run:
-   ```bash
-   npx gltf-transform copy \
-     "public/assets/models/Modular SciFi MegaKit[Standard]/glTF/<Subfolder>/<Model>.gltf" \
-     "public/assets/models/xr-kit/<model_name>.glb" \
-     --allow-http
-   ```
-   If `gltf-transform copy` cannot resolve the textures (because they are in `../Textures/`), manually copy the needed `.png` files into the same folder as the `.gltf` first, then run the command.
+3. The script already converts the minimum set below. If you add models, extend `scripts/build-xr-kit-glb.mjs` or run `gltf-transform copy` by hand (copy shared `Textures/*.png` next to the `.gltf` first if URIs fail).
 
-   Models to convert (minimum set):
+   Models in the script (minimum set):
    - `glTF/Platforms/Platform_Round1.gltf` → `xr-kit/platform_round.glb`
    - `glTF/Platforms/Platform_Simple.gltf` → `xr-kit/platform_simple.glb`
    - `glTF/Columns/Column_Astra.gltf` → `xr-kit/column_astra.glb`
@@ -140,13 +136,9 @@ Each task is a single unit of work. Complete them in order. **Do not skip ahead.
    - `glTF/Walls/TopPlastic_Straight.gltf` → `xr-kit/wall_top_straight.glb`
    - `glTF/Walls/BottomSimple_Straight.gltf` → `xr-kit/wall_bottom_straight.glb`
 
-4. Copy Molten Maps props that are needed (already `.glb`, no conversion):
-   ```bash
-   cp "public/assets/models/Molten Maps SciFi Asset Pack/Assets/gtlf/Briefing_Screen_Blue.glb" \
-      public/assets/models/xr-kit/briefing_screen.glb
-   ```
+4. Molten `briefing_screen.glb` is copied by the same script.
 
-5. Verify all `.glb` files load without errors:
+5. Verify (optional):
    ```bash
    npx gltf-transform inspect public/assets/models/xr-kit/platform_round.glb
    ```
@@ -159,7 +151,7 @@ Each task is a single unit of work. Complete them in order. **Do not skip ahead.
 
 **What:** Create a shared hook in `src/xr/visual/useKitModel.ts` that loads and optionally retints a kit `.glb`.
 
-**File to create:** `src/xr/visual/useKitModel.ts`
+**File to create:** `src/xr/visual/useKitModel.tsx` (JSX for `KitInstance`)
 
 **Behavior:**
 ```typescript
@@ -305,7 +297,7 @@ These checks require a person in a headset:
 |------|------|--------|
 | Converted kit models | `public/assets/models/xr-kit/*.glb` | **Create in Task 0** |
 | Stock packs (source) | `public/assets/models/Modular SciFi MegaKit[Standard]/`, `Molten Maps SciFi Asset Pack/`, `kenney_modular-space-kit_1.0/`, `kenney_space-station-kit/` | On disk, not loaded by app |
-| Kit loader hook | `src/xr/visual/useKitModel.ts` | **Create in Task 1** |
+| Kit loader hook | `src/xr/visual/useKitModel.tsx` | **Done** |
 | Kit preloader | `src/xr/visual/preloadKit.ts` (optional) | Create if needed |
 | Skydome | `src/xr/visual/Skydome.tsx` | Done |
 | Scene foundations | `src/xr/scene/SharedScene.tsx`, `VRScene.tsx`, `ARScene.tsx` | Done (lights, fog, grid, skydome) |

@@ -1,9 +1,13 @@
 import { Grid } from '@react-three/drei'
+import { useControls } from 'leva'
 import { usePlaygroundTheme } from '../theme/PlaygroundThemeContext'
 import { Skydome } from '../visual/Skydome'
 
 export function VRScene() {
   const { xr } = usePlaygroundTheme()
+  const { showHeightRef } = useControls('Debug', {
+    showHeightRef: false,
+  })
 
   return (
     <>
@@ -35,6 +39,13 @@ export function VRScene() {
           metalness={0}
         />
       </mesh>
+
+      {showHeightRef && (
+        <mesh position={[1, 0.85, -1]} raycast={() => null}>
+          <capsuleGeometry args={[0.25, 1.2, 6, 12]} />
+          <meshBasicMaterial color="#666666" wireframe />
+        </mesh>
+      )}
     </>
   )
 }
