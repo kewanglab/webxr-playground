@@ -16,7 +16,10 @@ function ThemedCanvas() {
   const themePresetId = usePlaygroundStore((s) => s.themePresetId)
 
   return (
-    <Canvas style={{ position: 'fixed', inset: 0 }}>
+    <Canvas
+      style={{ position: 'fixed', inset: 0 }}
+      camera={{ position: [0, 1.6, 4.5], fov: 40, near: 0.1, far: 80 }}
+    >
       <PlaygroundThemeProvider presetId={themePresetId}>
         <XRRoot />
       </PlaygroundThemeProvider>
