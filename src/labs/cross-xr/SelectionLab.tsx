@@ -13,7 +13,67 @@ import {
   scalePlatformRoundForTargetCube,
 } from '../../xr/visual/kitNative'
 import { KitInstance, useKitModel } from '../../xr/visual/useKitModel'
+import { useInitialEyeLevelOffset } from '../../xr/core/useInitialEyeLevelOffset'
 import { LabHeading } from '../LabHeading'
+
+const SELECTION_FOCUS_Y = 1.26
+
+function SelectionStage({
+  stone,
+  rim,
+  voidColor,
+}: {
+  stone: string
+  rim: string
+  voidColor: string
+}) {
+  return (
+    <group>
+      <mesh position={[0, 0.03, -1.48]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[1.42, 44]} />
+        <meshStandardMaterial
+          color={stone}
+          roughness={0.96}
+          metalness={0}
+          emissive={voidColor}
+          emissiveIntensity={0.08}
+        />
+      </mesh>
+      <mesh position={[0, 0.042, -1.48]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.94, 1.22, 48]} />
+        <meshStandardMaterial
+          color={rim}
+          roughness={0.55}
+          emissive={rim}
+          emissiveIntensity={0.18}
+        />
+      </mesh>
+      <mesh position={[0, 1.28, -2.48]}>
+        <torusGeometry args={[1.62, 0.085, 12, 54, Math.PI * 1.08]} />
+        <meshStandardMaterial
+          color={stone}
+          roughness={0.92}
+          emissive={rim}
+          emissiveIntensity={0.1}
+        />
+      </mesh>
+      <mesh position={[0, 1.28, -2.5]}>
+        <torusGeometry args={[1.38, 0.02, 8, 40, Math.PI * 1.08]} />
+        <meshBasicMaterial color={rim} transparent opacity={0.75} />
+      </mesh>
+      <mesh position={[0, 0.72, -2.52]}>
+        <boxGeometry args={[2.55, 1.24, 0.08]} />
+        <meshStandardMaterial
+          color={stone}
+          roughness={0.98}
+          metalness={0}
+          emissive={voidColor}
+          emissiveIntensity={0.05}
+        />
+      </mesh>
+    </group>
+  )
+}
 
 function SelectableTarget({
   position,
@@ -103,6 +163,10 @@ export function SelectionLab() {
 
   const size = Math.max(0.12, readLevaNumber(targetSize, defaults.targetSize))
   const boost = readLevaNumber(confirmScaleBoost, defaults.confirmScaleBoost)
+  const stageOffsetY = useInitialEyeLevelOffset({
+    referenceY: SELECTION_FOCUS_Y,
+    eyeOffsetFromHead: -0.24,
+  })
 
   return (
     <group>
@@ -110,49 +174,66 @@ export function SelectionLab() {
         title={getLabTitle('selection')}
         subtitle={`Target ${size.toFixed(2)} · Confirm boost ${boost.toFixed(2)} · Haptics ${enableHaptics ? 'on' : 'off'} · Audio ${enableAudio ? 'on' : 'off'}`}
       />
-      <SelectableTarget
-        position={[-0.45, 1.25, -1.25]}
-        color={labAccents.selection.primary}
-        size={size}
-        confirmScaleBoost={boost}
-        enableHaptics={enableHaptics}
-        enableAudio={enableAudio}
-        pointerType="ray"
-        label="Ray (controller)"
-      />
-      <SelectableTarget
-        position={[0, 1.45, -0.9]}
-        color={labAccents.selection.secondary}
-        size={size}
-        confirmScaleBoost={boost}
-        enableHaptics={enableHaptics}
-        enableAudio={enableAudio}
-        pointerType="touch"
-        label="Direct touch (hands)"
-      />
-      <SelectableTarget
-        position={[0.45, 1.25, -1.25]}
-        color={xr.accent.cyan}
-        size={size}
-        confirmScaleBoost={boost}
-        enableHaptics={enableHaptics}
-        enableAudio={enableAudio}
-        pointerType="grab"
-        label="Hand pinch (grab)"
-      />
+      <group position={[0, stageOffsetY, 0]}>
+        <SelectionStage
+          stone={xr.accent.seal}
+          rim={labAccents.selection.secondary}
+          voidColor={xr.void.clear}
+        />
+        <SelectableTarget
+          position={[-0.72, 1.18, -1.58]}
+          color={labAccents.selection.primary}
+          size={size}
+          confirmScaleBoost={boost}
+          enableHaptics={enableHaptics}
+          enableAudio={enableAudio}
+          pointerType="ray"
+          label="Ray (controller)"
+        />
+        <SelectableTarget
+          position={[0, 1.34, -1.12]}
+          color={labAccents.selection.secondary}
+          size={size}
+          confirmScaleBoost={boost}
+          enableHaptics={enableHaptics}
+          enableAudio={enableAudio}
+          pointerType="touch"
+          label="Direct touch (hands)"
+        />
+        <SelectableTarget
+          position={[0.72, 1.18, -1.58]}
+          color={xr.accent.cyan}
+          size={size}
+          confirmScaleBoost={boost}
+          enableHaptics={enableHaptics}
+          enableAudio={enableAudio}
+          pointerType="grab"
+          label="Hand pinch (grab)"
+        />
 
-      <KitInstance
-        name="column_hollow"
-        position={[-2.2, 0, -9]}
-        scale={scaleColumnHollowToHeight(2.85)}
-        options={{ color: xr.accent.stone, roughness: 0.9, emissive: xr.accent.amber, emissiveIntensity: 0.06 }}
-      />
-      <KitInstance
-        name="column_astra"
-        position={[2.2, 0, -10.5]}
-        scale={scaleColumnAstraToHeight(2.95)}
-        options={{ color: xr.accent.stone, roughness: 0.88 }}
-      />
+        <KitInstance
+          name="column_hollow"
+          position={[-2.35, 0, -4.25]}
+          scale={scaleColumnHollowToHeight(2.75)}
+          options={{
+            color: xr.accent.stone,
+            roughness: 0.9,
+            emissive: xr.accent.amber,
+            emissiveIntensity: 0.07,
+          }}
+        />
+        <KitInstance
+          name="column_astra"
+          position={[2.55, 0, -5.35]}
+          scale={scaleColumnAstraToHeight(3.15)}
+          options={{
+            color: xr.accent.stone,
+            roughness: 0.88,
+            emissive: xr.accent.amber,
+            emissiveIntensity: 0.05,
+          }}
+        />
+      </group>
     </group>
   )
 }

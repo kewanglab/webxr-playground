@@ -15,7 +15,7 @@
 | **1 — Cross-XR skeleton** | **Done** |
 | **2 — First labs** | **Done** — Selection, Placement, Locomotion. |
 | **3 — Object Manipulation Lab** | **Done** — VHI/VHS, docking + zen, proximity + hand-ray acquisition; see Phase 3 below. |
-| **4 — Spatial polish** | **Next** — specs in [Spatial polish plan](./spatial-polish-plan.md); implementation not started. |
+| **4 — Spatial polish** | **In progress** — theme/XR foundations plus Selection, Locomotion, Docking, and Placement recovery passes landed, including second-pass correctness fixes for reachability, target visibility, and AR placement; Quest validation remains and is tracked in [XR scene enhancement plan](./xr-scene-enhancement-plan.md). |
 | **5 — Interaction platform** | **Not started** — shared primitives (`src/xr/interactions/`), cross-lab A/B preset UI, shared feedback library. |
 | **6 — Expanded labs & AR** | **Not started** — MenuLab, UIReadabilityLab, deeper AR studies (after Phase 5 where noted). |
 
@@ -201,7 +201,8 @@ Deliverables:
 
 *Edit this section as your current sprint changes.*
 
-- **Now (Phase 4):** Implement **spatial polish** — theme module, CSS variables + shell restyle, Leva theme from tokens, XR scene / HUD / AR cue updates per [Spatial polish plan](./spatial-polish-plan.md); validate on Quest
+- **Now (Phase 4):** Run **Quest validation + perf logging** from [XR scene enhancement plan](./xr-scene-enhancement-plan.md), then decide whether any lab needs a second headset-driven refinement pass
+- **Already landed in Phase 4:** theme module, shell polish, XR foundations, authored desktop preview framing, Selection eye-level staging, Locomotion reachability fix, Docking target-volume plus eye-level bench anchoring, and the correctness-first Placement rewrite
 - **Alongside:** Optional Quest hardening passes on **ObjectManipulationLab** (docking + zen); decide later whether **HRI/HRS** land in Phase 6 as a small dedicated lab
 - **Then (Phase 5):** **Primitive graduation** into `src/xr/interactions/`, then shared **A/B preset** UI and **feedback** primitives
 - **Then (Phase 6):** **MenuLab** and AR expansion labs once Phase 5 primitives are available where reuse matters

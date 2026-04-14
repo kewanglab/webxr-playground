@@ -12,6 +12,7 @@ import { InXRStats } from '../hud/InXRStats'
 import { HUDPanel } from '../hud/HUDPanel'
 import { TagAlongHUD } from '../hud/TagAlongHUD'
 import { preloadXrKitModels } from '../visual/useKitModel'
+import { DesktopPreviewCamera } from './DesktopPreviewCamera'
 
 function XRScene() {
   const mode = useXRMode()
@@ -21,6 +22,7 @@ function XRScene() {
 
   return (
     <>
+      <DesktopPreviewCamera />
       <XROrigin position={originPosition} rotation={[0, originRotationY, 0]} />
       <SharedScene />
       {!isAR && <VRScene />}

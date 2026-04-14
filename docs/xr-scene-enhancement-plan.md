@@ -1,6 +1,6 @@
 # XR scene enhancement — execution plan
 
-**Goal:** Replace placeholder primitives in lab staging with stock-kit models so labs feel **credible, cinematic-adjacent, and adult** — still within [xr-3d.md](./style-templates/xr-3d.md) performance guardrails (Quest-first, ≤ 2 meaningful lights, no default post stack).
+**Goal:** Replace placeholder staging with **authored spatial compositions** so each lab feels **intentional, legible, and exciting** at human scale. Stock-kit models are only support material. The outcome should read as a designed XR stage, not a debug scene with nicer props — still within [xr-3d.md](./style-templates/xr-3d.md) performance guardrails (Quest-first, ≤ 2 meaningful lights, no default post stack).
 
 **Spec authority:** [xr-3d.md](./style-templates/xr-3d.md). **Program context:** [spatial-polish-plan.md](./spatial-polish-plan.md).
 
@@ -23,13 +23,101 @@ These items are **complete** — do not redo them:
 
 ---
 
+## Execution tracker
+
+Use this section as the working status board for the enhancement pass. Update it whenever a phase changes state so implementation decisions stay tied to the plan.
+
+### Phase status
+
+| Phase | Scope | Status | Notes |
+|------|-------|--------|-------|
+| **A** | Theme core + shared XR foundations | **Done** | Theme tokens, scene lights, fog, floor, skydome, HUD panel baseline all landed. |
+| **B** | Asset pipeline + kit loading | **Done** | `xr-kit/*.glb`, build script, preload, and `useKitModel` landed. |
+| **C** | Desktop preview framing | **Done** | Authored desktop camera views now frame labs outside XR. |
+| **D** | Selection recovery pass | **Done** | Stage, backdrop gesture, and stronger comparison composition landed; the scene now also captures initial eye height and lifts the whole stage together for better first-entry framing. |
+| **E** | Locomotion recovery pass | **Done** | Second pass expanded the teleport footprint, opened the corridor read, and added a real landing zone inside the destination space. |
+| **F** | Docking recovery pass | **Done** | Second pass lowered/simplified the station so the ghost target stays visible across the full trial volume, then added initial eye-level anchoring so the whole bench reads correctly on first entry. |
+| **G** | Placement recovery pass | **Done** | Second pass rebuilt placement around one active-source preview, direct `selectstart` confirmation, scale-locked placements, and hand/controller hit-test fallback. |
+| **H** | Quest validation + perf logging | **Next (human)** | Validate readability, scale, triangles, draw calls, and frame time on device. |
+
+### Current focus
+
+- **Right now:** Phase **H — Quest validation + perf logging** against the second-pass locomotion, docking, and placement fixes
+- **After that:** decide whether any lab needs a second refinement pass from headset findings
+- **Then:** close Phase 4 and move attention to Phase 5
+
+### Working rules for this tracker
+
+- Only mark a lab phase **Done** when the lab satisfies the replacement brief above, not when a few props have been added.
+- If a phase reveals a new blocker or subproblem, add it as a short note in the phase table instead of creating hidden scratch plans elsewhere.
+- Keep this tracker aligned with the higher-level status in [roadmap.md](./roadmap.md).
+
+---
+
+## Replacement brief (read this before implementing more kit work)
+
+The first version of this plan leaned too hard on **asset substitution**. That improves credibility a little, but it does **not** automatically create drama, focus, or spatial identity. From this point on, treat stock kit parts as **raw material** for composing a stage, not as the stage itself.
+
+If a scene still reads as:
+
+- a few interactables floating in open void
+- a straight line of props on a grid
+- a hero interaction object that is still a debug primitive
+- a backdrop piece that sits somewhere nearby but does not frame the action
+
+then the scene is **not solved**, even if every primitive has been swapped for a `.glb`.
+
+### What success should feel like
+
+Each lab should communicate a short, readable spatial story within 2–3 seconds:
+
+- **Where should I look first?**
+- **What is the ritual here?**
+- **What is the depth structure of this space?**
+- **What is the payoff or destination?**
+
+The interaction target must feel like the **hero** of the scene. Supporting architecture exists to frame, reinforce, and dramatize that hero.
+
+### Non-negotiable spatial requirements
+
+Every lab pass must satisfy all of the following:
+
+1. **Foreground / midground / background** are deliberately authored.
+   - Foreground = the immediate interaction surface or object family.
+   - Midground = the active task zone.
+   - Background = one readable landmark, enclosure, or payoff.
+2. **One strong framing gesture** exists.
+   - Examples: arc, portal, wall band, corridor mouth, bench surround, ring, side rails.
+   - A lone prop in empty space is not framing.
+3. **The hero interaction reads first.**
+   - The thing the user touches or manipulates must be the clearest silhouette, clearest contrast, or strongest accent in the scene.
+   - Background detail must not outshine the interactive object.
+4. **Space has directional intent.**
+   - The scene should encourage a glance path or body orientation.
+   - If locomotion is involved, there must be a destination.
+5. **Desktop preview must communicate the stage.**
+   - Since this playground depends on fast desktop iteration, the non-XR camera framing must show the composition clearly enough to judge silhouette, spacing, and focal hierarchy.
+
+### Failure modes to reject
+
+Reject a pass if any of the following are true:
+
+- The scene is still mostly a dark floor and empty void with a few placed assets.
+- The main composition only becomes understandable after reading labels.
+- The kit props feel sprinkled in rather than structurally related.
+- The most visually detailed object is not the one the user interacts with.
+- The only "improvement" is muted sci-fi decoration behind the same prototype geometry.
+
+---
+
 ## Design principles (reference — do not delete)
 
 1. **Readable role at 2 m** — silhouette + scale, not labels.
-2. **Institutional, not toy** — large surfaces muted; accents thin, linear, or rim-only.
-3. **Asymmetry** — offsets, one strong vertical, cutouts.
-4. **Human-scaled** — check against ~1.7 m reference.
-5. **Performance** — ≤ 2 lights, instancing for repeats, ≤ 100 K tris per scene, ≤ 50 draw calls target.
+2. **Hero-first** — the interactive object or surface must visually win.
+3. **Institutional, not toy** — large surfaces muted; accents thin, linear, or rim-only.
+4. **Asymmetry with intent** — offsets, one strong vertical, framed negative space, purposeful imbalance.
+5. **Human-scaled** — check against ~1.7 m reference.
+6. **Performance** — ≤ 2 lights, instancing for repeats, ≤ 100 K tris per scene, ≤ 50 draw calls target.
 
 ---
 
@@ -100,6 +188,78 @@ Each row maps a **lab staging role** to a **specific stock model** to use. This 
 | **Zen Garden** | Manipulation (Zen) | **Keep existing procedural staging** (wooden tray, sand, petals) — do NOT replace with sci-fi kit | N/A |
 
 > **Zen Garden exception:** `ZenGardenMode.tsx` already has purpose-built nature staging (wooden tray, sand texture, cherry petals, organic objects). The sci-fi stock kit is **wrong** for this context. Leave it as-is; only apply stock kit to Docking Mode and shared lab shells.
+
+---
+
+## Per-lab experiential targets
+
+These replace the weaker "just add some kit pieces" interpretation.
+
+### Selection Lab — ceremonial comparison stage
+
+**Desired read:** three offerings on a deliberate stage, with a clear comparison rhythm and one containing frame behind them.
+
+**Must have:**
+
+- Three pedestals arranged as a **shallow arc or horseshoe**, not just three isolated objects.
+- A **single backdrop gesture** behind them: curved arc, segmented wall band, or portal-like frame.
+- A darker base plane or plinth zone anchoring the set to the floor.
+- One taller landmark offset behind the composition for vertical rhythm, not as random distant clutter.
+
+**Must avoid:**
+
+- Three cubes floating in open void with unrelated columns in the distance.
+- Labels doing the work of spatial organization.
+
+### Locomotion Lab — route with payoff
+
+**Desired read:** departure zone, guided travel path, and destination landmark that rewards forward attention.
+
+**Must have:**
+
+- A **launch zone** around the user start position.
+- A forward **path rhythm** that feels designed: chevrons, segmented rails, or floor banding.
+- A **destination space ahead**: monolith, doorway, portal, overlook, or framed terminal.
+- At least a partial **corridor or runway enclosure**, created by side pieces, not just floor dressing.
+
+**Must avoid:**
+
+- A sparse line of path cues with no clear endpoint.
+- The only architectural anchor being behind the player.
+
+### Docking Mode — instrumented workbench
+
+**Desired read:** a precision manipulation station where the docking object is the obvious hero and the station explains the task.
+
+**Must have:**
+
+- A bench, cradle, or fixture that makes the target volume feel **mounted** in a station, not floating in space.
+- The manipulable object upgraded from raw debug cube to a more authored, asymmetric object, while preserving the experiment's rotational readability.
+- Instrument surfaces or readouts that frame the task laterally or rearward.
+- Clear contrast between **held object**, **target ghost**, and **support structure**.
+
+**Must avoid:**
+
+- Decorating a raw cube with a background computer and calling the scene finished.
+- Making the bench more visually interesting than the object under study.
+
+### Placement Lab — minimal but authored AR ritual
+
+**Desired read:** a clean placement ritual with an explicit footprint, ghost, and confirmation state.
+
+**Must have:**
+
+- A deliberate **ring / footprint** language on the hit plane.
+- A ghost object whose silhouette and edge treatment communicate validity.
+- A clear visual distinction between preview, valid placement, invalid placement, and confirmed placement.
+
+**Must avoid:**
+
+- Default sphere/box previews with color alone doing all the work.
+
+### Zen Garden — keep the custom language
+
+Zen Garden already succeeds because it has a center, object family, material contrast, and a clear ritual. Do not contaminate it with stock sci-fi kit. If anything, future work should sharpen tray composition and object silhouettes, not change the theme.
 
 ---
 
@@ -199,61 +359,70 @@ export function useKitModel(name: string, options?: KitModelOptions) {
 
 ### Task 2 — Selection Lab staging upgrade
 
-**What:** Replace the inline `cylinderGeometry` pedestal in `SelectionLab.tsx` with a kit model.
+**What:** Turn Selection into a composed comparison stage, not just three kit pedestals.
 
 **File to modify:** `src/labs/cross-xr/SelectionLab.tsx`
 
 **Current code (lines 40-48):** The `SelectableTarget` component has a `<mesh>` with `<cylinderGeometry>` for the pedestal.
 
 **Changes:**
-1. Import `useKitModel` from `../../xr/visual/useKitModel`.
-2. Replace the pedestal `<mesh>` with:
-   ```tsx
-   const pedestal = useKitModel('platform_round', {
-     color: xr.accent.stone,
-     emissive: xr.accent.mustard,
-     roughness: 0.85,
-   })
-   // ...
-   <primitive object={pedestal} position={[0, -size * 0.42, 0]} scale={[size * 0.8, size * 0.25, size * 0.8]} />
-   ```
-3. Adjust `scale` and `position` in headset until the pedestal reads at waist-chest height (~0.3–0.5 m) and the interactable box sits naturally on top.
+1. Keep the pedestal upgrade, but re-block the three targets into a deliberate shallow arc.
+2. Add a **backdrop frame** behind them using either:
+   - custom low-poly arc geometry, or
+   - a segmented wall composition that reads as one gesture.
+3. Add a grounded stage zone under the comparison area so the set does not dissolve into the infinite floor.
+4. Ensure the targets remain the strongest focal read; pedestals and backdrop are support only.
 
-**Optional:** Add one or two `Column_Astra` models in the far background (z = -8 to -12) at ~3 m tall as landmarks, tinted `xr.accent.stone`.
-
-**Done when:** Selection lab renders kit-model pedestals instead of raw cylinders. Interactable boxes still work identically (pointer events, hover, select).
+**Done when:** At a glance, the scene reads as a curated comparison ritual with a foreground stage, a midground interaction band, and a single background frame.
 
 ---
 
 ### Task 3 — Locomotion Lab staging upgrade
 
-**What:** Add backdrop and landmark to `LocomotionLab.tsx`.
+**What:** Turn Locomotion into a journey with a visible payoff.
 
 **File to modify:** `src/labs/vr/LocomotionLab.tsx`
 
 **Changes:**
-1. Add 2–3 `Column_Hollow` or `Column_Astra` models at varying distances (z = -6, -10, -15) as landmarks. Tint with `xr.accent.stone`. Scale tallest to ~4 m.
-2. Add `Prop_Rail_4` instanced along the teleport floor as path guides. Space at 2 m intervals along z-axis. Tint with `xr.accent.cyan`, low emissive.
-3. Optionally add one `wall_top_straight` + `wall_bottom_straight` stacked behind the start position as a "room entry" anchor.
+1. Keep path guides, but make them read as a designed runway rather than repeated props.
+2. Place the main architectural payoff **ahead** of the player, not behind.
+3. Add side structure or partial enclosure so the route feels authored, even if still open.
+4. Preserve teleport readability; the path should support teleportation, not compete with it.
 
-**Done when:** Locomotion lab has visible depth cues and a landmark readable at fog distance. Teleport still works. No new lights added.
+**Done when:** The user can instantly read a start zone, a route, and a destination space ahead.
 
 ---
 
 ### Task 4 — Manipulation Lab (Docking Mode only) staging upgrade
 
-**What:** Add a console/workbench prop behind the docking area.
+**What:** Elevate Docking into a precision station whose hero is the manipulated object.
 
 **File to modify:** `src/labs/cross-xr/manipulation/DockingMode.tsx`
 
 **Changes:**
-1. Add one `prop_computer` or `briefing_screen` model behind the docking target area (z ≈ -1.2, y ≈ 0.8) as a "readout console."
-2. Tint with `xr.accent.stone` base, `xr.accent.cyan` emissive at 0.15 intensity.
-3. Add one `platform_simple` under the docking origin as a workbench surface.
+1. Add a proper work surface or fixture around the docking origin so the task feels mounted.
+2. Replace the raw docking cube with an authored asymmetric form that still exposes rotation clearly for the experiment.
+3. Use consoles/screens as framing devices, not as the primary point of interest.
+4. Keep the manipulation math and experiment logic unchanged.
 
 **Do NOT modify `ZenGardenMode.tsx`** — its nature-themed staging is intentional and complete.
 
-**Done when:** Docking mode has a visible institutional backdrop. Manipulation interaction is unchanged. Zen Garden is untouched.
+**Done when:** The manipulated object is clearly the hero, the station explains the task, and the scene no longer reads like debug geometry with backdrop decor.
+
+---
+
+### Task 4.5 — Desktop preview framing
+
+**What:** Add an authored desktop camera/default view for non-XR iteration.
+
+**Why:** This playground depends on fast desktop iteration. If the desktop view reads as distant and empty, spatial work will be misjudged even when the in-headset scene improves.
+
+**Changes:**
+1. Add a default desktop camera position/target that frames the active lab stage.
+2. Keep XR session behavior unchanged.
+3. Revisit lab spacing after the desktop framing is in place; some layouts that barely work in-headset will read as tiny from desktop.
+
+**Done when:** Opening the app on desktop gives a clear, reviewable shot of the active lab composition without entering XR.
 
 ---
 
@@ -310,13 +479,15 @@ These checks require a person in a headset:
 
 | Intended vocabulary | Fails (reject) | Passes (accept) |
 |---------------------|----------------|-----------------|
-| **Pedestal** | Raw `cylinderGeometry` or `boxGeometry` | Kit model (`platform_round.glb`) tinted with `xr.accent.stone` + `mustard` rim emissive |
-| **Backdrop wall** | Nothing behind targets | At least one wall or column from kit, anchored to floor |
-| **Landmark** | No depth cue | Column visible at fog distance, taller than foreground props |
-| **Console** | Single slab | Kit prop (`prop_computer.glb` or `briefing_screen.glb`) with panel detail |
+| **Hero object** | Raw debug primitive remains the visual focus | Authored silhouette with clear interaction read; strongest focal priority in scene |
+| **Pedestal / support** | Raw `cylinderGeometry` or `boxGeometry` with no relation to composition | Support surface clearly belongs to a larger stage and reinforces the hero |
+| **Backdrop frame** | Nothing behind targets, or one unrelated prop nearby | One readable framing gesture that contains the task zone |
+| **Landmark / payoff** | No depth cue or destination | Clear background landmark or destination space that completes the composition |
+| **Path / route** | Scattered repeated props on a grid | Rhythmic route with directional intent and visible payoff |
+| **Console / instrument** | Generic prop pasted into scene | Instrument surface that supports the task without stealing focus |
 | **Zen Garden** | Replaced with sci-fi kit | **Untouched** — keeps wooden tray, sand, petals, organic objects |
 
-**Hard rule:** If the only difference from the previous debug scene is hex colors, the task is **not done**.
+**Hard rule:** If the only difference from the previous debug scene is nicer assets or nicer hex colors, the task is **not done**.
 
 ---
 

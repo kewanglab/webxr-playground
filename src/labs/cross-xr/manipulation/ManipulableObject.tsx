@@ -59,6 +59,24 @@ export function ManipulableObject({
     }
   }, [])
 
+  useEffect(() => {
+    if (initialPosition instanceof Vector3) {
+      positionRef.current.copy(initialPosition)
+    } else {
+      positionRef.current.set(...initialPosition)
+    }
+    if (groupRef.current) {
+      groupRef.current.position.copy(positionRef.current)
+    }
+  }, [initialPosition])
+
+  useEffect(() => {
+    quaternionRef.current.copy(initialQuaternion ?? new Quaternion())
+    if (groupRef.current) {
+      groupRef.current.quaternion.copy(quaternionRef.current)
+    }
+  }, [initialQuaternion])
+
   return (
     <group
       ref={groupRef}
