@@ -6,7 +6,6 @@ import type { ManipulationResult } from './techniques'
 import { tuningPresets } from '../../../config/labs'
 import { usePlaygroundTheme } from '../../../xr/theme/PlaygroundThemeContext'
 import {
-  scalePlatformSimpleToWidth,
   scalePropComputerToHeight,
 } from '../../../xr/visual/kitNative'
 import { KitInstance } from '../../../xr/visual/useKitModel'
@@ -42,7 +41,13 @@ const OBJECT_ORIGIN = new Vector3(0, 1.2, -0.7)
 const DEFAULTS = tuningPresets.manipulation
 const MIN_TARGET_Y = OBJECT_ORIGIN.y - DEFAULTS.docking.translationOffsetM
 const DESK_SURFACE_Y = MIN_TARGET_Y - 0.2 + 0.04
-const TABLE_SURFACE_BELOW_EYE_M = 0.57
+const TABLE_SURFACE_BELOW_EYE_M = 0.54
+const DEFAULT_STANDING_EYE_HEIGHT_M = 1.66
+const DESK_PLATFORM_WIDTH = 1.45
+const DESK_PLATFORM_DEPTH = 0.78
+const DESK_PLATFORM_THICKNESS = 0.06
+const DEFAULT_TABLE_OFFSET_Y =
+  DEFAULT_STANDING_EYE_HEIGHT_M - TABLE_SURFACE_BELOW_EYE_M - DESK_SURFACE_Y
 
 function addYOffset(position: [number, number, number], offsetY: number): [number, number, number] {
   return [position[0], position[1] + offsetY, position[2]]
@@ -241,18 +246,36 @@ function DockingStation({
 }) {
   return (
     <group>
-      <mesh position={addYOffset([OBJECT_ORIGIN.x, MIN_TARGET_Y - 0.34, OBJECT_ORIGIN.z + 0.04], offsetY)}>
-        <boxGeometry args={[1.7, 0.12, 1.04]} />
+      <mesh position={addYOffset([OBJECT_ORIGIN.x, MIN_TARGET_Y - 0.34, OBJECT_ORIGIN.z - 0.06], offsetY)}>
+        <boxGeometry args={[1.7, 0.12, 0.86]} />
         <meshStandardMaterial color={seal} roughness={0.96} emissive={seal} emissiveIntensity={0.05} />
       </mesh>
-      <mesh position={addYOffset([OBJECT_ORIGIN.x, MIN_TARGET_Y - 0.2, OBJECT_ORIGIN.z], offsetY)}>
-        <boxGeometry args={[1.22, 0.08, 0.56]} />
+      <mesh position={addYOffset([OBJECT_ORIGIN.x, MIN_TARGET_Y - 0.23, OBJECT_ORIGIN.z - 0.1], offsetY)}>
+        <boxGeometry args={[1.18, 0.1, 0.4]} />
         <meshStandardMaterial color={stone} roughness={0.88} />
       </mesh>
+      <mesh
+        position={addYOffset(
+          [OBJECT_ORIGIN.x, DESK_SURFACE_Y - DESK_PLATFORM_THICKNESS / 2, OBJECT_ORIGIN.z + 0.04],
+          offsetY,
+        )}
+      >
+        <boxGeometry args={[DESK_PLATFORM_WIDTH, DESK_PLATFORM_THICKNESS, DESK_PLATFORM_DEPTH]} />
+        <meshStandardMaterial color={stone} roughness={0.82} metalness={0.08} />
+      </mesh>
+      {[-0.42, 0, 0.42].map((x) => (
+        <mesh
+          key={`table-support-${x}`}
+          position={addYOffset([OBJECT_ORIGIN.x + x, MIN_TARGET_Y - 0.175, OBJECT_ORIGIN.z - 0.02], offsetY)}
+        >
+          <boxGeometry args={[0.08, 0.18, 0.12]} />
+          <meshStandardMaterial color={stone} roughness={0.86} />
+        </mesh>
+      ))}
       {[-0.52, 0.52].map((x) => (
         <mesh
           key={`cradle-${x}`}
-          position={addYOffset([OBJECT_ORIGIN.x + x, MIN_TARGET_Y - 0.08, OBJECT_ORIGIN.z + 0.02], offsetY)}
+          position={addYOffset([OBJECT_ORIGIN.x + x, MIN_TARGET_Y - 0.08, OBJECT_ORIGIN.z - 0.04], offsetY)}
         >
           <boxGeometry args={[0.1, 0.22, 0.32]} />
           <meshStandardMaterial color={stone} roughness={0.84} />
@@ -348,13 +371,25 @@ export function DockingMode({
 }: DockingModeProps) {
   const { labAccents, xr } = usePlaygroundTheme()
   const joints = useHandJoints('right')
-  const tableOffsetY = useInitialEyeLevelOffset({
+  const baseTableOffsetY = useInitialEyeLevelOffset({
     referenceY: DESK_SURFACE_Y,
     eyeOffsetFromHead: -TABLE_SURFACE_BELOW_EYE_M,
+    desktopOffsetY: DEFAULT_TABLE_OFFSET_Y,
   })
+  const [manualTableLiftY, setManualTableLiftY] = useState(0)
+  const tableOffsetY = baseTableOffsetY + manualTableLiftY
   const objectOrigin = useMemo(
     () => OBJECT_ORIGIN.clone().add(new Vector3(0, tableOffsetY, 0)),
     [tableOffsetY],
+  )
+  const tableHandleAnchor = useMemo(
+    () =>
+      new Vector3(
+        OBJECT_ORIGIN.x + 0.58,
+        DESK_SURFACE_Y + baseTableOffsetY + 0.08,
+        OBJECT_ORIGIN.z + DESK_PLATFORM_DEPTH * 0.5 + 0.01,
+      ),
+    [baseTableOffsetY],
   )
 
   const trials = useMemo(() => generateTrials(), [])
@@ -374,6 +409,7 @@ export function DockingMode({
 
   const onRelease = useCallback(
     (id: string, result: ManipulationResult) => {
+      if (id !== 'docking-object') return
       if (!currentTrial || !targetPosition) return
 
       const positionalOffset = result.position.distanceTo(targetPosition)
@@ -479,7 +515,7 @@ export function DockingMode({
           objectSize * 0.72,
         ]}
         register={register}
-        isActive={state.isManipulating}
+        isActive={state.isManipulating && state.targetId === 'docking-object'}
         onPointerDown={acquisition === 'ray' ? () => acquireById('docking-object') : undefined}
         onPointerUp={acquisition === 'ray' ? () => releaseActive() : undefined}
       >
@@ -490,6 +526,73 @@ export function DockingMode({
           active={state.isManipulating}
         />
       </ManipulableObject>
+
+      <ManipulableObject
+        id="table-height-handle"
+        initialPosition={[
+          tableHandleAnchor.x,
+          tableHandleAnchor.y + manualTableLiftY,
+          tableHandleAnchor.z,
+        ]}
+        hitHalfExtents={[0.08, 0.16, 0.08]}
+        register={register}
+        constrainResult={(result) => {
+          return {
+            position: new Vector3(tableHandleAnchor.x, result.position.y, tableHandleAnchor.z),
+            quaternion: new Quaternion(),
+          }
+        }}
+        onUpdate={(result) => {
+          const nextLift = result.position.y - tableHandleAnchor.y
+          setManualTableLiftY((prev) =>
+            Math.abs(prev - nextLift) > 0.002 ? nextLift : prev,
+          )
+        }}
+        isActive={state.isManipulating && state.targetId === 'table-height-handle'}
+        onPointerDown={
+          acquisition === 'ray' ? () => acquireById('table-height-handle') : undefined
+        }
+        onPointerUp={acquisition === 'ray' ? () => releaseActive() : undefined}
+      >
+        <group>
+          <mesh
+            position={[
+              0,
+              -0.105,
+              0,
+            ]}
+          >
+            <cylinderGeometry args={[0.018, 0.022, 0.14, 14]} />
+            <meshStandardMaterial color={xr.accent.stone} roughness={0.48} metalness={0.14} />
+          </mesh>
+          <mesh position={[0, 0.02, 0]}>
+            <sphereGeometry args={[0.055, 18, 16]} />
+            <meshStandardMaterial
+              color={state.targetId === 'table-height-handle' ? labAccents.manipulation.primary : '#ece2d1'}
+              roughness={0.22}
+              metalness={0.12}
+              emissive={labAccents.manipulation.primary}
+              emissiveIntensity={state.targetId === 'table-height-handle' ? 0.18 : 0.05}
+            />
+          </mesh>
+        </group>
+      </ManipulableObject>
+
+      <Text
+        position={[
+          tableHandleAnchor.x,
+          DESK_SURFACE_Y + tableOffsetY + 0.04,
+          OBJECT_ORIGIN.z + DESK_PLATFORM_DEPTH * 0.5 + 0.05,
+        ]}
+        fontSize={0.026}
+        color="#f3ead9"
+        outlineWidth={0.004}
+        outlineColor="#594f43"
+        anchorX="center"
+        anchorY="middle"
+      >
+        Desk height
+      </Text>
 
       <DockingStation
         objectSize={objectSize}
@@ -502,10 +605,10 @@ export function DockingMode({
       <KitInstance
         name="platform_simple"
         position={addYOffset(
-          [OBJECT_ORIGIN.x, DESK_SURFACE_Y - 0.004, OBJECT_ORIGIN.z + 0.18],
+          [OBJECT_ORIGIN.x, DESK_SURFACE_Y + 0.002, OBJECT_ORIGIN.z + 0.04],
           tableOffsetY,
         )}
-        scale={scalePlatformSimpleToWidth(1.45)}
+        scale={[DESK_PLATFORM_WIDTH / 4, 1, DESK_PLATFORM_DEPTH / 4]}
         options={{
           color: xr.accent.stone,
           emissive: xr.accent.mustard,

@@ -136,12 +136,12 @@ function SelectableTarget({
         />
       </mesh>
       <Text
-        position={[0, s / 2 + 0.12, 0]}
-        fontSize={0.12}
+        position={[0, -s / 2 - XR_KIT_NATIVE.platformRoundTopY * pedestalScale + 0.06, 0.18]}
+        fontSize={0.058}
         color={xr.hud.textPrimary}
         anchorX="center"
         anchorY="middle"
-        outlineWidth={0.01}
+        outlineWidth={0.006}
         outlineColor={xr.void.clear}
       >
         {label}
@@ -181,7 +181,7 @@ export function SelectionLab() {
           voidColor={xr.void.clear}
         />
         <SelectableTarget
-          position={[-0.72, 1.18, -1.58]}
+          position={[-0.62, 1.16, -0.74]}
           color={labAccents.selection.primary}
           size={size}
           confirmScaleBoost={boost}
@@ -191,7 +191,7 @@ export function SelectionLab() {
           label="Ray (controller)"
         />
         <SelectableTarget
-          position={[0, 1.34, -1.12]}
+          position={[0, 1.22, -0.82]}
           color={labAccents.selection.secondary}
           size={size}
           confirmScaleBoost={boost}
@@ -201,7 +201,7 @@ export function SelectionLab() {
           label="Direct touch (hands)"
         />
         <SelectableTarget
-          position={[0.72, 1.18, -1.58]}
+          position={[0.62, 1.16, -0.74]}
           color={xr.accent.cyan}
           size={size}
           confirmScaleBoost={boost}

@@ -35,6 +35,11 @@ export type ManipulableEntry = {
   quaternion: Quaternion
   /** Half-extents along the object's local X/Y/Z (matches boxGeometry-style meshes). */
   hitHalfExtents: Vector3
+  constrainResult?: (
+    result: ManipulationResult,
+    entry: ManipulableEntry,
+  ) => ManipulationResult
+  onUpdate?: (result: ManipulationResult) => void
 }
 
 export type ManipulationState = {
@@ -138,12 +143,16 @@ export function useManipulation(options: UseManipulationOptions) {
           snapRef.current,
           cdGain,
         )
-        entry.position.copy(result.position)
-        entry.quaternion.copy(result.quaternion)
+        const next = entry.constrainResult
+          ? entry.constrainResult(result, entry)
+          : result
+        entry.position.copy(next.position)
+        entry.quaternion.copy(next.quaternion)
         if (entry.objectRef.current) {
-          entry.objectRef.current.position.copy(result.position)
-          entry.objectRef.current.quaternion.copy(result.quaternion)
+          entry.objectRef.current.position.copy(next.position)
+          entry.objectRef.current.quaternion.copy(next.quaternion)
         }
+        entry.onUpdate?.(next)
       }
     }
 
