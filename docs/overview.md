@@ -267,7 +267,7 @@ Feedback systems that can be composed into any lab:
 
 World-space UI that must be visible **inside** an immersive session. The Meta Quest browser does **not** implement WebXR DOM overlay for headset AR/VR the way handheld browsers do, so HTML panels (Leva, desktop session logger) do not appear in-headset. This folder holds a small 3D HUD instead:
 
-- `TagAlongHUD.tsx` — smooth-follow group (lags the headset slightly to avoid rigid head-lock)
+- `TagAlongHUD.tsx` — smooth-follow group using camera world transforms, so it stays with the headset after locomotion/origin movement
 - `InXRStats.tsx` — minimal rolling-average FPS as drei `<Text>` (drei `<Stats>` is DOM-based and stays invisible in XR)
 - `HUDButton.tsx` — simple plane buttons with pointer + haptic/tone feedback
 
@@ -416,7 +416,7 @@ When validating on Quest 3:
 
 ### In-headset HUD (VR and AR)
 
-While immersed, use the floating panel in the lower-left field of view for a minimal FPS readout. Its status bar uses Quest/WebXR comfort bands: green at **90+ FPS** (smooth), yellow at **72–89 FPS** (not so smooth but acceptable), orange at **45–71 FPS** (choppy), and red below **45 FPS** (not workable). Session notes stay on the desktop logger.
+While immersed, use the floating panel in the lower-left field of view for a minimal FPS readout. It can be toggled from the Appearance panel. Its status bar uses Quest/WebXR comfort bands: green at **90+ FPS** (smooth), yellow at **72–89 FPS** (not so smooth but acceptable), orange at **45–71 FPS** (choppy), and red below **45 FPS** (not workable). Session notes stay on the desktop logger.
 
 ### Desktop log capture and viewer
 

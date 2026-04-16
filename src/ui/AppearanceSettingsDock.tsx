@@ -30,12 +30,12 @@ const popover: CSSProperties = {
   bottom: 'calc(var(--pg-shell-space-lg) + 48px + var(--pg-shell-space-sm))',
   right: v('--pg-shell-space-lg'),
   zIndex: 1001,
-  width: 'min(calc(100vw - 2 * var(--pg-shell-space-lg)), 320px)',
+  width: 'min(calc(100vw - 2 * var(--pg-shell-space-lg)), 340px)',
   boxSizing: 'border-box',
-  padding: v('--pg-shell-space-lg'),
+  padding: `calc(${v('--pg-shell-space-lg')} + ${v('--pg-shell-space-xs')})`,
   display: 'flex',
   flexDirection: 'column',
-  gap: v('--pg-shell-space-md'),
+  gap: v('--pg-shell-space-lg'),
   fontFamily: v('--pg-shell-font-ui'),
   color: v('--pg-shell-text-primary'),
   background: v('--pg-shell-bg-panel'),
@@ -52,6 +52,12 @@ const titleStyle: CSSProperties = {
 }
 
 const labelRow: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: v('--pg-shell-space-sm'),
+}
+
+const settingGroup: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: v('--pg-shell-space-xs'),
@@ -86,14 +92,24 @@ const selectStyle: CSSProperties = {
 const checkRow: CSSProperties = {
   display: 'flex',
   alignItems: 'flex-start',
-  gap: v('--pg-shell-space-sm'),
-  minHeight: 44,
+  gap: v('--pg-shell-space-md'),
+  minHeight: 48,
+  padding: `${v('--pg-shell-space-sm')} 0`,
+  cursor: 'pointer',
+}
+
+const checkCopy: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: v('--pg-shell-space-xs'),
+  minWidth: 0,
+  flex: 1,
 }
 
 const checkbox: CSSProperties = {
   width: 20,
   height: 20,
-  marginTop: 2,
+  margin: '1px 0 0 0',
   flexShrink: 0,
   accentColor: v('--pg-shell-accent-primary'),
   cursor: 'pointer',
@@ -110,7 +126,7 @@ const doneBtn: CSSProperties = {
   fontWeight: 600,
   fontFamily: 'inherit',
   cursor: 'pointer',
-  alignSelf: 'flex-start',
+  alignSelf: 'stretch',
 }
 
 function PaletteIcon() {
@@ -140,6 +156,8 @@ export function AppearanceSettingsDock() {
   const setThemePresetId = usePlaygroundStore((s) => s.setThemePresetId)
   const arAlignmentGuide = usePlaygroundStore((s) => s.arAlignmentGuide)
   const setArAlignmentGuide = usePlaygroundStore((s) => s.setArAlignmentGuide)
+  const fpsHudVisible = usePlaygroundStore((s) => s.fpsHudVisible)
+  const setFpsHudVisible = usePlaygroundStore((s) => s.setFpsHudVisible)
 
   useEffect(() => {
     if (!open) return
@@ -191,7 +209,7 @@ export function AppearanceSettingsDock() {
             </select>
           </label>
 
-          <div>
+          <div style={settingGroup}>
             <label style={checkRow}>
               <input
                 type="checkbox"
@@ -199,11 +217,30 @@ export function AppearanceSettingsDock() {
                 checked={arAlignmentGuide}
                 onChange={(e) => setArAlignmentGuide(e.target.checked)}
               />
-              <span style={controlLabel}>AR alignment ring</span>
+              <span style={checkCopy}>
+                <span style={controlLabel}>AR alignment ring</span>
+                <span style={hint}>
+                  Thin floor ring in immersive AR to show scene origin.
+                </span>
+              </span>
             </label>
-            <p style={{ ...hint, marginTop: v('--pg-shell-space-xs'), paddingLeft: 28 }}>
-              Thin floor ring in immersive AR (passthrough) to show scene origin.
-            </p>
+          </div>
+
+          <div style={settingGroup}>
+            <label style={checkRow}>
+              <input
+                type="checkbox"
+                style={checkbox}
+                checked={fpsHudVisible}
+                onChange={(e) => setFpsHudVisible(e.target.checked)}
+              />
+              <span style={checkCopy}>
+                <span style={controlLabel}>XR FPS HUD</span>
+                <span style={hint}>
+                  Small in-headset performance card that follows your view.
+                </span>
+              </span>
+            </label>
           </div>
 
           <button type="button" style={doneBtn} onClick={() => setOpen(false)}>
