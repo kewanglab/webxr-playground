@@ -36,6 +36,10 @@ export const labs: LabDefinition[] = [
   },
 ]
 
+export function isValidLabId(id: string): id is LabId {
+  return labs.some((lab) => lab.id === id)
+}
+
 /** Stable scene title for each lab (use with `LabHeading`). */
 export function getLabTitle(id: LabId): string {
   const lab = labs.find((l) => l.id === id)

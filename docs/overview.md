@@ -4,7 +4,7 @@
 
 **Overview** is the stable reference for *what this project is* and *how it is shaped*: goals, product intent, stack and XR patterns, architecture, directory map, state conventions, agent rules, device testing, logging, and working principles. It changes when architecture or conventions change—not every sprint.
 
-**Related docs:** [Roadmap](./roadmap.md) (phases and what to build next), [Pitfalls](./pitfalls.md) (bugs and footguns we already hit), [Spatial polish plan](./spatial-polish-plan.md) and [style templates](./style-templates/README.md) (2D shell vs 3D XR specs), [README](../README.md) (quick start and repo entry).
+**Related docs:** [Roadmap](./roadmap.md) (phases and what to build next), [Pitfalls](./pitfalls.md) (bugs and footguns we already hit), [Visual capture workflow](./visual-capture.md) (Playwright screenshots and 3D review angles), [Spatial polish plan](./spatial-polish-plan.md) and [style templates](./style-templates/README.md) (2D shell vs 3D XR specs), [README](../README.md) (quick start and repo entry).
 
 ---
 

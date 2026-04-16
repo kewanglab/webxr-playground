@@ -1,11 +1,22 @@
 import { create } from 'zustand'
 import { Vector3 } from 'three'
-import type { LabId } from '../config/labs'
+import { isValidLabId, type LabId } from '../config/labs'
 import {
   defaultPlaygroundPresetId,
   isValidPresetId,
   THEME_STORAGE_KEY,
 } from '../config/playgroundTheme'
+
+function readInitialLabId(): LabId {
+  if (typeof window === 'undefined') return 'selection'
+  try {
+    const q = new URLSearchParams(window.location.search).get('lab')
+    if (q && isValidLabId(q)) return q
+  } catch {
+    /* ignore */
+  }
+  return 'selection'
+}
 
 function readInitialThemePresetId(): string {
   if (typeof window === 'undefined') return defaultPlaygroundPresetId
@@ -50,7 +61,7 @@ type PlaygroundState = {
 }
 
 export const usePlaygroundStore = create<PlaygroundState>((set) => ({
-  currentLab: 'selection',
+  currentLab: readInitialLabId(),
   setLab: (lab) => set({ currentLab: lab }),
   themePresetId: readInitialThemePresetId(),
   setThemePresetId: (id) => {

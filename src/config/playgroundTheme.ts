@@ -199,6 +199,100 @@ const defaultLabAccents: Record<LabId, LabAccentPair> = {
   manipulation: { primary: defaultXr.accent.orange, secondary: defaultXr.accent.mustard },
 }
 
+const cloudParkShell: ShellTheme = {
+  bg: {
+    canvas: '#E7F7EF',
+    elevated: '#FFF9E9',
+    subtle: '#D6F0E5',
+  },
+  border: {
+    subtle: '#A9D5CB',
+    default: '#72B7B4',
+  },
+  text: {
+    primary: '#213F43',
+    muted: '#557779',
+    inverse: '#FFFBEF',
+  },
+  accent: {
+    primary: '#B94F48',
+    primaryHover: '#9E413C',
+    soft: '#FFD3A4',
+  },
+  focus: { ring: '#1C8D99' },
+  state: {
+    success: '#268E7E',
+    warning: '#B77921',
+    danger: '#A63E42',
+  },
+  shadow: { soft: 'rgba(33, 63, 67, 0.12)' },
+  overlay: { scrim: 'rgba(33, 63, 67, 0.32)' },
+  font: { ...defaultShell.font },
+  space: { ...defaultShell.space },
+  radius: { ...defaultShell.radius },
+}
+
+const cloudParkXr: XrTheme = {
+  void: { clear: '#98DDF0' },
+  skydome: {
+    top: '#71C8EB',
+    horizon: '#FFE29B',
+    bottom: '#B8EFCF',
+  },
+  fog: {
+    color: '#BDECDC',
+    near: 14,
+    far: 52,
+  },
+  floor: {
+    albedo: '#7ED8AD',
+    emissive: '#43AF8E',
+  },
+  grid: {
+    cell: '#DAFFF0',
+    section: '#FFD26F',
+  },
+  light: {
+    key: {
+      color: '#FFF5C7',
+      intensity: 1.28,
+      position: [-3.5, 7.5, 4.5],
+    },
+    hemi: {
+      sky: '#C8F2FF',
+      ground: '#6CCBA0',
+      intensity: 0.74,
+    },
+  },
+  accent: {
+    cyan: '#2FAFC6',
+    amber: '#FFD166',
+    orange: '#E86455',
+    mustard: '#B7C95C',
+    stone: '#FFF3C8',
+    seal: '#2F6971',
+  },
+  hud: {
+    panelFill: '#F2FFF5',
+    panelOpacity: 0.78,
+    panelBorder: '#E86455',
+    textPrimary: '#1D464B',
+    textMetric: '#117D91',
+    textMuted: '#5A8180',
+  },
+  ar: {
+    stroke: '#2FAFC6',
+    opacity: 0.48,
+  },
+}
+
+const cloudParkLabAccents: Record<LabId, LabAccentPair> = {
+  selection: { primary: cloudParkXr.accent.orange, secondary: cloudParkXr.accent.amber },
+  placement: { primary: cloudParkXr.accent.cyan, secondary: cloudParkXr.accent.orange },
+  locomotion: { primary: cloudParkXr.accent.cyan, secondary: cloudParkXr.accent.amber },
+  manipulation: { primary: cloudParkXr.accent.orange, secondary: cloudParkXr.accent.mustard },
+}
+
 export const defaultPlaygroundPresetId = 'default'
 
 export const playgroundPresets: PlaygroundThemePreset[] = [
@@ -208,6 +302,13 @@ export const playgroundPresets: PlaygroundThemePreset[] = [
     shell: defaultShell,
     xr: defaultXr,
     labAccents: defaultLabAccents,
+  },
+  {
+    id: 'cloud-park',
+    label: 'Cloud Park',
+    shell: cloudParkShell,
+    xr: cloudParkXr,
+    labAccents: cloudParkLabAccents,
   },
 ]
 
