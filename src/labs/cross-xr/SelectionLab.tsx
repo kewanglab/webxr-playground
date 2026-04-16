@@ -8,15 +8,15 @@ import { useConfirmTone } from '../../xr/feedback/audio/useConfirmTone'
 import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
 import {
   XR_KIT_NATIVE,
-  scaleColumnAstraToHeight,
-  scaleColumnHollowToHeight,
   scalePlatformRoundForTargetCube,
 } from '../../xr/visual/kitNative'
-import { KitInstance, useKitModel } from '../../xr/visual/useKitModel'
+import { useKitModel } from '../../xr/visual/useKitModel'
 import { useInitialEyeLevelOffset } from '../../xr/core/useInitialEyeLevelOffset'
 import { LabHeading } from '../LabHeading'
 
 const SELECTION_FOCUS_Y = 1.26
+
+type SelectionTokenVariant = 'ray' | 'touch' | 'grab'
 
 function SelectionStage({
   stone,
@@ -75,6 +75,46 @@ function SelectionStage({
   )
 }
 
+function SelectionBackdropPiers({
+  stone,
+  rim,
+  shadow,
+}: {
+  stone: string
+  rim: string
+  shadow: string
+}) {
+  return (
+    <group>
+      {[-1, 1].map((dir) => (
+        <group key={`selection-pier-${dir}`} position={[dir * 1.78, 0, -2.16]}>
+          <mesh position={[0, 0.74, 0]}>
+            <boxGeometry args={[0.22, 1.48, 0.18]} />
+            <meshStandardMaterial
+              color={stone}
+              roughness={0.94}
+              emissive={shadow}
+              emissiveIntensity={0.035}
+            />
+          </mesh>
+          <mesh position={[0, 1.49, 0]}>
+            <boxGeometry args={[0.36, 0.08, 0.24]} />
+            <meshStandardMaterial color={stone} roughness={0.9} />
+          </mesh>
+          <mesh position={[0, 0.08, 0.01]}>
+            <boxGeometry args={[0.42, 0.16, 0.28]} />
+            <meshStandardMaterial color={stone} roughness={0.92} />
+          </mesh>
+          <mesh position={[-dir * 0.08, 0.82, 0.095]}>
+            <boxGeometry args={[0.035, 1.06, 0.012]} />
+            <meshBasicMaterial color={rim} transparent opacity={0.5} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  )
+}
+
 function SelectableTarget({
   position,
   color,
@@ -84,6 +124,7 @@ function SelectableTarget({
   enableAudio,
   pointerType,
   label,
+  variant,
 }: {
   position: [number, number, number]
   color: string
@@ -93,8 +134,9 @@ function SelectableTarget({
   enableAudio: boolean
   pointerType: 'ray' | 'touch' | 'grab'
   label: string
+  variant: SelectionTokenVariant
 }) {
-  const { xr } = usePlaygroundTheme()
+  const { xr, shell } = usePlaygroundTheme()
   const [hovered, setHovered] = useState(false)
   const [selected, setSelected] = useState(false)
   const pulse = useHapticPulse()
@@ -108,6 +150,12 @@ function SelectableTarget({
     roughness: 0.85,
   })
   const pedestalScale = scalePlatformRoundForTargetCube(s)
+  const activeColor = selected
+    ? shell.state.success
+    : hovered
+      ? shell.accent.primaryHover
+      : color
+  const haloColor = selected ? shell.state.success : hovered ? color : xr.accent.amber
 
   return (
     <group position={position} scale={hovered ? 1 + confirmScaleBoost : 1}>
@@ -120,6 +168,15 @@ function SelectableTarget({
         ]}
         scale={pedestalScale}
       />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -s / 2 + 0.01, 0]}>
+        <ringGeometry args={[s * 0.48, s * 0.62, 36]} />
+        <meshBasicMaterial
+          color={haloColor}
+          transparent
+          opacity={selected || hovered ? 0.76 : 0.46}
+          depthWrite={false}
+        />
+      </mesh>
       <mesh
         pointerEventsType={{ allow: pointerType }}
         onPointerEnter={() => setHovered(true)}
@@ -130,11 +187,21 @@ function SelectableTarget({
           if (enableAudio) playTone(700, 70)
         }}
       >
-        <boxGeometry args={[s, s, s]} />
-        <meshStandardMaterial
-          color={selected ? '#22c55e' : hovered ? '#f59e0b' : color}
-        />
+        <boxGeometry args={[s * 1.05, s * 1.16, s * 1.05]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
+      <group position={[0, -s / 2 + 0.13, 0]}>
+        <SelectionToken
+          variant={variant}
+          size={s}
+          activeColor={activeColor}
+          bodyColor={xr.accent.stone}
+          trimColor={xr.accent.mustard}
+          systemColor={xr.accent.cyan}
+          selected={selected}
+          hovered={hovered}
+        />
+      </group>
       <Text
         position={[0, -s / 2 - XR_KIT_NATIVE.platformRoundTopY * pedestalScale + 0.06, 0.18]}
         fontSize={0.058}
@@ -150,8 +217,136 @@ function SelectableTarget({
   )
 }
 
+function SelectionToken({
+  variant,
+  size,
+  activeColor,
+  bodyColor,
+  trimColor,
+  systemColor,
+  selected,
+  hovered,
+}: {
+  variant: SelectionTokenVariant
+  size: number
+  activeColor: string
+  bodyColor: string
+  trimColor: string
+  systemColor: string
+  selected: boolean
+  hovered: boolean
+}) {
+  const glow = selected ? systemColor : activeColor
+  const glowIntensity = hovered || selected ? 0.14 : 0.05
+
+  if (variant === 'ray') {
+    return (
+      <group position={[0, size * 0.18, 0]} rotation={[-0.18, 0, 0]}>
+        <mesh>
+          <boxGeometry args={[size * 0.52, size * 0.82, size * 0.08]} />
+          <meshStandardMaterial
+            color={bodyColor}
+            roughness={0.62}
+            metalness={0.06}
+            emissive={glow}
+            emissiveIntensity={glowIntensity}
+          />
+        </mesh>
+        <mesh position={[0, 0, size * 0.046]}>
+          <boxGeometry args={[size * 0.4, size * 0.58, size * 0.018]} />
+          <meshStandardMaterial
+            color={activeColor}
+            roughness={0.4}
+            metalness={0.04}
+            emissive={glow}
+            emissiveIntensity={0.12}
+          />
+        </mesh>
+        <mesh position={[0, 0, size * 0.06]}>
+          <ringGeometry args={[size * 0.075, size * 0.12, 24]} />
+          <meshBasicMaterial color={systemColor} transparent opacity={0.72} />
+        </mesh>
+        <mesh position={[0, 0, size * 0.064]}>
+          <circleGeometry args={[size * 0.025, 18]} />
+          <meshBasicMaterial color={trimColor} transparent opacity={0.8} />
+        </mesh>
+      </group>
+    )
+  }
+
+  if (variant === 'touch') {
+    return (
+      <group position={[0, size * 0.08, 0]}>
+        <mesh>
+          <cylinderGeometry args={[size * 0.34, size * 0.38, size * 0.13, 36]} />
+          <meshStandardMaterial
+            color={bodyColor}
+            roughness={0.5}
+            metalness={0.04}
+            emissive={glow}
+            emissiveIntensity={glowIntensity}
+          />
+        </mesh>
+        <mesh position={[0, size * 0.075, 0]}>
+          <cylinderGeometry args={[size * 0.28, size * 0.3, size * 0.035, 36]} />
+          <meshStandardMaterial
+            color={activeColor}
+            roughness={0.32}
+            metalness={0.08}
+            emissive={glow}
+            emissiveIntensity={0.12}
+          />
+        </mesh>
+        {[0.08, 0.15, 0.22].map((r) => (
+          <mesh key={r} position={[0, size * 0.097, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[size * r, size * 0.007, 6, 36, Math.PI * 1.45]} />
+            <meshBasicMaterial color={systemColor} transparent opacity={0.48} />
+          </mesh>
+        ))}
+      </group>
+    )
+  }
+
+  return (
+    <group position={[0, size * 0.18, 0]}>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <capsuleGeometry args={[size * 0.18, size * 0.34, 8, 18]} />
+        <meshStandardMaterial
+          color={bodyColor}
+          roughness={0.4}
+          metalness={0.08}
+          emissive={glow}
+          emissiveIntensity={glowIntensity}
+        />
+      </mesh>
+      {[-1, 1].map((dir) => (
+        <mesh key={dir} position={[dir * size * 0.31, 0, 0]}>
+          <sphereGeometry args={[size * 0.15, 18, 14]} />
+          <meshStandardMaterial
+            color={activeColor}
+            roughness={0.34}
+            metalness={0.08}
+            emissive={glow}
+            emissiveIntensity={0.1}
+          />
+        </mesh>
+      ))}
+      <mesh position={[0, size * 0.16, 0]}>
+        <torusGeometry args={[size * 0.21, size * 0.018, 8, 28]} />
+        <meshStandardMaterial
+          color={trimColor}
+          roughness={0.38}
+          metalness={0.1}
+          emissive={trimColor}
+          emissiveIntensity={0.08}
+        />
+      </mesh>
+    </group>
+  )
+}
+
 export function SelectionLab() {
-  const { labAccents, xr } = usePlaygroundTheme()
+  const { labAccents, xr, shell } = usePlaygroundTheme()
   const defaults = tuningPresets.controller.selection
   const { targetSize, confirmScaleBoost, enableHaptics, enableAudio } = useControls('Selection', {
     // Plain sliders here — Leva’s custom stepper plugin was unreliable for this folder (size could collapse).
@@ -176,9 +371,9 @@ export function SelectionLab() {
       />
       <group position={[0, stageOffsetY, 0]}>
         <SelectionStage
-          stone={xr.accent.seal}
+          stone={xr.accent.stone}
           rim={labAccents.selection.secondary}
-          voidColor={xr.void.clear}
+          voidColor={xr.floor.emissive}
         />
         <SelectableTarget
           position={[-0.62, 1.16, -0.74]}
@@ -189,6 +384,7 @@ export function SelectionLab() {
           enableAudio={enableAudio}
           pointerType="ray"
           label="Ray (controller)"
+          variant="ray"
         />
         <SelectableTarget
           position={[0, 1.22, -0.82]}
@@ -199,39 +395,24 @@ export function SelectionLab() {
           enableAudio={enableAudio}
           pointerType="touch"
           label="Direct touch (hands)"
+          variant="touch"
         />
         <SelectableTarget
           position={[0.62, 1.16, -0.74]}
-          color={xr.accent.cyan}
+          color={shell.accent.soft}
           size={size}
           confirmScaleBoost={boost}
           enableHaptics={enableHaptics}
           enableAudio={enableAudio}
           pointerType="grab"
           label="Hand pinch (grab)"
+          variant="grab"
         />
 
-        <KitInstance
-          name="column_hollow"
-          position={[-2.35, 0, -4.25]}
-          scale={scaleColumnHollowToHeight(2.75)}
-          options={{
-            color: xr.accent.stone,
-            roughness: 0.9,
-            emissive: xr.accent.amber,
-            emissiveIntensity: 0.07,
-          }}
-        />
-        <KitInstance
-          name="column_astra"
-          position={[2.55, 0, -5.35]}
-          scale={scaleColumnAstraToHeight(3.15)}
-          options={{
-            color: xr.accent.stone,
-            roughness: 0.88,
-            emissive: xr.accent.amber,
-            emissiveIntensity: 0.05,
-          }}
+        <SelectionBackdropPiers
+          stone={xr.accent.stone}
+          rim={labAccents.selection.secondary}
+          shadow={xr.floor.emissive}
         />
       </group>
     </group>

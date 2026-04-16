@@ -13,6 +13,7 @@ import { useHandJoints } from './useHandJoints'
 import { useManipulation } from './useManipulation'
 import { ManipulableObject } from './ManipulableObject'
 import { useInitialEyeLevelOffset } from '../../../xr/core/useInitialEyeLevelOffset'
+import { SensorPodObject } from './SensorPodObject'
 
 type DockingModeProps = {
   acquisition: ManipulationAcquisition
@@ -48,6 +49,8 @@ const DESK_PLATFORM_DEPTH = 0.78
 const DESK_PLATFORM_THICKNESS = 0.06
 const DEFAULT_TABLE_OFFSET_Y =
   DEFAULT_STANDING_EYE_HEIGHT_M - TABLE_SURFACE_BELOW_EYE_M - DESK_SURFACE_Y
+const SIDE_CONSOLE_HEIGHT_M = 1.2
+const SIDE_CONSOLE_GROUND_Y = 0.001
 
 function addYOffset(position: [number, number, number], offsetY: number): [number, number, number] {
   return [position[0], position[1] + offsetY, position[2]]
@@ -119,110 +122,6 @@ function DockingGhost({
         >
           <boxGeometry args={[objectSize * 0.08, objectSize * 0.16, objectSize * 0.03]} />
           <meshBasicMaterial color={secondary} transparent opacity={0.5} depthWrite={false} />
-        </mesh>
-      ))}
-    </group>
-  )
-}
-
-function DockingHeroObject({
-  objectSize,
-  baseColor,
-  accentColor,
-  active,
-}: {
-  objectSize: number
-  baseColor: string
-  accentColor: string
-  active: boolean
-}) {
-  const accent = active ? accentColor : '#ef4444'
-
-  return (
-    <group>
-      <mesh castShadow rotation={[Math.PI / 2, 0, 0]}>
-        <capsuleGeometry args={[objectSize * 0.18, objectSize * 0.36, 8, 20]} />
-        <meshStandardMaterial
-          color={baseColor}
-          roughness={0.28}
-          metalness={0.18}
-          emissive={active ? accentColor : '#000000'}
-          emissiveIntensity={active ? 0.05 : 0}
-        />
-      </mesh>
-      <mesh position={[0, 0, objectSize * 0.42]} castShadow>
-        <sphereGeometry args={[objectSize * 0.2, 24, 20]} />
-        <meshStandardMaterial
-          color="#efdeba"
-          roughness={0.12}
-          metalness={0.14}
-          emissive={accent}
-          emissiveIntensity={0.18}
-        />
-      </mesh>
-      <mesh position={[0, objectSize * 0.28, -objectSize * 0.04]} castShadow>
-        <cylinderGeometry args={[objectSize * 0.028, objectSize * 0.028, objectSize * 0.24, 12]} />
-        <meshStandardMaterial color="#cac3b7" roughness={0.26} metalness={0.16} />
-      </mesh>
-      <mesh position={[0, objectSize * 0.42, -objectSize * 0.04]} castShadow>
-        <sphereGeometry args={[objectSize * 0.09, 18, 16]} />
-        <meshStandardMaterial
-          color="#cceaf0"
-          roughness={0.14}
-          metalness={0.08}
-          emissive={accentColor}
-          emissiveIntensity={0.16}
-        />
-      </mesh>
-      <mesh position={[0, -objectSize * 0.24, -objectSize * 0.02]} castShadow>
-        <boxGeometry args={[objectSize * 0.3, objectSize * 0.07, objectSize * 0.2]} />
-        <meshStandardMaterial
-          color={accentColor}
-          roughness={0.24}
-          metalness={0.18}
-          emissive={accentColor}
-          emissiveIntensity={active ? 0.1 : 0.04}
-        />
-      </mesh>
-      <mesh position={[0, 0, -objectSize * 0.44]} castShadow rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[objectSize * 0.14, objectSize * 0.028, 10, 28]} />
-        <meshStandardMaterial
-          color="#cabfb1"
-          roughness={0.22}
-          metalness={0.14}
-          emissive={accentColor}
-          emissiveIntensity={active ? 0.08 : 0.02}
-        />
-      </mesh>
-      <mesh position={[-objectSize * 0.26, -objectSize * 0.05, -objectSize * 0.08]} castShadow>
-        <sphereGeometry args={[objectSize * 0.1, 18, 16]} />
-        <meshStandardMaterial
-          color={accentColor}
-          roughness={0.2}
-          metalness={0.12}
-          emissive={accent}
-          emissiveIntensity={active ? 0.12 : 0.06}
-        />
-      </mesh>
-      <mesh position={[objectSize * 0.22, 0, -objectSize * 0.14]} castShadow>
-        <boxGeometry args={[objectSize * 0.07, objectSize * 0.18, objectSize * 0.16]} />
-        <meshStandardMaterial color="#bcb4a8" roughness={0.24} metalness={0.12} />
-      </mesh>
-      {[-1, 1].map((dir) => (
-        <mesh
-          key={`hero-wing-${dir}`}
-          position={[dir * objectSize * 0.1, 0, objectSize * 0.28]}
-          rotation={[0, 0, dir * 0.42]}
-          castShadow
-        >
-          <boxGeometry args={[objectSize * 0.08, objectSize * 0.16, objectSize * 0.03]} />
-          <meshStandardMaterial
-            color={accent}
-            roughness={0.24}
-            metalness={0.14}
-            emissive={accent}
-            emissiveIntensity={0.18}
-          />
         </mesh>
       ))}
     </group>
@@ -369,7 +268,7 @@ export function DockingMode({
   grabDistance,
   cdGain,
 }: DockingModeProps) {
-  const { labAccents, xr } = usePlaygroundTheme()
+  const { labAccents, xr, shell } = usePlaygroundTheme()
   const joints = useHandJoints('right')
   const baseTableOffsetY = useInitialEyeLevelOffset({
     referenceY: DESK_SURFACE_Y,
@@ -450,7 +349,7 @@ export function DockingMode({
         <Text
           position={[0, 1.4, -1]}
           fontSize={0.1}
-          color="#22c55e"
+          color={shell.state.success}
           anchorX="center"
           anchorY="middle"
         >
@@ -519,10 +418,11 @@ export function DockingMode({
         onPointerDown={acquisition === 'ray' ? () => acquireById('docking-object') : undefined}
         onPointerUp={acquisition === 'ray' ? () => releaseActive() : undefined}
       >
-        <DockingHeroObject
+        <SensorPodObject
           objectSize={objectSize}
           baseColor={state.isManipulating ? '#f1e6d8' : xr.accent.stone}
           accentColor={labAccents.manipulation.primary}
+          restAccent={labAccents.manipulation.secondary}
           active={state.isManipulating}
         />
       </ManipulableObject>
@@ -618,25 +518,25 @@ export function DockingMode({
       />
       <KitInstance
         name="prop_computer"
-        position={[-1.18, 0, -1.32]}
-        scale={scalePropComputerToHeight(1.28)}
+        position={[-1.18, SIDE_CONSOLE_GROUND_Y, -1.32]}
+        scale={scalePropComputerToHeight(SIDE_CONSOLE_HEIGHT_M)}
         rotation={[0, Math.PI * 0.22, 0]}
         options={{
           color: xr.accent.stone,
-          emissive: labAccents.manipulation.secondary,
-          emissiveIntensity: 0.16,
+          emissive: xr.accent.amber,
+          emissiveIntensity: 0.1,
           roughness: 0.55,
         }}
       />
       <KitInstance
         name="prop_computer"
-        position={[1.18, 0, -1.26]}
-        scale={scalePropComputerToHeight(1.14)}
+        position={[1.18, SIDE_CONSOLE_GROUND_Y, -1.26]}
+        scale={scalePropComputerToHeight(SIDE_CONSOLE_HEIGHT_M)}
         rotation={[0, -Math.PI * 0.18, 0]}
         options={{
           color: xr.accent.stone,
-          emissive: labAccents.manipulation.primary,
-          emissiveIntensity: 0.14,
+          emissive: xr.accent.amber,
+          emissiveIntensity: 0.1,
           roughness: 0.55,
         }}
       />

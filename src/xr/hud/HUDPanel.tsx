@@ -1,4 +1,3 @@
-import { DoubleSide } from 'three'
 import type { ReactNode } from 'react'
 import { usePlaygroundTheme } from '../theme/PlaygroundThemeContext'
 
@@ -6,16 +5,14 @@ type HUDPanelProps = {
   children: ReactNode
 }
 
-/**
- * Translucent plate + ring “seal” behind TagAlong HUD content (xr.hud tokens).
- */
+/** Minimal themed FPS card for the in-headset TagAlong HUD. */
 export function HUDPanel({ children }: HUDPanelProps) {
   const { xr } = usePlaygroundTheme()
 
   return (
     <group>
       <mesh position={[0, 0, -0.008]} renderOrder={-500}>
-        <planeGeometry args={[0.52, 0.28]} />
+        <planeGeometry args={[0.28, 0.095]} />
         <meshBasicMaterial
           color={xr.hud.panelFill}
           transparent
@@ -23,14 +20,13 @@ export function HUDPanel({ children }: HUDPanelProps) {
           depthWrite={false}
         />
       </mesh>
-      <mesh position={[0, 0, -0.006]} renderOrder={-499}>
-        <ringGeometry args={[0.22, 0.248, 40]} />
+      <mesh position={[0, 0, -0.007]} renderOrder={-499}>
+        <planeGeometry args={[0.255, 0.07]} />
         <meshBasicMaterial
-          color={xr.hud.panelBorder}
+          color={xr.hud.textPrimary}
           transparent
-          opacity={0.92}
+          opacity={0.045}
           depthWrite={false}
-          side={DoubleSide}
         />
       </mesh>
       <group>{children}</group>
