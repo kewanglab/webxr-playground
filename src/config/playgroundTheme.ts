@@ -92,32 +92,32 @@ export type PlaygroundThemePreset = {
 
 const defaultShell: ShellTheme = {
   bg: {
-    canvas: '#EBE4DC',
-    elevated: '#F5EFE8',
-    subtle: '#E3D9CF',
+    canvas: '#F0E3D4',
+    elevated: '#FBF7EF',
+    subtle: '#E8D7CA',
   },
   border: {
-    subtle: '#C9B8A8',
-    default: '#B0A090',
+    subtle: '#D3BCAC',
+    default: '#B99B89',
   },
   text: {
-    primary: '#2A221C',
-    muted: '#5C524C',
-    inverse: '#F5EFE8',
+    primary: '#3A2820',
+    muted: '#6B5A50',
+    inverse: '#FFF7EF',
   },
   accent: {
-    primary: '#C4706A',
-    primaryHover: '#A85A55',
-    soft: '#E8C4BE',
+    primary: '#B9564E',
+    primaryHover: '#97463F',
+    soft: '#DEA199',
   },
-  focus: { ring: '#C4706A' },
+  focus: { ring: '#B9564E' },
   state: {
-    success: '#4A7C6A',
-    warning: '#B8860B',
-    danger: '#9B3B3B',
+    success: '#6F8792',
+    warning: '#9C6B4E',
+    danger: '#8F3C37',
   },
-  shadow: { soft: 'rgba(42, 34, 28, 0.08)' },
-  overlay: { scrim: 'rgba(42, 34, 28, 0.35)' },
+  shadow: { soft: 'rgba(58, 40, 32, 0.08)' },
+  overlay: { scrim: 'rgba(58, 40, 32, 0.35)' },
   font: {
     ui: 'ui-sans-serif, "SF Pro Text", "Segoe UI", system-ui, sans-serif',
     mono: 'ui-monospace, "SF Mono", "Cascadia Code", monospace',
@@ -138,81 +138,57 @@ const defaultShell: ShellTheme = {
   },
 }
 
-const shellCool: ShellTheme = {
-  ...defaultShell,
-  bg: {
-    canvas: '#EEF1F4',
-    elevated: '#F8FAFC',
-    subtle: '#E2E8F0',
-  },
-  border: {
-    subtle: '#CBD5E1',
-    default: '#94A3B8',
-  },
-  text: {
-    primary: '#0F172A',
-    muted: '#475569',
-    inverse: '#F8FAFC',
-  },
-  accent: {
-    primary: '#0F766E',
-    primaryHover: '#0D9488',
-    soft: '#99F6E4',
-  },
-  focus: { ring: '#0F766E' },
-}
-
 const defaultXr: XrTheme = {
-  void: { clear: '#0B0614' },
+  void: { clear: '#1C1B1D' },
   skydome: {
-    top: '#1a0b2e',
-    horizon: '#3d1f0f',
-    bottom: '#120a18',
+    top: '#28313A',
+    horizon: '#866560',
+    bottom: '#231F1D',
   },
   fog: {
-    color: '#120a18',
-    near: 8,
-    far: 35,
+    color: '#282321',
+    near: 7,
+    far: 32,
   },
   floor: {
-    albedo: '#1e1428',
-    emissive: '#120818',
+    albedo: '#403A36',
+    emissive: '#292522',
   },
   grid: {
-    cell: '#3d3550',
-    section: '#f59e0b',
+    cell: '#706862',
+    section: '#D7AEA8',
   },
   light: {
     key: {
-      color: '#FFE8D2',
-      intensity: 1.0,
-      position: [5, 8, 5],
+      color: '#FFE8D6',
+      intensity: 1.08,
+      position: [4.5, 7.5, 5.5],
     },
     hemi: {
-      sky: '#6B8CFF',
-      ground: '#2A1810',
-      intensity: 0.35,
+      sky: '#8298A0',
+      ground: '#4A3A34',
+      intensity: 0.56,
     },
   },
   accent: {
-    cyan: '#22d3ee',
-    amber: '#f59e0b',
-    orange: '#ea580c',
-    mustard: '#d97706',
-    stone: '#a8a29e',
-    seal: '#78350f',
+    cyan: '#829AA2',
+    amber: '#DDB2AB',
+    orange: '#C85F58',
+    mustard: '#9A7A68',
+    stone: '#DED2C3',
+    seal: '#62504A',
   },
   hud: {
-    panelFill: '#1c1917',
-    panelOpacity: 0.82,
-    panelBorder: '#d97706',
-    textPrimary: '#e7e5e4',
-    textMetric: '#99f6e4',
-    textMuted: '#a8a29e',
+    panelFill: '#51443E',
+    panelOpacity: 0.7,
+    panelBorder: '#C85F58',
+    textPrimary: '#FFF5EA',
+    textMetric: '#B4C7CC',
+    textMuted: '#E5C9C0',
   },
   ar: {
-    stroke: '#22d3ee',
-    opacity: 0.35,
+    stroke: '#829AA2',
+    opacity: 0.42,
   },
 }
 
@@ -228,15 +204,8 @@ export const defaultPlaygroundPresetId = 'default'
 export const playgroundPresets: PlaygroundThemePreset[] = [
   {
     id: 'default',
-    label: 'Default',
+    label: 'Warm Night',
     shell: defaultShell,
-    xr: defaultXr,
-    labAccents: defaultLabAccents,
-  },
-  {
-    id: 'shellCool',
-    label: 'Cool shell',
-    shell: shellCool,
     xr: defaultXr,
     labAccents: defaultLabAccents,
   },

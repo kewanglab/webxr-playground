@@ -7,7 +7,6 @@ import { VRScene } from '../scene/VRScene'
 import { ARScene } from '../scene/ARScene'
 import { LabContent } from '../../app/LabContent'
 import { usePlaygroundStore } from '../../app/store'
-import { InXRLogger } from '../hud/InXRLogger'
 import { InXRStats } from '../hud/InXRStats'
 import { HUDPanel } from '../hud/HUDPanel'
 import { TagAlongHUD } from '../hud/TagAlongHUD'
@@ -45,7 +44,6 @@ export function XRRoot() {
       <TagAlongHUD>
         <HUDPanel>
           <InXRStats />
-          <InXRLogger />
         </HUDPanel>
       </TagAlongHUD>
     </XR>

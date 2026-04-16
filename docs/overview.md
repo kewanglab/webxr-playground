@@ -268,11 +268,10 @@ Feedback systems that can be composed into any lab:
 World-space UI that must be visible **inside** an immersive session. The Meta Quest browser does **not** implement WebXR DOM overlay for headset AR/VR the way handheld browsers do, so HTML panels (Leva, desktop session logger) do not appear in-headset. This folder holds a small 3D HUD instead:
 
 - `TagAlongHUD.tsx` — smooth-follow group (lags the headset slightly to avoid rigid head-lock)
-- `InXRStats.tsx` — rolling-average FPS and frame time as drei `<Text>` (drei `<Stats>` is DOM-based and stays invisible in XR)
+- `InXRStats.tsx` — minimal rolling-average FPS as drei `<Text>` (drei `<Stats>` is DOM-based and stays invisible in XR)
 - `HUDButton.tsx` — simple plane buttons with pointer + haptic/tone feedback
-- `InXRLogger.tsx` — single wide **Log** control: append entry (placeholder note, `fromHeadset: true`) then POST the **full** in-memory list to `/api/logs` so the desktop file matches immediately
 
-Shared HTTP helpers for desktop persistence live in `src/ui/sessionLogSync.ts` and are used by both the desktop Session Logger panel and `InXRLogger`.
+Shared HTTP helpers for desktop persistence live in `src/ui/sessionLogSync.ts` and are used by the desktop Session Logger panel.
 
 ### `public/assets/`
 
@@ -304,7 +303,7 @@ Desktop ergonomics:
 - `src/ui/DebugPanel.tsx` widens the pane, rows, and fonts so controls are easier to read and hit on a monitor.
 - Most numeric lab parameters use the custom `stepperNumber` plugin in `src/ui/levaPlugins/stepperNumber.tsx`: **−** / **+** buttons, a number field, and a **range** slider. **Selection Lab** uses plain Leva number sliders only (avoids fragile size values for the targets).
 
-Leva stays a **desktop** overlay (HTML). It is not replicated inside the headset; see **In-headset HUD** under Device Testing Workflow for VR/AR access to logging and FPS.
+Leva stays a **desktop** overlay (HTML). It is not replicated inside the headset; see **In-headset HUD** under Device Testing Workflow for VR/AR FPS feedback.
 
 ## AI-Agent Conventions
 
@@ -410,14 +409,14 @@ When validating on Quest 3:
 
 - Verify VR entry and AR entry both work
 - Test with controllers first (more reliable), then switch to hand tracking
-- Watch for frame drops during interactions (drei `<Stats>` on desktop; in-headset FPS line from `InXRStats` when in VR/AR)
+- Watch for frame drops during interactions (drei `<Stats>` on desktop; in-headset FPS card from `InXRStats` when in VR/AR)
 - Check that hand tracking recovers gracefully when hands leave the tracking volume
 - Confirm haptic feedback fires on controller interactions
 - Verify AR hit-test places objects on real surfaces
 
 ### In-headset HUD (VR and AR)
 
-While immersed, use the floating panel (lower-left field of view): green **FPS | ms** text, then one wide **Log** button. Each tap appends a headset quick-log entry and immediately POSTs the **entire** in-memory log list to `/api/logs` (same route as the desktop panel; requires `adb reverse` so the headset reaches the dev server).
+While immersed, use the floating panel in the lower-left field of view for a minimal FPS readout. Its status bar uses Quest/WebXR comfort bands: green at **90+ FPS** (smooth), yellow at **72–89 FPS** (not so smooth but acceptable), orange at **45–71 FPS** (choppy), and red below **45 FPS** (not workable). Session notes stay on the desktop logger.
 
 ### Desktop log capture and viewer
 

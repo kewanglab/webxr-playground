@@ -1,6 +1,6 @@
 # Style template: Shell (2D UI)
 
-**Intent:** Calm, warm configuration surfaces that feel **human and spacious**—in the spirit of *Her*: soft paper, coral/rosé accents, low visual noise. This template covers **everything drawn with HTML/CSS** over the canvas (playground chrome, Leva, logger, future theme picker).
+**Intent:** Calm, warm configuration surfaces that feel **human and spacious**—in the spirit of *Her*: coral red, dusty salmon, muted blue, cream, off-white, walnut, and low visual noise. This template covers **everything drawn with HTML/CSS** over the canvas (playground chrome, Leva, logger, future theme picker).
 
 **Out of scope:** Three.js materials and world lighting (see [xr-3d.md](./xr-3d.md)).
 
@@ -14,13 +14,13 @@
 
 The **web page and configuration surfaces** (Leva, playground chrome, logger) lean *Her*-like:
 
-- Warm, quiet, **human** interface: paper-adjacent off-whites and dusty rose / peach / soft coral accents (not loud product red).
+- Warm, quiet, **human** interface: cream/off-white grounds, walnut text, coral red actions, dusty salmon grouping, and restrained muted blue system states.
 - **Lots of breathing room**, soft radii, low-contrast dividers, **humanist sans** for labels; interactions feel calm and legible, not “gamer HUD.”
-- Buttons and chips: subtle elevation or hairline border—not heavy chrome.
+- Buttons and chips: flat panels, thin rules, roomy margins, soft grouping, minimal iconography, and almost no visual noise.
 
 ### Where the rest of the product lives
 
-In-headset worlds, HUD chrome, and lab props follow **[xr-3d.md](./xr-3d.md)** (*The Fifth Element* / *Loki* mood + WebXR craft). Cross-cutting execution plan: [spatial polish plan](../spatial-polish-plan.md).
+In-headset worlds, HUD chrome, and lab props follow **[xr-3d.md](./xr-3d.md)** as the same restrained warm identity translated into 3D. Cross-cutting execution plan: [spatial polish plan](../spatial-polish-plan.md).
 
 ---
 
@@ -53,14 +53,14 @@ type PlaygroundPreset = {
 
 **Why not top-level `space` / `radius`?** You can do `preset.space` as a sibling of `preset.shell`, but then “what applies to the page?” is split across two keys. Nesting under `shell` keeps presets cohesive and avoids orphan keys.
 
-**Answers you do *not* need to give for v1:** Spacing and radius can stay **identical across presets** (`default`, `shellCool`, etc.); only copy the `shell.space` / `shell.radius` objects if a preset ever needs a denser UI.
+**Answers you do *not* need to give for v1:** Spacing and radius can stay **identical across future presets**; only copy the `shell.space` / `shell.radius` objects if a preset ever needs a denser UI.
 
 ---
 
 ## Principles
 
-1. **Warm neutrals first** — backgrounds read as paper or linen, not pure white or cold gray.
-2. **One primary accent** — peach / dusty rose / coral for actions and selection; avoid rainbow chrome.
+1. **Warm neutrals first** — backgrounds read as cream, off-white, or linen, not pure white or cold gray.
+2. **One primary accent** — coral red for actions and selection; dusty salmon is support, muted blue is rare.
 3. **Breathing room** — prefer padding over borders; group with spacing before drawing boxes.
 4. **Hairline structure** — dividers at low contrast; reserve strong contrast for text and primary buttons.
 5. **Readable type** — humanist sans for UI; monospace only for logs, codes, and timestamps.
@@ -74,23 +74,23 @@ Use these as the **`shell`** object in `playgroundTheme` and as **CSS custom pro
 
 | Token | Default | Usage |
 |-------|---------|--------|
-| `shell.bg.canvas` | `#EBE4DC` | Page behind the full-screen WebGL canvas (if visible at edges) |
-| `shell.bg.elevated` | `#F5EFE8` | Panels, Leva root, logger cards |
-| `shell.bg.subtle` | `#E3D9CF` | Grouped regions, inactive chip fill |
-| `shell.border.subtle` | `#C9B8A8` | Dividers, inactive outlines |
-| `shell.border.default` | `#B0A090` | Resting button/chip borders |
-| `shell.text.primary` | `#2A221C` | Body labels, titles |
-| `shell.text.muted` | `#5C524C` | Secondary descriptions, hints |
-| `shell.text.inverse` | `#F5EFE8` | Text on solid accent buttons |
-| `shell.accent.primary` | `#C4706A` | Primary actions, active lab chip, links |
-| `shell.accent.primaryHover` | `#A85A55` | Hover / pressed (darker) |
-| `shell.accent.soft` | `#E8C4BE` | Soft fills (selected row tint, focus halo fill) |
-| `shell.focus.ring` | `#C4706A` | Focus-visible outline (2px) + 2px offset |
-| `shell.state.success` | `#4A7C6A` | Sync OK, positive badges (muted sage) |
-| `shell.state.warning` | `#B8860B` | Non-destructive warnings |
-| `shell.state.danger` | `#9B3B3B` | Destructive or error (restrained red) |
-| `shell.shadow.soft` | `rgba(42, 34, 28, 0.08)` | Panel elevation shadow |
-| `shell.overlay.scrim` | `rgba(42, 34, 28, 0.35)` | Modal / emphasis scrim (rare) |
+| `shell.bg.canvas` | `#F0E3D4` | Cream page/canvas surround |
+| `shell.bg.elevated` | `#FBF7EF` | Off-white panels, Leva root, logger cards |
+| `shell.bg.subtle` | `#E8D7CA` | Soft grouping regions, inactive chip fill |
+| `shell.border.subtle` | `#D3BCAC` | Thin rules, dividers, inactive outlines |
+| `shell.border.default` | `#B99B89` | Resting button/chip borders |
+| `shell.text.primary` | `#3A2820` | Walnut body labels, titles |
+| `shell.text.muted` | `#6B5A50` | Secondary descriptions, hints |
+| `shell.text.inverse` | `#FFF7EF` | Text on solid coral buttons |
+| `shell.accent.primary` | `#B9564E` | Coral red primary actions, active lab chip, links |
+| `shell.accent.primaryHover` | `#97463F` | Hover / pressed coral |
+| `shell.accent.soft` | `#DEA199` | Dusty salmon fills and focus halo support |
+| `shell.focus.ring` | `#B9564E` | Focus-visible outline (2px) + 2px offset |
+| `shell.state.success` | `#6F8792` | Sync OK, positive badges, muted blue system success |
+| `shell.state.warning` | `#9C6B4E` | Non-destructive warnings |
+| `shell.state.danger` | `#8F3C37` | Destructive or error, restrained coral-brown |
+| `shell.shadow.soft` | `rgba(58, 40, 32, 0.08)` | Panel elevation shadow |
+| `shell.overlay.scrim` | `rgba(58, 40, 32, 0.35)` | Modal / emphasis scrim (rare) |
 
 **Contrast checks:** Pair `text.primary` on `bg.elevated` and `accent.primary` on `text.inverse` for AA where those combinations appear.
 
@@ -203,9 +203,9 @@ See [Pitfalls](../pitfalls.md) before customizing Leva plugins.
 
 ---
 
-## Optional second preset: `shellCool` (accessibility / taste)
+## Future presets
 
-For A/B or high-contrast needs, define a cooler variant: shift `bg.*` toward `#EEF1F4`, accent toward a single **teal** `#0F766E`, keep structure identical. Document contrast deltas in the theme module.
+Future day or accessibility presets should preserve the same quiet component grammar unless the product direction explicitly changes: flat panels, thin rules, roomy margins, soft grouping, minimal iconography, and restrained accents.
 
 ---
 

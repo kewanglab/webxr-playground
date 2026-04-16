@@ -16,13 +16,13 @@ export function VRScene() {
       <Skydome />
       <Grid
         infiniteGrid
-        fadeDistance={30}
-        fadeStrength={3}
+        fadeDistance={24}
+        fadeStrength={2.2}
         cellSize={0.5}
-        cellThickness={0.5}
+        cellThickness={0.38}
         cellColor={xr.grid.cell}
         sectionSize={2}
-        sectionThickness={1}
+        sectionThickness={0.78}
         sectionColor={xr.grid.section}
       />
       <mesh
@@ -34,7 +34,7 @@ export function VRScene() {
         <meshStandardMaterial
           color={xr.floor.albedo}
           emissive={xr.floor.emissive}
-          emissiveIntensity={0.12}
+          emissiveIntensity={0.06}
           roughness={0.92}
           metalness={0}
         />

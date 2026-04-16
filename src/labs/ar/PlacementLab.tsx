@@ -16,6 +16,7 @@ import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
 import { resetXRInputDefaults } from '../../xr/core/xrStore'
 import { useHapticPulse } from '../../xr/feedback/haptics/useHapticPulse'
 import { useConfirmTone } from '../../xr/feedback/audio/useConfirmTone'
+import { SensorPodObject } from '../cross-xr/manipulation/SensorPodObject'
 
 type PlacementTransform = {
   position: Vector3
@@ -45,9 +46,11 @@ function clampObjectSize(value: number) {
 function PlacedArtifact({
   objectSize,
   color,
+  secondary,
 }: {
   objectSize: number
   color: string
+  secondary: string
 }) {
   return (
     <group>
@@ -64,24 +67,14 @@ function PlacedArtifact({
           blending={AdditiveBlending}
         />
       </mesh>
-      <mesh position={[0, objectSize * 0.34, 0]} castShadow>
-        <boxGeometry args={[objectSize * 0.84, objectSize * 0.66, objectSize * 0.84]} />
-        <meshStandardMaterial
-          color="#ece7df"
-          roughness={0.36}
-          metalness={0.08}
-          emissive={color}
-          emissiveIntensity={0.08}
+      <group position={[0, objectSize * 0.42, 0]} scale={0.9}>
+        <SensorPodObject
+          objectSize={objectSize}
+          baseColor="#ece7df"
+          accentColor={color}
+          restAccent={secondary}
         />
-      </mesh>
-      <mesh position={[0, objectSize * 0.56, 0]}>
-        <boxGeometry args={[objectSize * 0.34, objectSize * 0.08, objectSize * 0.22]} />
-        <meshStandardMaterial color={color} roughness={0.42} metalness={0.12} />
-      </mesh>
-      <mesh position={[-objectSize * 0.26, objectSize * 0.34, 0]}>
-        <boxGeometry args={[objectSize * 0.08, objectSize * 0.52, objectSize * 0.54]} />
-        <meshStandardMaterial color={color} roughness={0.46} metalness={0.16} />
-      </mesh>
+      </group>
     </group>
   )
 }
@@ -215,6 +208,7 @@ export function PlacementLab() {
                     ? labAccents.placement.primary
                     : labAccents.placement.secondary
                 }
+                secondary={xr.accent.mustard}
               />
             </group>
           ))}
@@ -366,41 +360,17 @@ function PlacementPreview({
           blending={AdditiveBlending}
         />
       </mesh>
-      <mesh position={[0, objectSize * 0.34, 0]}>
-        <boxGeometry args={[objectSize * 0.84, objectSize * 0.66, objectSize * 0.84]} />
-        <meshStandardMaterial
-          color="#f4efe7"
+      <group position={[0, objectSize * 0.42, 0]} scale={0.9}>
+        <SensorPodObject
+          objectSize={objectSize}
+          baseColor="#f4efe7"
+          accentColor={color}
+          restAccent={secondary}
           transparent
-          opacity={Math.min(0.34, opacity * 0.5)}
-          roughness={0.32}
-          metalness={0.04}
-          emissive={color}
-          emissiveIntensity={0.12}
+          opacity={Math.min(0.42, opacity * 0.56)}
           depthWrite={false}
         />
-      </mesh>
-      <mesh position={[0, objectSize * 0.56, 0]}>
-        <boxGeometry args={[objectSize * 0.34, objectSize * 0.08, objectSize * 0.22]} />
-        <meshStandardMaterial
-          color={color}
-          transparent
-          opacity={Math.min(0.72, opacity * 0.78)}
-          roughness={0.44}
-          metalness={0.12}
-          depthWrite={false}
-        />
-      </mesh>
-      <mesh position={[-objectSize * 0.26, objectSize * 0.34, 0]}>
-        <boxGeometry args={[objectSize * 0.08, objectSize * 0.52, objectSize * 0.54]} />
-        <meshStandardMaterial
-          color={secondary}
-          transparent
-          opacity={Math.min(0.52, opacity * 0.62)}
-          roughness={0.46}
-          metalness={0.14}
-          depthWrite={false}
-        />
-      </mesh>
+      </group>
 
       {activeSource?.hitTestSpace && (
         <XRHitTest

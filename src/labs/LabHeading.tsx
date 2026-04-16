@@ -19,18 +19,22 @@ export function LabHeading({ title, subtitle }: LabHeadingProps) {
       <Text
         position={[0, 1.8, -2]}
         fontSize={0.12}
-        color={xr.hud.textMuted}
+        color={xr.hud.textPrimary}
         anchorX="center"
         anchorY="middle"
+        outlineWidth={0.006}
+        outlineColor={xr.void.clear}
       >
         {title}
       </Text>
       <Text
         position={[0, 1.64, -2]}
         fontSize={0.065}
-        color={xr.accent.stone}
+        color={xr.hud.textMuted}
         anchorX="center"
         anchorY="middle"
+        outlineWidth={0.003}
+        outlineColor={xr.void.clear}
       >
         {subtitle}
       </Text>
