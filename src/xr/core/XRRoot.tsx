@@ -32,6 +32,8 @@ function XRScene() {
 }
 
 export function XRRoot() {
+  const fpsHudVisible = usePlaygroundStore((s) => s.fpsHudVisible)
+
   useEffect(() => {
     preloadXrKitModels()
   }, [])
@@ -41,11 +43,13 @@ export function XRRoot() {
       <Suspense fallback={null}>
         <XRScene />
       </Suspense>
-      <TagAlongHUD>
-        <HUDPanel>
-          <InXRStats />
-        </HUDPanel>
-      </TagAlongHUD>
+      {fpsHudVisible && (
+        <TagAlongHUD>
+          <HUDPanel>
+            <InXRStats />
+          </HUDPanel>
+        </TagAlongHUD>
+      )}
     </XR>
   )
 }

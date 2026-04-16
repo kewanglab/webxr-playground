@@ -11,6 +11,8 @@ const tmpForward = new Vector3()
 const tmpRight = new Vector3()
 const tmpUp = new Vector3()
 const tmpTargetPos = new Vector3()
+const tmpCameraPos = new Vector3()
+const tmpCameraQuat = new Quaternion()
 const worldUp = new Vector3(0, 1, 0)
 
 /**
@@ -34,6 +36,8 @@ export function TagAlongHUD({ children }: TagAlongHUDProps) {
     const g = groupRef.current
     if (!g || !inXR) return
 
+    camera.getWorldPosition(tmpCameraPos)
+    camera.getWorldQuaternion(tmpCameraQuat)
     camera.getWorldDirection(tmpForward)
     tmpRight.crossVectors(tmpForward, worldUp)
     if (tmpRight.lengthSq() < 1e-8) {
@@ -45,20 +49,20 @@ export function TagAlongHUD({ children }: TagAlongHUDProps) {
 
     // Offset in view space: negative right = left, negative up = down (bottom-left corner).
     tmpTargetPos
-      .copy(camera.position)
+      .copy(tmpCameraPos)
       .addScaledVector(tmpForward, 0.9)
       .addScaledVector(tmpRight, -0.4)
       .addScaledVector(tmpUp, -0.4)
 
     if (!initialized.current) {
       smoothPos.current.copy(tmpTargetPos)
-      smoothQuat.current.copy(camera.quaternion)
+      smoothQuat.current.copy(tmpCameraQuat)
       initialized.current = true
     }
 
     const k = 1 - Math.pow(0.88, delta * 60)
     smoothPos.current.lerp(tmpTargetPos, k)
-    smoothQuat.current.slerp(camera.quaternion, k)
+    smoothQuat.current.slerp(tmpCameraQuat, k)
 
     g.position.copy(smoothPos.current)
     g.quaternion.copy(smoothQuat.current)

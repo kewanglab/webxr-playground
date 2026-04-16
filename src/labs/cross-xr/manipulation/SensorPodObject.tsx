@@ -88,21 +88,23 @@ export function SensorPodObject({
           {...common}
         />
       </mesh>
-      <mesh position={[-objectSize * 0.26, -objectSize * 0.05, -objectSize * 0.08]} castShadow>
-        <sphereGeometry args={[objectSize * 0.1, 18, 16]} />
-        <meshStandardMaterial
-          color={accentColor}
-          roughness={0.2}
-          metalness={0.12}
-          emissive={accent}
-          emissiveIntensity={active ? 0.12 : 0.06}
-          {...common}
-        />
-      </mesh>
-      <mesh position={[objectSize * 0.22, 0, -objectSize * 0.14]} castShadow>
-        <boxGeometry args={[objectSize * 0.07, objectSize * 0.18, objectSize * 0.16]} />
-        <meshStandardMaterial color="#bcb4a8" roughness={0.24} metalness={0.12} {...common} />
-      </mesh>
+      {[-1, 1].map((dir) => (
+        <mesh
+          key={`side-orb-${dir}`}
+          position={[dir * objectSize * 0.26, -objectSize * 0.05, -objectSize * 0.08]}
+          castShadow
+        >
+          <sphereGeometry args={[objectSize * 0.1, 18, 16]} />
+          <meshStandardMaterial
+            color={accentColor}
+            roughness={0.2}
+            metalness={0.12}
+            emissive={accent}
+            emissiveIntensity={active ? 0.12 : 0.06}
+            {...common}
+          />
+        </mesh>
+      ))}
       {[-1, 1].map((dir) => (
         <mesh
           key={`hero-wing-${dir}`}

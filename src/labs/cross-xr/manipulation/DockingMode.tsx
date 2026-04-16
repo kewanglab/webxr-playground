@@ -130,14 +130,15 @@ function DockingGhost({
         <torusGeometry args={[objectSize * 0.14, objectSize * 0.028, 8, 24]} />
         <meshBasicMaterial color={secondary} transparent opacity={0.46} depthWrite={false} />
       </mesh>
-      <mesh position={[-objectSize * 0.26, -objectSize * 0.05, -objectSize * 0.08]}>
-        <sphereGeometry args={[objectSize * 0.1, 14, 10]} />
-        <meshBasicMaterial color={secondary} transparent opacity={0.42} depthWrite={false} />
-      </mesh>
-      <mesh position={[objectSize * 0.22, 0, -objectSize * 0.14]}>
-        <boxGeometry args={[objectSize * 0.07, objectSize * 0.18, objectSize * 0.16]} />
-        <meshBasicMaterial color={secondary} transparent opacity={0.3} depthWrite={false} />
-      </mesh>
+      {[-1, 1].map((dir) => (
+        <mesh
+          key={`ghost-side-orb-${dir}`}
+          position={[dir * objectSize * 0.26, -objectSize * 0.05, -objectSize * 0.08]}
+        >
+          <sphereGeometry args={[objectSize * 0.1, 14, 10]} />
+          <meshBasicMaterial color={secondary} transparent opacity={0.42} depthWrite={false} />
+        </mesh>
+      ))}
       {[-1, 1].map((dir) => (
         <mesh
           key={`ghost-wing-${dir}`}

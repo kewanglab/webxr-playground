@@ -7,6 +7,10 @@ import {
   THEME_STORAGE_KEY,
 } from '../config/playgroundTheme'
 
+const FPS_HUD_STORAGE_KEY = 'xr-playground-fps-hud-visible'
+const DEFAULT_ORIGIN_POSITION = new Vector3(0, 0, 0)
+const DEFAULT_ORIGIN_ROTATION_Y = 0
+
 function readInitialLabId(): LabId {
   if (typeof window === 'undefined') return 'selection'
   try {
@@ -31,6 +35,18 @@ function readInitialThemePresetId(): string {
   return defaultPlaygroundPresetId
 }
 
+function readInitialBoolean(key: string, fallback: boolean): boolean {
+  if (typeof window === 'undefined') return fallback
+  try {
+    const stored = localStorage.getItem(key)
+    if (stored === 'true') return true
+    if (stored === 'false') return false
+  } catch {
+    /* ignore */
+  }
+  return fallback
+}
+
 export type SessionLogEntry = {
   id: string
   timestamp: string
@@ -50,6 +66,9 @@ type PlaygroundState = {
   /** AR-only: world-space alignment ring (see spatial polish plan). */
   arAlignmentGuide: boolean
   setArAlignmentGuide: (visible: boolean) => void
+  /** XR-only: show the lightweight in-headset FPS card. */
+  fpsHudVisible: boolean
+  setFpsHudVisible: (visible: boolean) => void
   originPosition: Vector3
   setOriginPosition: (pos: Vector3) => void
   originRotationY: number
@@ -62,7 +81,12 @@ type PlaygroundState = {
 
 export const usePlaygroundStore = create<PlaygroundState>((set) => ({
   currentLab: readInitialLabId(),
-  setLab: (lab) => set({ currentLab: lab }),
+  setLab: (lab) =>
+    set({
+      currentLab: lab,
+      originPosition: DEFAULT_ORIGIN_POSITION.clone(),
+      originRotationY: DEFAULT_ORIGIN_ROTATION_Y,
+    }),
   themePresetId: readInitialThemePresetId(),
   setThemePresetId: (id) => {
     if (!isValidPresetId(id)) return
@@ -78,10 +102,19 @@ export const usePlaygroundStore = create<PlaygroundState>((set) => ({
   },
   arAlignmentGuide: true,
   setArAlignmentGuide: (visible) => set({ arAlignmentGuide: visible }),
+  fpsHudVisible: readInitialBoolean(FPS_HUD_STORAGE_KEY, true),
+  setFpsHudVisible: (visible) => {
+    try {
+      localStorage.setItem(FPS_HUD_STORAGE_KEY, String(visible))
+    } catch {
+      /* ignore */
+    }
+    set({ fpsHudVisible: visible })
+  },
   // Session origin transform controlled by locomotion and teleport labs.
-  originPosition: new Vector3(0, 0, 0),
+  originPosition: DEFAULT_ORIGIN_POSITION.clone(),
   setOriginPosition: (pos) => set({ originPosition: pos }),
-  originRotationY: 0,
+  originRotationY: DEFAULT_ORIGIN_ROTATION_Y,
   setOriginRotationY: (yRadians) => set({ originRotationY: yRadians }),
   logEntries: [],
   addLogEntry: (entry) =>

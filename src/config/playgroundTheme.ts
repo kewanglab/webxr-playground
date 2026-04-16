@@ -298,7 +298,7 @@ export const defaultPlaygroundPresetId = 'default'
 export const playgroundPresets: PlaygroundThemePreset[] = [
   {
     id: 'default',
-    label: 'Warm Night',
+    label: 'Patina Instrument Lab',
     shell: defaultShell,
     xr: defaultXr,
     labAccents: defaultLabAccents,
