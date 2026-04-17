@@ -10,6 +10,14 @@ export function applyShellTheme(shell: ShellTheme): void {
   r.setProperty('--pg-shell-bg-canvas', shell.bg.canvas)
   r.setProperty('--pg-shell-bg-elevated', shell.bg.elevated)
   r.setProperty('--pg-shell-bg-subtle', shell.bg.subtle)
+  r.setProperty(
+    '--pg-shell-bg-panel',
+    `linear-gradient(180deg, ${shell.bg.elevated} 0%, ${shell.bg.canvas} 145%)`,
+  )
+  r.setProperty(
+    '--pg-shell-bg-control',
+    `linear-gradient(180deg, ${shell.bg.canvas} 0%, ${shell.bg.subtle} 160%)`,
+  )
   r.setProperty('--pg-shell-border-subtle', shell.border.subtle)
   r.setProperty('--pg-shell-border-default', shell.border.default)
   r.setProperty('--pg-shell-text-primary', shell.text.primary)

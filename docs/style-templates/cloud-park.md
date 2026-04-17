@@ -38,6 +38,64 @@ Use this mental model:
 - **Cream objects and panels** are rest points for the eye.
 - **Deep teal** provides contrast without pulling the world back into night mode.
 
+## Scenic Vocabulary
+
+Cloud Park is beauty-first. The world should read as a place before it reads as a testing scaffold.
+
+Use these procedural forms:
+
+- **Cloud mats** as soft ground islands and task bases.
+- **Soft arches** as social gateways and lab landmarks.
+- **Wind streaks** as motion lines, not decorative noise.
+- **Painterly cloud cards** for distant atmosphere. Use layered translucent planes with soft alpha textures, highlight lobes, and lower shadow bands so background clouds read as haze, not toy spheres.
+- **Atmospheric sunlight** for daytime warmth. Use feathered glow textures, horizon haze, a small soft core, and occasional cloud veil shapes instead of a hard sticker-like sun disc.
+- **Distant park silhouettes** such as faint arches and islands to make the world feel larger than the active lab.
+- **Tiny flecks** for atmospheric scale, kept sparse and static.
+- **Contact-shadow blobs** under objects so props feel grounded without a full shadow pipeline.
+
+The grid is allowed in Cloud Park, but it should be secondary. It should help spatial review only after the scene already feels like a floating social park.
+
+## Object Shape Grammar
+
+Cloud Park objects should tell the same story as the atmosphere: a soft floating park for social play. Do not just recolor default lab equipment.
+
+Use this shape language:
+
+- **Tangible park objects:** rounded, buoyant, low-poly, soft-edged, and slightly handmade.
+- **Movement objects:** ribbons, kites, streamers, stepping clouds, wind trails, and route puffs.
+- **System or validity cues:** ocean-blue halos, beacon rings, and clean sky markers.
+- **Social or action cues:** coral and amber accents.
+- **Grounding:** cloud perches, contact blobs, soft mats, and pale cream bases.
+
+Avoid in Cloud Park:
+
+- hard sci-fi pods, box wings, metal gadget details, and imported platform-kit pedestals
+- perfect-circle suns or foreground-like sphere clouds in the far background
+- technical markers that dominate the scenic read
+- props whose silhouette does not explain why they exist in a sky park
+
+## Lab Set Language
+
+Each lab should feel like a distinct small scene inside the same park:
+
+| Lab | Cloud Park Set Direction |
+|-----|--------------------------|
+| Selection | Cloud-gate plaza with a kite pointer, landing-pad touch token, handhold charm, and soft cloud perches |
+| Placement | Beacon-seed surface marker showcase for desktop captures; passthrough-safe rings and beacon preview in AR |
+| Locomotion | Floating ribbon path with stepping-cloud route markers, cloud checkpoints, and a destination gate |
+| Manipulation | Sky-workbench with matching beacon object/ghost for docking, cloud-garden basin for zen arrangement |
+
+Interaction behavior is not part of this theme pass. Keep hitboxes, movement math, placement confirmation, grab logic, measurements, and Leva controls unchanged unless a separate interaction task calls for it.
+
+## Motion Limits
+
+Subtle motion is welcome when it increases presence:
+
+- Move only decorative atmosphere groups such as distant clouds, flecks, wind lines, and far silhouettes.
+- Keep target meshes, hitboxes, trial objects, placement transforms, and measurement-critical objects stable.
+- Use simple group transform updates; do not allocate materials or geometry in animation frames.
+- Keep movement slow enough that generated screenshots still compose cleanly.
+
 ## Token Translation
 
 | Layer | Direction |
@@ -63,5 +121,7 @@ Use this mental model:
 
 - Do not use Half+Half logos, avatars, named spaces, screenshots, or branded shapes.
 - Keep color playful but purposeful; avoid turning every object into decoration.
-- Preserve Quest-friendly rendering: one skydome, one grid, one floor plane, one directional light, one hemisphere light.
+- Preserve Quest-friendly rendering: one skydome, one quiet grid, one floor plane, one directional light, one hemisphere light, and lightweight procedural props.
+- Avoid required postprocessing, high-density particles, complex shaders, or new asset pipelines.
+- Prefer memoized/reused low-poly primitives for repeated clouds, mats, islands, and scenic markers.
 - Keep the theme readable in AR by reserving blue for alignment and validity cues.

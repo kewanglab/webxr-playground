@@ -201,56 +201,56 @@ const defaultLabAccents: Record<LabId, LabAccentPair> = {
 
 const cloudParkShell: ShellTheme = {
   bg: {
-    canvas: '#E7F7EF',
-    elevated: '#FFF9E9',
-    subtle: '#D6F0E5',
+    canvas: '#EAF8F1',
+    elevated: '#FFF8E8',
+    subtle: '#DDF3E8',
   },
   border: {
-    subtle: '#A9D5CB',
-    default: '#72B7B4',
+    subtle: '#B6DDD2',
+    default: '#76BBB6',
   },
   text: {
-    primary: '#213F43',
-    muted: '#557779',
-    inverse: '#FFFBEF',
+    primary: '#24484B',
+    muted: '#5D7F7E',
+    inverse: '#FFF9EC',
   },
   accent: {
-    primary: '#B94F48',
-    primaryHover: '#9E413C',
-    soft: '#FFD3A4',
+    primary: '#D65F55',
+    primaryHover: '#B94B45',
+    soft: '#FFE0B6',
   },
-  focus: { ring: '#1C8D99' },
+  focus: { ring: '#238F9F' },
   state: {
-    success: '#268E7E',
-    warning: '#B77921',
-    danger: '#A63E42',
+    success: '#2B9A86',
+    warning: '#C3852C',
+    danger: '#B6474C',
   },
-  shadow: { soft: 'rgba(33, 63, 67, 0.12)' },
-  overlay: { scrim: 'rgba(33, 63, 67, 0.32)' },
+  shadow: { soft: 'rgba(36, 72, 75, 0.14)' },
+  overlay: { scrim: 'rgba(36, 72, 75, 0.3)' },
   font: { ...defaultShell.font },
   space: { ...defaultShell.space },
   radius: { ...defaultShell.radius },
 }
 
 const cloudParkXr: XrTheme = {
-  void: { clear: '#98DDF0' },
+  void: { clear: '#9ADFF0' },
   skydome: {
-    top: '#71C8EB',
-    horizon: '#FFE29B',
-    bottom: '#B8EFCF',
+    top: '#83D5ED',
+    horizon: '#FFE4A8',
+    bottom: '#BDEFD2',
   },
   fog: {
-    color: '#BDECDC',
+    color: '#C7F0DE',
     near: 14,
     far: 52,
   },
   floor: {
-    albedo: '#7ED8AD',
-    emissive: '#43AF8E',
+    albedo: '#91DBAE',
+    emissive: '#4BB694',
   },
   grid: {
-    cell: '#DAFFF0',
-    section: '#FFD26F',
+    cell: '#E6FFF4',
+    section: '#FFD985',
   },
   light: {
     key: {
@@ -265,11 +265,11 @@ const cloudParkXr: XrTheme = {
     },
   },
   accent: {
-    cyan: '#2FAFC6',
+    cyan: '#2EAEC3',
     amber: '#FFD166',
-    orange: '#E86455',
-    mustard: '#B7C95C',
-    stone: '#FFF3C8',
+    orange: '#E76456',
+    mustard: '#BED36A',
+    stone: '#FFF2C7',
     seal: '#2F6971',
   },
   hud: {

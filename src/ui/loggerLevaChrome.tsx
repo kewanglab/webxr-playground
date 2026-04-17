@@ -51,7 +51,7 @@ const titleBarRowBase: CSSProperties = {
   flexShrink: 0,
   height: TITLE_BAR_H,
   minHeight: TITLE_BAR_H,
-  background: v('--pg-shell-bg-elevated'),
+  background: v('--pg-shell-bg-panel'),
   fontFamily: v('--pg-shell-font-mono'),
   fontSize: 14,
   color: v('--pg-shell-text-primary'),
@@ -123,7 +123,7 @@ export function LoggerLevaTitleBar({
 
 export function loggerLevaPanelShell(): CSSProperties {
   return {
-    background: v('--pg-shell-bg-elevated'),
+    background: v('--pg-shell-bg-panel'),
     border: `1px solid ${v('--pg-shell-border-subtle')}`,
     borderRadius: v('--pg-shell-radius-lg'),
     boxShadow: `0 4px 24px ${v('--pg-shell-shadow-soft')}`,

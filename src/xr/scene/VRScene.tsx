@@ -1,10 +1,13 @@
 import { Grid } from '@react-three/drei'
 import { useControls } from 'leva'
 import { usePlaygroundTheme } from '../theme/PlaygroundThemeContext'
+import { CloudParkWorld } from '../visual/CloudParkScenery'
 import { Skydome } from '../visual/Skydome'
 
 export function VRScene() {
-  const { xr } = usePlaygroundTheme()
+  const preset = usePlaygroundTheme()
+  const { xr } = preset
+  const isCloudPark = preset.id === 'cloud-park'
   const { showHeightRef } = useControls('Debug', {
     showHeightRef: false,
   })
@@ -14,16 +17,17 @@ export function VRScene() {
       <color attach="background" args={[xr.void.clear]} />
       <fog attach="fog" args={[xr.fog.color, xr.fog.near, xr.fog.far]} />
       <Skydome />
+      <CloudParkWorld />
       <Grid
         infiniteGrid
-        fadeDistance={24}
-        fadeStrength={2.2}
+        fadeDistance={isCloudPark ? 16 : 24}
+        fadeStrength={isCloudPark ? 4.4 : 2.2}
         cellSize={0.5}
-        cellThickness={0.38}
-        cellColor={xr.grid.cell}
+        cellThickness={isCloudPark ? 0.13 : 0.38}
+        cellColor={isCloudPark ? '#B9E7D0' : xr.grid.cell}
         sectionSize={2}
-        sectionThickness={0.78}
-        sectionColor={xr.grid.section}
+        sectionThickness={isCloudPark ? 0.28 : 0.78}
+        sectionColor={isCloudPark ? '#DCE5A8' : xr.grid.section}
       />
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
@@ -34,8 +38,8 @@ export function VRScene() {
         <meshStandardMaterial
           color={xr.floor.albedo}
           emissive={xr.floor.emissive}
-          emissiveIntensity={0.06}
-          roughness={0.92}
+          emissiveIntensity={isCloudPark ? 0.035 : 0.06}
+          roughness={isCloudPark ? 0.98 : 0.92}
           metalness={0}
         />
       </mesh>

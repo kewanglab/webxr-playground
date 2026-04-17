@@ -94,9 +94,9 @@ const LAB_CAMERA_VIEWS: Record<LabId, Record<CaptureViewId, CameraView>> = {
   },
   manipulation: {
     hero: {
-      position: [0.85, 1.55, 2.1],
-      target: [0, 1.2, -0.85],
-      fov: 38,
+      position: [0.75, 1.52, 3.25],
+      target: [0, 1.08, -0.85],
+      fov: 44,
     },
     side: {
       position: [2.45, 1.62, 0.35],

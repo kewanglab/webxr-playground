@@ -74,6 +74,23 @@ http://127.0.0.1:5175/?theme=cloud-park&lab=selection&capture=scene&captureView=
 - `docs/mockups/captures/scenes/cloud-park/selection-overhead.png`
 - `docs/mockups/captures/scenes/cloud-park/selection-wide.png`
 
+## Cloud Park Beauty Review
+
+Cloud Park captures should be judged as scenic compositions, not just QA proofs.
+
+A passing Cloud Park hero frame should show:
+
+- a clear foreground, midground, and horizon layer
+- visible atmospheric detail such as painterly cloud cards, sunlight haze, wind lines, distant silhouettes, or flecks
+- lab props that feel like part of a sky park, not recolored debug geometry or sci-fi kit pieces
+- object silhouettes that explain the lab story: kite pointer, cloud landing pad, handhold charm, beacon seed, wind route, sky workbench, or cloud-garden basin
+- a quiet grid that supports spatial reading without becoming the subject
+- all required interaction objects framed without cropping
+
+For Placement Lab, desktop `capture=scene` shows a Cloud Park surface-marker showcase. Immersive AR still uses the real hit-test placement flow and should stay passthrough-safe.
+
+When Cloud Park looks flat, check shape before color. A hard circular sun, background sphere-puff clouds, kit pedestals, boxy pods, or technical route discs can make the scene read like a decorated lab even when the palette is correct.
+
 ## Iterating On Camera Angles
 
 When tuning a camera view, do not review only an overwritten PNG. Copy the candidate frame to a unique filename before sharing or comparing it, for example:
@@ -98,3 +115,4 @@ This keeps review honest. If the screenshot viewer caches an old image, or if a 
 - Keep camera views authored in `src/xr/core/DesktopPreviewCamera.tsx` so every lab has deliberate review angles instead of arbitrary browser camera drift.
 - For strict overhead reviews, prefer an orthographic camera with explicit rotation over a high perspective camera using `lookAt`.
 - Check ground-grid alignment: if grid lines meant to be horizontal/vertical are not parallel to the image edges, the capture is not a true plan view.
+- For Cloud Park, do not let QA helpers dominate beauty frames; scenic atmosphere and lab object polish should be visible before the grid is noticed.

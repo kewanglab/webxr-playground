@@ -20,6 +20,13 @@ import { CherryPetals } from './CherryPetals'
 import { usePlaygroundStore } from '../../../app/store'
 import { xrStore } from '../../../xr/core/xrStore'
 import { usePlaygroundTheme } from '../../../xr/theme/PlaygroundThemeContext'
+import {
+  CloudParkGardenTray,
+  CloudParkShadowBlob,
+  CloudParkSideIsland,
+  CloudParkWindLine,
+  FloatingCloudMat,
+} from '../../../xr/visual/CloudParkScenery'
 
 type ZenGardenModeProps = {
   acquisition: ManipulationAcquisition
@@ -75,6 +82,32 @@ function lerpHex(a: string, b: string, t: number): string {
 function buildZenPalette(p: PlaygroundThemePreset): ZenModePalette {
   const { xr, shell, labAccents } = p
   const m = labAccents.manipulation
+  if (p.id === 'cloud-park') {
+    return {
+      byId: {
+        'stone-1': '#FFF3D4',
+        'stone-2': '#E5F5D0',
+        'branch-1': '#64A98F',
+        'pebble-1': '#F7E7B0',
+        'crystal-1': lerpHex(xr.accent.cyan, '#FFF9E8', 0.34),
+        'moss-1': '#BEE7B4',
+        'flower-1': lerpHex(shell.accent.soft, '#FFF7E4', 0.28),
+      },
+      mossLight: '#BEE7B4',
+      mossDark: '#78B992',
+      stem: '#5FA783',
+      flowerCenter: xr.accent.amber,
+      woodTray: '#F3DFA0',
+      woodRim: '#D8BD6A',
+      sandTint: '#FFF4C8',
+      pointLight: '#FFE8A8',
+      branchDecor: '#64A98F',
+      blossom: '#FFE1BE',
+      arrangeText: m.primary,
+      tinyPebbles: ['#FFF5D9', '#B8E8E0', '#F5DC98'],
+    }
+  }
+
   return {
     byId: {
       'stone-1': xr.accent.stone,
@@ -142,13 +175,23 @@ function GardenObjectMesh({
   def,
   size,
   zen,
+  isCloudPark,
 }: {
   def: GardenObject
   size: number
   zen: ZenModePalette
+  isCloudPark: boolean
 }) {
   switch (def.geometry) {
     case 'stone-flat':
+      if (isCloudPark) {
+        return (
+          <mesh castShadow scale={[1.45, 0.38, 1.1]}>
+            <dodecahedronGeometry args={[size * 0.5, 0]} />
+            <meshStandardMaterial color={def.color} roughness={0.86} />
+          </mesh>
+        )
+      }
       return (
         <mesh castShadow>
           <boxGeometry args={[size * 1.4, size * 0.35, size * 1.1]} />
@@ -156,6 +199,14 @@ function GardenObjectMesh({
         </mesh>
       )
     case 'stone-tall':
+      if (isCloudPark) {
+        return (
+          <mesh castShadow scale={[0.64, 1.34, 0.74]} rotation={[0.08, 0.12, -0.04]}>
+            <dodecahedronGeometry args={[size * 0.5, 0]} />
+            <meshStandardMaterial color={def.color} roughness={0.88} />
+          </mesh>
+        )
+      }
       return (
         <mesh castShadow>
           <boxGeometry args={[size * 0.55, size * 1.4, size * 0.65]} />
@@ -246,6 +297,48 @@ function GardenObjectMesh({
   }
 }
 
+function CloudParkZenSurround({
+  primary,
+  secondary,
+}: {
+  primary: string
+  secondary: string
+}) {
+  return (
+    <group>
+      <FloatingCloudMat
+        position={[0, 0.69, -0.78]}
+        scale={0.78}
+        cloudColor="#FFF5DA"
+        shadeColor="#DFF4E6"
+        rimColor={secondary}
+      />
+      <CloudParkShadowBlob
+        position={[0, 0.705, -0.78]}
+        scale={[1.25, 1, 0.86]}
+        color={primary}
+        opacity={0.12}
+      />
+      <CloudParkSideIsland position={[-0.72, 0.68, -0.96]} scale={0.22} rimColor={secondary} />
+      <CloudParkSideIsland position={[0.72, 0.68, -0.62]} scale={0.2} rimColor={primary} />
+      <CloudParkWindLine
+        position={[-0.46, 1.05, -0.62]}
+        rotation={[0, 0, 0.14]}
+        length={0.48}
+        color={secondary}
+        opacity={0.34}
+      />
+      <CloudParkWindLine
+        position={[0.5, 1.12, -0.9]}
+        rotation={[0, 0, -0.12]}
+        length={0.42}
+        color={primary}
+        opacity={0.3}
+      />
+    </group>
+  )
+}
+
 /** Procedural rake-pattern texture for the sand surface. */
 function useSandTexture() {
   const tex = useMemo(() => {
@@ -293,6 +386,7 @@ export function ZenGardenMode({
 }: ZenGardenModeProps) {
   const preset = usePlaygroundTheme()
   const zen = useMemo(() => buildZenPalette(preset), [preset])
+  const isCloudPark = preset.id === 'cloud-park'
   const joints = useHandJoints('right')
   const addLogEntry = usePlaygroundStore((s) => s.addLogEntry)
   const currentLab = usePlaygroundStore((s) => s.currentLab)
@@ -326,43 +420,58 @@ export function ZenGardenMode({
       {/* Ambient atmosphere */}
       <pointLight position={[0.3, 1.5, -0.5]} intensity={0.4} color={zen.pointLight} distance={3} />
 
-      {/* Platform — wooden tray with darker base */}
-      <mesh position={[0, 0.73, -0.78]} receiveShadow castShadow>
-        <boxGeometry args={[0.74, 0.035, 0.54]} />
-        <meshStandardMaterial color={zen.woodTray} roughness={0.85} />
-      </mesh>
-
-      {/* Sand surface with rake pattern */}
-      <mesh position={[0, 0.755, -0.78]} receiveShadow>
-        <boxGeometry args={[0.68, 0.008, 0.48]} />
-        <meshStandardMaterial
-          map={sandTexture}
-          color={zen.sandTint}
-          roughness={1}
+      {isCloudPark && (
+        <CloudParkZenSurround
+          primary={preset.labAccents.manipulation.primary}
+          secondary={preset.labAccents.manipulation.secondary}
         />
-      </mesh>
+      )}
 
-      {/* Wooden rim pieces */}
-      {/* Left */}
-      <mesh position={[-0.355, 0.76, -0.78]} castShadow>
-        <boxGeometry args={[0.02, 0.04, 0.52]} />
-        <meshStandardMaterial color={zen.woodRim} roughness={0.9} />
-      </mesh>
-      {/* Right */}
-      <mesh position={[0.355, 0.76, -0.78]} castShadow>
-        <boxGeometry args={[0.02, 0.04, 0.52]} />
-        <meshStandardMaterial color={zen.woodRim} roughness={0.9} />
-      </mesh>
-      {/* Front */}
-      <mesh position={[0, 0.76, -0.54]} castShadow>
-        <boxGeometry args={[0.74, 0.04, 0.02]} />
-        <meshStandardMaterial color={zen.woodRim} roughness={0.9} />
-      </mesh>
-      {/* Back */}
-      <mesh position={[0, 0.76, -1.02]} castShadow>
-        <boxGeometry args={[0.74, 0.04, 0.02]} />
-        <meshStandardMaterial color={zen.woodRim} roughness={0.9} />
-      </mesh>
+      {isCloudPark ? (
+        <CloudParkGardenTray
+          position={[0, 0.735, -0.78]}
+          trayColor={zen.woodTray}
+          rimColor={zen.woodRim}
+          sandColor={zen.sandTint}
+          sandMap={sandTexture}
+        />
+      ) : (
+        <>
+          {/* Platform - wooden tray with darker base */}
+          <mesh position={[0, 0.73, -0.78]} receiveShadow castShadow>
+            <boxGeometry args={[0.74, 0.035, 0.54]} />
+            <meshStandardMaterial color={zen.woodTray} roughness={0.85} />
+          </mesh>
+
+          {/* Sand surface with rake pattern */}
+          <mesh position={[0, 0.755, -0.78]} receiveShadow>
+            <boxGeometry args={[0.68, 0.008, 0.48]} />
+            <meshStandardMaterial
+              map={sandTexture}
+              color={zen.sandTint}
+              roughness={1}
+            />
+          </mesh>
+
+          {/* Wooden rim pieces */}
+          <mesh position={[-0.355, 0.76, -0.78]} castShadow>
+            <boxGeometry args={[0.02, 0.04, 0.52]} />
+            <meshStandardMaterial color={zen.woodRim} roughness={0.9} />
+          </mesh>
+          <mesh position={[0.355, 0.76, -0.78]} castShadow>
+            <boxGeometry args={[0.02, 0.04, 0.52]} />
+            <meshStandardMaterial color={zen.woodRim} roughness={0.9} />
+          </mesh>
+          <mesh position={[0, 0.76, -0.54]} castShadow>
+            <boxGeometry args={[0.74, 0.04, 0.02]} />
+            <meshStandardMaterial color={zen.woodRim} roughness={0.9} />
+          </mesh>
+          <mesh position={[0, 0.76, -1.02]} castShadow>
+            <boxGeometry args={[0.74, 0.04, 0.02]} />
+            <meshStandardMaterial color={zen.woodRim} roughness={0.9} />
+          </mesh>
+        </>
+      )}
 
       {/* Small corner accent stones (decorative, not manipulable) */}
       <mesh position={[-0.28, 0.76, -0.96]}>
@@ -418,7 +527,7 @@ export function ZenGardenMode({
             onPointerDown={acquisition === 'ray' ? () => acquireById(def.id) : undefined}
             onPointerUp={acquisition === 'ray' ? () => releaseActive() : undefined}
           >
-            <GardenObjectMesh def={full} size={objectSize} zen={zen} />
+            <GardenObjectMesh def={full} size={objectSize} zen={zen} isCloudPark={isCloudPark} />
           </ManipulableObject>
         )
       })}

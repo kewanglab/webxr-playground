@@ -10,6 +10,14 @@ import {
   XR_KIT_NATIVE,
   scalePlatformRoundForTargetCube,
 } from '../../xr/visual/kitNative'
+import {
+  CloudParkArch,
+  CloudParkPerch,
+  CloudParkShadowBlob,
+  CloudParkSideIsland,
+  CloudParkWindLine,
+  FloatingCloudMat,
+} from '../../xr/visual/CloudParkScenery'
 import { useKitModel } from '../../xr/visual/useKitModel'
 import { useInitialEyeLevelOffset } from '../../xr/core/useInitialEyeLevelOffset'
 import { LabHeading } from '../LabHeading'
@@ -22,11 +30,55 @@ function SelectionStage({
   stone,
   rim,
   voidColor,
+  isCloudPark,
 }: {
   stone: string
   rim: string
   voidColor: string
+  isCloudPark: boolean
 }) {
+  if (isCloudPark) {
+    return (
+      <group>
+        <FloatingCloudMat
+          position={[0, 0.018, -1.48]}
+          scale={1.55}
+          cloudColor={stone}
+          shadeColor="#DDF4E3"
+          rimColor={rim}
+        />
+        <CloudParkShadowBlob
+          position={[0, 0.02, -0.98]}
+          scale={[3.2, 1, 1.45]}
+          color={rim}
+          opacity={0.11}
+        />
+        <mesh position={[0, 0.76, -2.58]}>
+          <planeGeometry args={[2.75, 1.08]} />
+          <meshBasicMaterial
+            color={stone}
+            transparent
+            opacity={0.42}
+            depthWrite={false}
+          />
+        </mesh>
+        <CloudParkArch position={[0, 0.28, -2.5]} scale={1.18} stone={stone} rim={rim} />
+        <CloudParkWindLine
+          position={[-0.88, 1.76, -2.42]}
+          rotation={[0, 0, -0.18]}
+          length={0.76}
+          opacity={0.28}
+        />
+        <CloudParkWindLine
+          position={[0.94, 1.88, -2.4]}
+          rotation={[0, 0, 0.16]}
+          length={0.9}
+          opacity={0.22}
+        />
+      </group>
+    )
+  }
+
   return (
     <group>
       <mesh position={[0, 0.03, -1.48]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -79,11 +131,50 @@ function SelectionBackdropPiers({
   stone,
   rim,
   shadow,
+  isCloudPark,
 }: {
   stone: string
   rim: string
   shadow: string
+  isCloudPark: boolean
 }) {
+  if (isCloudPark) {
+    return (
+      <group>
+        <CloudParkSideIsland position={[-2.05, 0.04, -1.82]} scale={0.78} rimColor={rim} />
+        <CloudParkSideIsland position={[2.05, 0.05, -1.96]} scale={0.72} rimColor={rim} />
+        {[-1, 1].map((dir) => (
+          <group key={`cloud-selection-marker-${dir}`} position={[dir * 2.02, 0.16, -1.86]}>
+            <FloatingCloudMat
+              position={[0, -0.16, 0.02]}
+              scale={0.28}
+              cloudColor={stone}
+              shadeColor="#DDF4E3"
+              rimColor={rim}
+            />
+            <mesh position={[0, 0.32, 0]}>
+              <capsuleGeometry args={[0.047, 0.62, 7, 12]} />
+              <meshStandardMaterial
+                color={stone}
+                roughness={0.92}
+                emissive={shadow}
+                emissiveIntensity={0.04}
+              />
+            </mesh>
+            <mesh position={[0, 0.69, 0.012]}>
+              <sphereGeometry args={[0.115, 12, 8]} />
+              <meshStandardMaterial color={rim} roughness={0.58} emissive={rim} emissiveIntensity={0.08} />
+            </mesh>
+            <mesh position={[0, 0.49, 0.014]} rotation={[Math.PI / 2, 0, 0]}>
+              <torusGeometry args={[0.1, 0.008, 6, 24]} />
+              <meshBasicMaterial color={rim} transparent opacity={0.28} depthWrite={false} />
+            </mesh>
+          </group>
+        ))}
+      </group>
+    )
+  }
+
   return (
     <group>
       {[-1, 1].map((dir) => (
@@ -136,7 +227,9 @@ function SelectableTarget({
   label: string
   variant: SelectionTokenVariant
 }) {
-  const { xr, shell } = usePlaygroundTheme()
+  const preset = usePlaygroundTheme()
+  const { xr, shell } = preset
+  const isCloudPark = preset.id === 'cloud-park'
   const [hovered, setHovered] = useState(false)
   const [selected, setSelected] = useState(false)
   const pulse = useHapticPulse()
@@ -159,15 +252,25 @@ function SelectableTarget({
 
   return (
     <group position={position} scale={hovered ? 1 + confirmScaleBoost : 1}>
-      <primitive
-        object={pedestal}
-        position={[
-          0,
-          -s / 2 - XR_KIT_NATIVE.platformRoundTopY * pedestalScale,
-          0,
-        ]}
-        scale={pedestalScale}
-      />
+      {isCloudPark ? (
+        <CloudParkPerch
+          position={[0, -s / 2 - 0.035, 0]}
+          scale={s}
+          bodyColor={xr.accent.stone}
+          rimColor={haloColor}
+          accentColor={activeColor}
+        />
+      ) : (
+        <primitive
+          object={pedestal}
+          position={[
+            0,
+            -s / 2 - XR_KIT_NATIVE.platformRoundTopY * pedestalScale,
+            0,
+          ]}
+          scale={pedestalScale}
+        />
+      )}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -s / 2 + 0.01, 0]}>
         <ringGeometry args={[s * 0.48, s * 0.62, 36]} />
         <meshBasicMaterial
@@ -200,10 +303,15 @@ function SelectableTarget({
           systemColor={xr.accent.cyan}
           selected={selected}
           hovered={hovered}
+          isCloudPark={isCloudPark}
         />
       </group>
       <Text
-        position={[0, -s / 2 - XR_KIT_NATIVE.platformRoundTopY * pedestalScale + 0.06, 0.18]}
+        position={
+          isCloudPark
+            ? [0, -s / 2 - 0.105, 0.2]
+            : [0, -s / 2 - XR_KIT_NATIVE.platformRoundTopY * pedestalScale + 0.06, 0.18]
+        }
         fontSize={0.058}
         color={xr.hud.textPrimary}
         anchorX="center"
@@ -226,6 +334,7 @@ function SelectionToken({
   systemColor,
   selected,
   hovered,
+  isCloudPark,
 }: {
   variant: SelectionTokenVariant
   size: number
@@ -235,9 +344,25 @@ function SelectionToken({
   systemColor: string
   selected: boolean
   hovered: boolean
+  isCloudPark: boolean
 }) {
   const glow = selected ? systemColor : activeColor
   const glowIntensity = hovered || selected ? 0.14 : 0.05
+
+  if (isCloudPark) {
+    return (
+      <CloudParkSelectionToken
+        variant={variant}
+        size={size}
+        activeColor={activeColor}
+        bodyColor={bodyColor}
+        trimColor={trimColor}
+        systemColor={systemColor}
+        glow={glow}
+        glowIntensity={glowIntensity}
+      />
+    )
+  }
 
   if (variant === 'ray') {
     return (
@@ -345,8 +470,143 @@ function SelectionToken({
   )
 }
 
+function CloudParkSelectionToken({
+  variant,
+  size,
+  activeColor,
+  bodyColor,
+  trimColor,
+  systemColor,
+  glow,
+  glowIntensity,
+}: {
+  variant: SelectionTokenVariant
+  size: number
+  activeColor: string
+  bodyColor: string
+  trimColor: string
+  systemColor: string
+  glow: string
+  glowIntensity: number
+}) {
+  if (variant === 'ray') {
+    return (
+      <group position={[0, size * 0.2, 0]} rotation={[-0.28, 0.12, -0.08]}>
+        <mesh scale={[size * 0.42, size * 0.6, size * 0.08]}>
+          <octahedronGeometry args={[1, 0]} />
+          <meshStandardMaterial
+            color={activeColor}
+            roughness={0.42}
+            metalness={0.02}
+            emissive={glow}
+            emissiveIntensity={glowIntensity + 0.06}
+          />
+        </mesh>
+        <mesh position={[0, -size * 0.42, -size * 0.04]} rotation={[0.18, 0, 0]}>
+          <coneGeometry args={[size * 0.13, size * 0.5, 3]} />
+          <meshStandardMaterial color={trimColor} roughness={0.72} />
+        </mesh>
+        {[-1, 1].map((dir) => (
+          <mesh
+            key={`cloud-kite-tail-${dir}`}
+            position={[dir * size * 0.11, -size * 0.52, -size * 0.01]}
+            rotation={[0.2, 0, dir * 0.28]}
+          >
+            <coneGeometry args={[size * 0.04, size * 0.22, 3]} />
+            <meshStandardMaterial color={dir < 0 ? systemColor : trimColor} roughness={0.7} />
+          </mesh>
+        ))}
+        <CloudParkWindLine
+          position={[-size * 0.32, -size * 0.18, size * 0.08]}
+          rotation={[0, 0, -0.32]}
+          length={size * 1.0}
+          color={systemColor}
+          opacity={0.42}
+        />
+      </group>
+    )
+  }
+
+  if (variant === 'touch') {
+    return (
+      <group position={[0, size * 0.1, 0]}>
+        <FloatingCloudMat
+          position={[0, -size * 0.08, 0]}
+          scale={size * 0.68}
+          cloudColor={bodyColor}
+          shadeColor="#DFF4E6"
+          rimColor={trimColor}
+        />
+        <mesh position={[0, size * 0.12, 0]}>
+          <cylinderGeometry args={[size * 0.34, size * 0.42, size * 0.12, 28]} />
+          <meshStandardMaterial
+            color={activeColor}
+            roughness={0.38}
+            metalness={0.02}
+            emissive={glow}
+            emissiveIntensity={glowIntensity + 0.05}
+          />
+        </mesh>
+        {[0.14, 0.24, 0.34].map((r, i) => (
+          <mesh
+            key={`cloud-touch-ripple-${r}`}
+            position={[0, size * (0.21 + i * 0.012), 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+          >
+            <torusGeometry args={[size * r, size * 0.006, 6, 28]} />
+            <meshBasicMaterial color={systemColor} transparent opacity={0.42 - i * 0.08} />
+          </mesh>
+        ))}
+      </group>
+    )
+  }
+
+  return (
+    <group position={[0, size * 0.2, 0]} rotation={[0.08, 0, 0]}>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[size * 0.24, size * 0.045, 10, 34]} />
+        <meshStandardMaterial
+          color={bodyColor}
+          roughness={0.58}
+          metalness={0}
+          emissive={glow}
+          emissiveIntensity={glowIntensity + 0.02}
+        />
+      </mesh>
+      {[-1, 1].map((dir) => (
+        <mesh key={`cloud-grab-orb-${dir}`} position={[dir * size * 0.28, size * 0.01, 0]}>
+          <sphereGeometry args={[size * 0.15, 16, 12]} />
+          <meshStandardMaterial
+            color={activeColor}
+            roughness={0.35}
+            emissive={glow}
+            emissiveIntensity={glowIntensity + 0.03}
+          />
+        </mesh>
+      ))}
+      <mesh position={[0, size * 0.22, 0]}>
+        <sphereGeometry args={[size * 0.1, 12, 10]} />
+        <meshStandardMaterial color={trimColor} roughness={0.45} emissive={trimColor} emissiveIntensity={0.12} />
+      </mesh>
+      <mesh position={[0, -size * 0.23, 0]} scale={[1.35, 0.32, 0.9]}>
+        <sphereGeometry args={[size * 0.13, 12, 8]} />
+        <meshStandardMaterial color={bodyColor} roughness={0.78} emissive={glow} emissiveIntensity={0.04} />
+      </mesh>
+      <CloudParkWindLine
+        position={[0, -size * 0.16, size * 0.1]}
+        rotation={[0, 0, 0.08]}
+        length={size * 0.78}
+        color={systemColor}
+        opacity={0.28}
+      />
+    </group>
+  )
+}
+
 export function SelectionLab() {
-  const { labAccents, xr, shell } = usePlaygroundTheme()
+  const preset = usePlaygroundTheme()
+  const { labAccents, xr, shell } = preset
+  const isCloudPark = preset.id === 'cloud-park'
   const defaults = tuningPresets.controller.selection
   const { targetSize, confirmScaleBoost, enableHaptics, enableAudio } = useControls('Selection', {
     // Plain sliders here — Leva’s custom stepper plugin was unreliable for this folder (size could collapse).
@@ -374,6 +634,7 @@ export function SelectionLab() {
           stone={xr.accent.stone}
           rim={labAccents.selection.secondary}
           voidColor={xr.floor.emissive}
+          isCloudPark={isCloudPark}
         />
         <SelectableTarget
           position={[-0.62, 1.16, -0.74]}
@@ -413,6 +674,7 @@ export function SelectionLab() {
           stone={xr.accent.stone}
           rim={labAccents.selection.secondary}
           shadow={xr.floor.emissive}
+          isCloudPark={isCloudPark}
         />
       </group>
     </group>
