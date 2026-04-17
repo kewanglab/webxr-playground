@@ -1,6 +1,10 @@
-import { useLayoutEffect } from 'react'
+import { useLayoutEffect, useRef } from 'react'
+import { OrthographicCamera } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import type { PerspectiveCamera } from 'three'
+import type {
+  OrthographicCamera as ThreeOrthographicCamera,
+  PerspectiveCamera,
+} from 'three'
 import type { LabId } from '../../config/labs'
 import { readCaptureViewId, type CaptureViewId } from '../../app/captureOptions'
 import { usePlaygroundStore } from '../../app/store'
@@ -10,6 +14,9 @@ type CameraView = {
   position: [number, number, number]
   target: [number, number, number]
   fov: number
+  up?: [number, number, number]
+  rotation?: [number, number, number]
+  orthographicZoom?: number
 }
 
 const LAB_CAMERA_VIEWS: Record<LabId, Record<CaptureViewId, CameraView>> = {
@@ -25,9 +32,11 @@ const LAB_CAMERA_VIEWS: Record<LabId, Record<CaptureViewId, CameraView>> = {
       fov: 42,
     },
     overhead: {
-      position: [0.2, 4.7, 1.1],
-      target: [0, 0.95, -1.4],
-      fov: 46,
+      position: [0, 10, -1.48],
+      target: [0, 0, -1.48],
+      fov: 48,
+      rotation: [-Math.PI / 2, 0, 0],
+      orthographicZoom: 170,
     },
     wide: {
       position: [0, 2.1, 6.4],
@@ -47,9 +56,11 @@ const LAB_CAMERA_VIEWS: Record<LabId, Record<CaptureViewId, CameraView>> = {
       fov: 43,
     },
     overhead: {
-      position: [0.1, 4.3, 0.8],
-      target: [0, 0.8, -1.05],
+      position: [0, 9, -1.05],
+      target: [0, 0, -1.05],
       fov: 48,
+      rotation: [-Math.PI / 2, 0, 0],
+      orthographicZoom: 165,
     },
     wide: {
       position: [0, 1.85, 5.4],
@@ -69,9 +80,11 @@ const LAB_CAMERA_VIEWS: Record<LabId, Record<CaptureViewId, CameraView>> = {
       fov: 42,
     },
     overhead: {
-      position: [0.4, 7.0, -1.2],
-      target: [0, 0.35, -6.0],
+      position: [0, 14, -5.2],
+      target: [0, 0, -5.2],
       fov: 52,
+      rotation: [-Math.PI / 2, 0, 0],
+      orthographicZoom: 92,
     },
     wide: {
       position: [0, 2.35, 8.2],
@@ -91,9 +104,11 @@ const LAB_CAMERA_VIEWS: Record<LabId, Record<CaptureViewId, CameraView>> = {
       fov: 42,
     },
     overhead: {
-      position: [0.35, 4.3, 0.25],
-      target: [0, 1.0, -0.78],
+      position: [0, 9, -0.78],
+      target: [0, 0, -0.78],
       fov: 48,
+      rotation: [-Math.PI / 2, 0, 0],
+      orthographicZoom: 175,
     },
     wide: {
       position: [0.35, 1.95, 4.4],
@@ -111,18 +126,46 @@ export function DesktopPreviewCamera() {
   const currentLab = usePlaygroundStore((s) => s.currentLab)
   const captureViewId = readCaptureViewId()
   const mode = useXRMode()
+  const view = LAB_CAMERA_VIEWS[currentLab][captureViewId]
+
+  if (mode != null) return null
+  if (view.orthographicZoom) return <DesktopOrthographicCamera view={view} />
+
+  return <DesktopPerspectiveCamera view={view} />
+}
+
+function DesktopPerspectiveCamera({ view }: { view: CameraView }) {
   const { camera } = useThree()
 
   useLayoutEffect(() => {
-    if (mode != null) return
-    const view = LAB_CAMERA_VIEWS[currentLab][captureViewId]
     const perspective = camera as PerspectiveCamera
     perspective.position.set(...view.position)
+    perspective.up.set(...(view.up ?? [0, 1, 0]))
     perspective.fov = view.fov
     perspective.lookAt(...view.target)
     perspective.updateProjectionMatrix()
     perspective.updateMatrixWorld()
-  }, [camera, captureViewId, currentLab, mode])
+  }, [camera, view])
 
   return null
+}
+
+function DesktopOrthographicCamera({ view }: { view: CameraView }) {
+  const ref = useRef<ThreeOrthographicCamera>(null)
+
+  useLayoutEffect(() => {
+    const camera = ref.current
+    if (!camera) return
+    camera.position.set(...view.position)
+    camera.zoom = view.orthographicZoom ?? 1
+    if (view.rotation) camera.rotation.set(...view.rotation)
+    else {
+      camera.up.set(...(view.up ?? [0, 1, 0]))
+      camera.lookAt(...view.target)
+    }
+    camera.updateProjectionMatrix()
+    camera.updateMatrixWorld()
+  }, [view])
+
+  return <OrthographicCamera ref={ref} makeDefault near={0.1} far={100} />
 }

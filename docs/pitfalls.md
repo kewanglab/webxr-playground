@@ -94,4 +94,35 @@ The WebXR API uses **generic action names**, not gesture names. The same event f
 
 ---
 
+## Visual capture screenshots can look stale
+
+### Symptom: a camera fix appears not to change the screenshot
+
+During camera-angle iteration, the capture command overwrites the same PNG path, but the review surface may still show the previous image or make it unclear which attempt is being discussed. This is especially confusing for overhead captures, where small camera-roll differences are judged by ground-grid alignment.
+
+**Cause:** repeated screenshots share the same filename, so browser/app image caching and human review context can blur together. The code may have changed, the PNG may have been regenerated, and the displayed image may still be an older artifact.
+
+**Fix:** when reviewing an important camera adjustment, copy the generated PNG to a unique, intent-named filename before sharing it:
+
+```bash
+cp docs/mockups/captures/scenes/cloud-park/selection-overhead.png \
+  docs/mockups/captures/scenes/cloud-park/selection-overhead-mat-center-orthographic.png
+```
+
+Prefer names that state the spatial claim being tested:
+
+- `selection-overhead-mat-center-orthographic.png`
+- `selection-overhead-hero-axis-wide-fit.png`
+- `locomotion-overhead-full-path.png`
+
+For true overhead review, also check the image itself: ground-grid lines intended to be horizontal or vertical should be parallel to the image edges. If they are not, the capture is not a trustworthy plan view.
+
+### Related project files
+
+- `docs/visual-capture.md` — capture workflow and naming guidance
+- `tests/visual/capture.spec.ts` — generated screenshot set
+- `src/xr/core/DesktopPreviewCamera.tsx` — authored review camera presets
+
+---
+
 <!-- Add new ## Section titles below for other domains (e.g. Quest browser, adb reverse). -->
