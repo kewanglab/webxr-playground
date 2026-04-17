@@ -14,9 +14,16 @@ import { LabHeading } from '../LabHeading'
 import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
 import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
 import { resetXRInputDefaults } from '../../xr/core/xrStore'
+import { useXRMode } from '../../xr/core/hooks'
 import { useHapticPulse } from '../../xr/feedback/haptics/useHapticPulse'
 import { useConfirmTone } from '../../xr/feedback/audio/useConfirmTone'
 import { SensorPodObject } from '../cross-xr/manipulation/SensorPodObject'
+import {
+  CloudParkBeaconObject,
+  CloudParkShadowBlob,
+  CloudParkWindLine,
+  FloatingCloudMat,
+} from '../../xr/visual/CloudParkScenery'
 
 type PlacementTransform = {
   position: Vector3
@@ -47,11 +54,61 @@ function PlacedArtifact({
   objectSize,
   color,
   secondary,
+  isCloudPark = false,
 }: {
   objectSize: number
   color: string
   secondary: string
+  isCloudPark?: boolean
 }) {
+  if (isCloudPark) {
+    return (
+      <group>
+        <FloatingCloudMat
+          position={[0, 0.004, 0]}
+          scale={objectSize * 2.5}
+          cloudColor="#FFF5DA"
+          shadeColor="#DFF4E6"
+          rimColor={secondary}
+        />
+        <CloudParkShadowBlob
+          position={[0, objectSize * 0.03, 0]}
+          scale={[objectSize * 5.2, 1, objectSize * 3.2]}
+          color={color}
+          opacity={0.14}
+        />
+        <mesh
+          position={[0, objectSize * 0.08, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <ringGeometry args={[objectSize * 0.5, objectSize * 0.72, 40]} />
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={0.46}
+            depthWrite={false}
+            blending={AdditiveBlending}
+          />
+        </mesh>
+        <group position={[0, objectSize * 0.48, 0]} scale={0.94}>
+          <CloudParkBeaconObject
+            objectSize={objectSize}
+            baseColor="#FFF3D4"
+            accentColor={color}
+            restAccent={secondary}
+          />
+        </group>
+        <CloudParkWindLine
+          position={[objectSize * 0.64, objectSize * 0.42, objectSize * 0.16]}
+          rotation={[0, 0, -0.18]}
+          length={objectSize * 2.1}
+          color={secondary}
+          opacity={0.32}
+        />
+      </group>
+    )
+  }
+
   return (
     <group>
       <mesh
@@ -80,7 +137,10 @@ function PlacedArtifact({
 }
 
 export function PlacementLab() {
-  const { labAccents, xr } = usePlaygroundTheme()
+  const preset = usePlaygroundTheme()
+  const { labAccents, xr } = preset
+  const mode = useXRMode()
+  const isCloudPark = preset.id === 'cloud-park'
   const defaults = tuningPresets.controller.placement
   const { objectSize, previewOpacity, enableHaptics, enableAudio } = useControls(
     'Placement',
@@ -173,6 +233,7 @@ export function PlacementLab() {
       : activeSource
         ? 'Scan a stable surface to reveal the placement guide'
         : 'Enter AR and raise a controller or hand to begin placement'
+  const showDesktopShowcase = isCloudPark && mode !== 'immersive-ar'
 
   return (
     <group>
@@ -189,6 +250,7 @@ export function PlacementLab() {
             secondary={labAccents.placement.secondary}
             opacity={previewOp}
             objectSize={objSize}
+            isCloudPark={isCloudPark}
             enableHaptics={enableHaptics}
             enableAudio={enableAudio}
             onPhaseChange={updatePhase}
@@ -209,6 +271,7 @@ export function PlacementLab() {
                     : labAccents.placement.secondary
                 }
                 secondary={xr.accent.mustard}
+                isCloudPark={isCloudPark}
               />
             </group>
           ))}
@@ -225,7 +288,16 @@ export function PlacementLab() {
         </group>
       </IfInSessionMode>
 
-      {!placed.length && (
+      {showDesktopShowcase && (
+        <CloudParkPlacementShowcase
+          objectSize={objSize}
+          color={labAccents.placement.primary}
+          secondary={labAccents.placement.secondary}
+          textColor={xr.hud.textMuted}
+        />
+      )}
+
+      {!placed.length && !showDesktopShowcase && (
         <Text
           position={[0, 1.15, -2]}
           fontSize={0.12}
@@ -240,12 +312,70 @@ export function PlacementLab() {
   )
 }
 
+function CloudParkPlacementShowcase({
+  objectSize,
+  color,
+  secondary,
+  textColor,
+}: {
+  objectSize: number
+  color: string
+  secondary: string
+  textColor: string
+}) {
+  const displaySize = Math.max(0.68, objectSize * 2.2)
+
+  return (
+    <group position={[0, 0, -1.08]}>
+      <FloatingCloudMat
+        position={[0, 0.02, 0]}
+        scale={1.22}
+        cloudColor="#FFF5DA"
+        shadeColor="#DFF4E6"
+        rimColor={secondary}
+      />
+      <PlacedArtifact
+        objectSize={displaySize}
+        color={color}
+        secondary={secondary}
+        isCloudPark
+      />
+      <CloudParkWindLine
+        position={[-0.78, 0.52, 0.02]}
+        rotation={[0, 0, 0.16]}
+        length={0.88}
+        color={secondary}
+        opacity={0.32}
+      />
+      <CloudParkWindLine
+        position={[0.78, 0.68, -0.02]}
+        rotation={[0, 0, -0.12]}
+        length={0.72}
+        color={color}
+        opacity={0.28}
+      />
+      <Text
+        position={[0, 1.12, -0.04]}
+        fontSize={0.07}
+        color={textColor}
+        anchorX="center"
+        anchorY="middle"
+        outlineWidth={0.005}
+        outlineColor="#E7F7EF"
+      >
+        Surface marker preview
+      </Text>
+    </group>
+  )
+}
+
 function PlacementPreview({
   activeSource,
   color,
   secondary,
   opacity,
   objectSize,
+  isCloudPark,
   enableHaptics,
   enableAudio,
   onPhaseChange,
@@ -256,6 +386,7 @@ function PlacementPreview({
   secondary: string
   opacity: number
   objectSize: number
+  isCloudPark: boolean
   enableHaptics: boolean
   enableAudio: boolean
   onPhaseChange: (phase: PlacementPhase) => void
@@ -361,15 +492,27 @@ function PlacementPreview({
         />
       </mesh>
       <group position={[0, objectSize * 0.42, 0]} scale={0.9}>
-        <SensorPodObject
-          objectSize={objectSize}
-          baseColor="#f4efe7"
-          accentColor={color}
-          restAccent={secondary}
-          transparent
-          opacity={Math.min(0.42, opacity * 0.56)}
-          depthWrite={false}
-        />
+        {isCloudPark ? (
+          <CloudParkBeaconObject
+            objectSize={objectSize}
+            baseColor="#FFF3D4"
+            accentColor={color}
+            restAccent={secondary}
+            transparent
+            opacity={Math.min(0.44, opacity * 0.58)}
+            depthWrite={false}
+          />
+        ) : (
+          <SensorPodObject
+            objectSize={objectSize}
+            baseColor="#f4efe7"
+            accentColor={color}
+            restAccent={secondary}
+            transparent
+            opacity={Math.min(0.42, opacity * 0.56)}
+            depthWrite={false}
+          />
+        )}
       </group>
 
       {activeSource?.hitTestSpace && (

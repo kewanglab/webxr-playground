@@ -9,6 +9,14 @@ import {
   scalePropComputerToHeight,
 } from '../../../xr/visual/kitNative'
 import { KitInstance } from '../../../xr/visual/useKitModel'
+import {
+  CloudParkBeaconObject,
+  CloudParkShadowBlob,
+  CloudParkSideIsland,
+  CloudParkWorkbenchHandle,
+  CloudParkWindLine,
+  FloatingCloudMat,
+} from '../../../xr/visual/CloudParkScenery'
 import { useHandJoints } from './useHandJoints'
 import { useManipulation } from './useManipulation'
 import { ManipulableObject } from './ManipulableObject'
@@ -60,11 +68,27 @@ function DockingGhost({
   objectSize,
   primary,
   secondary,
+  isCloudPark,
 }: {
   objectSize: number
   primary: string
   secondary: string
+  isCloudPark: boolean
 }) {
+  if (isCloudPark) {
+    return (
+      <CloudParkBeaconObject
+        objectSize={objectSize}
+        baseColor="#FFF3D4"
+        accentColor={primary}
+        restAccent={secondary}
+        transparent
+        opacity={0.34}
+        depthWrite={false}
+      />
+    )
+  }
+
   return (
     <group>
       <mesh rotation={[Math.PI / 2, 0, 0]}>
@@ -135,6 +159,7 @@ function DockingStation({
   primary,
   secondary,
   offsetY,
+  isCloudPark,
 }: {
   objectSize: number
   stone: string
@@ -142,7 +167,70 @@ function DockingStation({
   primary: string
   secondary: string
   offsetY: number
+  isCloudPark: boolean
 }) {
+  if (isCloudPark) {
+    return (
+      <group>
+        <FloatingCloudMat
+          position={addYOffset([OBJECT_ORIGIN.x, MIN_TARGET_Y - 0.36, OBJECT_ORIGIN.z - 0.02], offsetY)}
+          scale={0.98}
+          cloudColor={stone}
+          shadeColor="#DFF4E6"
+          rimColor={secondary}
+        />
+        <CloudParkShadowBlob
+          position={addYOffset([OBJECT_ORIGIN.x, DESK_SURFACE_Y - 0.01, OBJECT_ORIGIN.z + 0.04], offsetY)}
+          scale={[1.82, 1, 1.02]}
+          color={primary}
+          opacity={0.11}
+        />
+        <mesh
+          position={addYOffset(
+            [OBJECT_ORIGIN.x, DESK_SURFACE_Y - DESK_PLATFORM_THICKNESS / 2, OBJECT_ORIGIN.z + 0.04],
+            offsetY,
+          )}
+          scale={[1.28, 1, 0.68]}
+        >
+          <cylinderGeometry args={[0.58, 0.68, DESK_PLATFORM_THICKNESS, 32]} />
+          <meshStandardMaterial color={stone} roughness={0.86} metalness={0.02} />
+        </mesh>
+        {[-0.46, 0.46].map((x) => (
+          <mesh
+            key={`cloud-table-support-${x}`}
+            position={addYOffset([OBJECT_ORIGIN.x + x, MIN_TARGET_Y - 0.165, OBJECT_ORIGIN.z - 0.02], offsetY)}
+          >
+            <capsuleGeometry args={[0.045, 0.18, 7, 12]} />
+            <meshStandardMaterial color={stone} roughness={0.9} emissive={secondary} emissiveIntensity={0.025} />
+          </mesh>
+        ))}
+        <mesh
+          position={addYOffset([OBJECT_ORIGIN.x, MIN_TARGET_Y - 0.05, OBJECT_ORIGIN.z - 0.23], offsetY)}
+          rotation={[0, 0, Math.PI / 2]}
+        >
+          <capsuleGeometry args={[0.022, 0.54, 7, 18]} />
+          <meshStandardMaterial
+            color={secondary}
+            roughness={0.58}
+            emissive={secondary}
+            emissiveIntensity={0.12}
+          />
+        </mesh>
+        <mesh position={addYOffset([OBJECT_ORIGIN.x, MIN_TARGET_Y - 0.025, OBJECT_ORIGIN.z - 0.12], offsetY)}>
+          <torusGeometry args={[0.48, 0.014, 8, 32]} />
+          <meshBasicMaterial color={primary} transparent opacity={0.46} depthWrite={false} />
+        </mesh>
+        <CloudParkWindLine
+          position={addYOffset([OBJECT_ORIGIN.x - 0.6, DESK_SURFACE_Y + 0.18, OBJECT_ORIGIN.z + 0.22], offsetY)}
+          rotation={[0, 0, 0.16]}
+          length={0.7}
+          color={primary}
+          opacity={0.3}
+        />
+      </group>
+    )
+  }
+
   return (
     <group>
       <mesh position={addYOffset([OBJECT_ORIGIN.x, MIN_TARGET_Y - 0.34, OBJECT_ORIGIN.z - 0.06], offsetY)}>
@@ -193,6 +281,42 @@ function DockingStation({
         <torusGeometry args={[0.48, 0.014, 8, 32]} />
         <meshBasicMaterial color={primary} transparent opacity={0.42} depthWrite={false} />
       </mesh>
+    </group>
+  )
+}
+
+function CloudParkDockingScenery({
+  stone,
+  primary,
+  secondary,
+}: {
+  stone: string
+  primary: string
+  secondary: string
+}) {
+  return (
+    <group>
+      <CloudParkSideIsland position={[-1.32, 0.02, -1.32]} scale={0.54} rimColor={secondary} />
+      <CloudParkSideIsland position={[1.28, 0.02, -1.28]} scale={0.5} rimColor={primary} />
+      {[-1, 1].map((dir) => (
+        <group key={`cloud-docking-panel-${dir}`} position={[dir * 1.12, 0.92, -1.18]} rotation={[0, -dir * 0.24, 0]}>
+          <mesh>
+            <planeGeometry args={[0.36, 0.28]} />
+            <meshBasicMaterial color={stone} transparent opacity={0.58} depthWrite={false} />
+          </mesh>
+          <mesh position={[0, -0.01, 0.012]}>
+            <ringGeometry args={[0.07, 0.105, 24]} />
+            <meshBasicMaterial color={dir < 0 ? primary : secondary} transparent opacity={0.5} />
+          </mesh>
+          <CloudParkWindLine
+            position={[0, 0.18, 0.02]}
+            rotation={[0, 0, dir * 0.12]}
+            length={0.32}
+            color={dir < 0 ? primary : secondary}
+            opacity={0.28}
+          />
+        </group>
+      ))}
     </group>
   )
 }
@@ -268,7 +392,9 @@ export function DockingMode({
   grabDistance,
   cdGain,
 }: DockingModeProps) {
-  const { labAccents, xr, shell } = usePlaygroundTheme()
+  const preset = usePlaygroundTheme()
+  const { labAccents, xr, shell } = preset
+  const isCloudPark = preset.id === 'cloud-park'
   const joints = useHandJoints('right')
   const baseTableOffsetY = useInitialEyeLevelOffset({
     referenceY: DESK_SURFACE_Y,
@@ -401,6 +527,7 @@ export function DockingMode({
           objectSize={objectSize}
           primary={labAccents.manipulation.primary}
           secondary={labAccents.manipulation.secondary}
+          isCloudPark={isCloudPark}
         />
       </mesh>
 
@@ -418,13 +545,23 @@ export function DockingMode({
         onPointerDown={acquisition === 'ray' ? () => acquireById('docking-object') : undefined}
         onPointerUp={acquisition === 'ray' ? () => releaseActive() : undefined}
       >
-        <SensorPodObject
-          objectSize={objectSize}
-          baseColor={state.isManipulating ? '#f1e6d8' : xr.accent.stone}
-          accentColor={labAccents.manipulation.primary}
-          restAccent={labAccents.manipulation.secondary}
-          active={state.isManipulating}
-        />
+        {isCloudPark ? (
+          <CloudParkBeaconObject
+            objectSize={objectSize}
+            baseColor={state.isManipulating ? '#FFF7E1' : '#FFF3D4'}
+            accentColor={labAccents.manipulation.primary}
+            restAccent={labAccents.manipulation.secondary}
+            active={state.isManipulating}
+          />
+        ) : (
+          <SensorPodObject
+            objectSize={objectSize}
+            baseColor={state.isManipulating ? '#f1e6d8' : xr.accent.stone}
+            accentColor={labAccents.manipulation.primary}
+            restAccent={labAccents.manipulation.secondary}
+            active={state.isManipulating}
+          />
+        )}
       </ManipulableObject>
 
       <ManipulableObject
@@ -454,28 +591,37 @@ export function DockingMode({
         }
         onPointerUp={acquisition === 'ray' ? () => releaseActive() : undefined}
       >
-        <group>
-          <mesh
-            position={[
-              0,
-              -0.105,
-              0,
-            ]}
-          >
-            <cylinderGeometry args={[0.018, 0.022, 0.14, 14]} />
-            <meshStandardMaterial color={xr.accent.stone} roughness={0.48} metalness={0.14} />
-          </mesh>
-          <mesh position={[0, 0.02, 0]}>
-            <sphereGeometry args={[0.055, 18, 16]} />
-            <meshStandardMaterial
-              color={state.targetId === 'table-height-handle' ? labAccents.manipulation.primary : '#ece2d1'}
-              roughness={0.22}
-              metalness={0.12}
-              emissive={labAccents.manipulation.primary}
-              emissiveIntensity={state.targetId === 'table-height-handle' ? 0.18 : 0.05}
-            />
-          </mesh>
-        </group>
+        {isCloudPark ? (
+          <CloudParkWorkbenchHandle
+            active={state.targetId === 'table-height-handle'}
+            stone={xr.accent.stone}
+            primary={labAccents.manipulation.primary}
+            secondary={labAccents.manipulation.secondary}
+          />
+        ) : (
+          <group>
+            <mesh
+              position={[
+                0,
+                -0.105,
+                0,
+              ]}
+            >
+              <cylinderGeometry args={[0.018, 0.022, 0.14, 14]} />
+              <meshStandardMaterial color={xr.accent.stone} roughness={0.48} metalness={0.14} />
+            </mesh>
+            <mesh position={[0, 0.02, 0]}>
+              <sphereGeometry args={[0.055, 18, 16]} />
+              <meshStandardMaterial
+                color={state.targetId === 'table-height-handle' ? labAccents.manipulation.primary : '#ece2d1'}
+                roughness={0.22}
+                metalness={0.12}
+                emissive={labAccents.manipulation.primary}
+                emissiveIntensity={state.targetId === 'table-height-handle' ? 0.18 : 0.05}
+              />
+            </mesh>
+          </group>
+        )}
       </ManipulableObject>
 
       <Text
@@ -491,7 +637,7 @@ export function DockingMode({
         anchorX="center"
         anchorY="middle"
       >
-        Desk height
+        {isCloudPark ? 'Bench lift' : 'Desk height'}
       </Text>
 
       <DockingStation
@@ -501,45 +647,56 @@ export function DockingMode({
         primary={labAccents.manipulation.primary}
         secondary={labAccents.manipulation.secondary}
         offsetY={tableOffsetY}
+        isCloudPark={isCloudPark}
       />
-      <KitInstance
-        name="platform_simple"
-        position={addYOffset(
-          [OBJECT_ORIGIN.x, DESK_SURFACE_Y + 0.002, OBJECT_ORIGIN.z + 0.04],
-          tableOffsetY,
-        )}
-        scale={[DESK_PLATFORM_WIDTH / 4, 1, DESK_PLATFORM_DEPTH / 4]}
-        options={{
-          color: xr.accent.stone,
-          emissive: xr.accent.mustard,
-          emissiveIntensity: 0.04,
-          roughness: 0.88,
-        }}
-      />
-      <KitInstance
-        name="prop_computer"
-        position={[-1.18, SIDE_CONSOLE_GROUND_Y, -1.32]}
-        scale={scalePropComputerToHeight(SIDE_CONSOLE_HEIGHT_M)}
-        rotation={[0, Math.PI * 0.22, 0]}
-        options={{
-          color: xr.accent.stone,
-          emissive: xr.accent.amber,
-          emissiveIntensity: 0.1,
-          roughness: 0.55,
-        }}
-      />
-      <KitInstance
-        name="prop_computer"
-        position={[1.18, SIDE_CONSOLE_GROUND_Y, -1.26]}
-        scale={scalePropComputerToHeight(SIDE_CONSOLE_HEIGHT_M)}
-        rotation={[0, -Math.PI * 0.18, 0]}
-        options={{
-          color: xr.accent.stone,
-          emissive: xr.accent.amber,
-          emissiveIntensity: 0.1,
-          roughness: 0.55,
-        }}
-      />
+      {isCloudPark ? (
+        <CloudParkDockingScenery
+          stone={xr.accent.stone}
+          primary={labAccents.manipulation.primary}
+          secondary={labAccents.manipulation.secondary}
+        />
+      ) : (
+        <>
+          <KitInstance
+            name="platform_simple"
+            position={addYOffset(
+              [OBJECT_ORIGIN.x, DESK_SURFACE_Y + 0.002, OBJECT_ORIGIN.z + 0.04],
+              tableOffsetY,
+            )}
+            scale={[DESK_PLATFORM_WIDTH / 4, 1, DESK_PLATFORM_DEPTH / 4]}
+            options={{
+              color: xr.accent.stone,
+              emissive: xr.accent.mustard,
+              emissiveIntensity: 0.04,
+              roughness: 0.88,
+            }}
+          />
+          <KitInstance
+            name="prop_computer"
+            position={[-1.18, SIDE_CONSOLE_GROUND_Y, -1.32]}
+            scale={scalePropComputerToHeight(SIDE_CONSOLE_HEIGHT_M)}
+            rotation={[0, Math.PI * 0.22, 0]}
+            options={{
+              color: xr.accent.stone,
+              emissive: xr.accent.amber,
+              emissiveIntensity: 0.1,
+              roughness: 0.55,
+            }}
+          />
+          <KitInstance
+            name="prop_computer"
+            position={[1.18, SIDE_CONSOLE_GROUND_Y, -1.26]}
+            scale={scalePropComputerToHeight(SIDE_CONSOLE_HEIGHT_M)}
+            rotation={[0, -Math.PI * 0.18, 0]}
+            options={{
+              color: xr.accent.stone,
+              emissive: xr.accent.amber,
+              emissiveIntensity: 0.1,
+              roughness: 0.55,
+            }}
+          />
+        </>
+      )}
     </group>
   )
 }
