@@ -74,8 +74,27 @@ http://127.0.0.1:5175/?theme=cloud-park&lab=selection&capture=scene&captureView=
 - `docs/mockups/captures/scenes/cloud-park/selection-overhead.png`
 - `docs/mockups/captures/scenes/cloud-park/selection-wide.png`
 
+## Iterating On Camera Angles
+
+When tuning a camera view, do not review only an overwritten PNG. Copy the candidate frame to a unique filename before sharing or comparing it, for example:
+
+```bash
+cp docs/mockups/captures/scenes/cloud-park/selection-overhead.png \
+  docs/mockups/captures/scenes/cloud-park/selection-overhead-mat-center-orthographic.png
+```
+
+Use a name that describes the design intent, not just the timestamp. Good examples:
+
+- `selection-overhead-mat-center-orthographic.png`
+- `selection-overhead-hero-axis-wide-fit.png`
+- `locomotion-overhead-full-path.png`
+
+This keeps review honest. If the screenshot viewer caches an old image, or if a capture command silently overwrites a previous attempt, a unique filename makes it obvious which camera version is under discussion.
+
 ## Guardrails
 
 - Scene capture uses `preserveDrawingBuffer` only during capture mode so normal runtime performance stays unchanged.
 - Screenshots are desktop approximations, not headset validation. Use them for composition, palette, and layout review; still validate comfort and readability on Quest.
 - Keep camera views authored in `src/xr/core/DesktopPreviewCamera.tsx` so every lab has deliberate review angles instead of arbitrary browser camera drift.
+- For strict overhead reviews, prefer an orthographic camera with explicit rotation over a high perspective camera using `lookAt`.
+- Check ground-grid alignment: if grid lines meant to be horizontal/vertical are not parallel to the image edges, the capture is not a true plan view.
