@@ -47,10 +47,9 @@ Use these procedural forms:
 - **Cloud mats** as soft ground islands and task bases.
 - **Soft arches** as social gateways and lab landmarks.
 - **Wind streaks** as motion lines, not decorative noise.
-- **Painterly cloud cards** for distant atmosphere. Use layered translucent planes with soft alpha textures, highlight lobes, and lower shadow bands so background clouds read as haze, not toy spheres.
-- **Atmospheric sunlight** for daytime warmth. Use feathered glow textures, horizon haze, a small soft core, and occasional cloud veil shapes instead of a hard sticker-like sun disc.
-- **Distant park silhouettes** such as faint arches and islands to make the world feel larger than the active lab.
-- **Tiny flecks** for atmospheric scale, kept sparse and static.
+- **Simple cloud cards** for distant atmosphere. Use a few translucent circle or plane meshes so background clouds read as haze without adding texture or particle cost.
+- **Atmospheric sunlight** for daytime warmth. Use one soft glow disc plus a small core, not a stack of textured glow cards.
+- **Distant park hints** only when they support the active lab. Avoid building a second scene behind the scene.
 - **Contact-shadow blobs** under objects so props feel grounded without a full shadow pipeline.
 
 The grid is allowed in Cloud Park, but it should be secondary. It should help spatial review only after the scene already feels like a floating social park.
@@ -87,13 +86,14 @@ Each lab should feel like a distinct small scene inside the same park:
 
 Interaction behavior is not part of this theme pass. Keep hitboxes, movement math, placement confirmation, grab logic, measurements, and Leva controls unchanged unless a separate interaction task calls for it.
 
-## Motion Limits
+## Performance And Motion Limits
 
-Subtle motion is welcome when it increases presence:
+Cloud Park should stay close to the default theme's object complexity. Color, scale, and silhouette should carry the vibe before mesh density does.
 
-- Move only decorative atmosphere groups such as distant clouds, flecks, wind lines, and far silhouettes.
+- Prefer static decorative atmosphere. If motion returns later, move only one or two distant groups.
 - Keep target meshes, hitboxes, trial objects, placement transforms, and measurement-critical objects stable.
 - Use simple group transform updates; do not allocate materials or geometry in animation frames.
+- Avoid generated alpha textures, dense cloud clusters, high segment counts, and layered decorative stacks in headset-facing scenes.
 - Keep movement slow enough that generated screenshots still compose cleanly.
 
 ## Token Translation
