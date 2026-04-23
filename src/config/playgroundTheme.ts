@@ -51,6 +51,68 @@ export type ShellTheme = {
   }
 }
 
+/**
+ * Selection-target orb state colors per design handoff spec (Section 02 · Materials).
+ * Source: design-handoff-v0.2 tag → docs/design-handoff/project/XR Themes Design.html, TOKENS_JSON.
+ * Not yet wired into runtime — reserved for Phase 2+ rewrites.
+ */
+export type OrbStateColors = {
+  core: string
+  mid: string
+  rim: string
+  base: string
+}
+
+export type OrbTargetedState = OrbStateColors & {
+  /** Inner concentric ring, pulses at 1.2 Hz ±15% opacity. */
+  ring: string
+  /** Outer ring at visual r + 45mm. */
+  ringOuter: string
+  /** Ember shadow color for WN targeted glow (blur 12). CP omits — uses higher ring alpha instead. */
+  ringGlow?: string
+}
+
+export type OrbConfirmedState = OrbStateColors & {
+  /** Radial halo gradient, peaks at r×2, fades over 400 ms hold. */
+  halo: string
+}
+
+export type OrbTheme = {
+  idle: OrbStateColors
+  targeted: OrbTargetedState
+  confirmed: OrbConfirmedState
+}
+
+/** Tint colors for per-method affordance hints (ray arrow, pinch calipers, touch ring, etc.). */
+export type AffordanceTheme = {
+  rayArrow: string
+  pinchCalipers: string
+  touchRing: string
+  controllerRay: string
+  proximityRing: string
+  dockEmpty: string
+  dockActive: string
+}
+
+/** Recipe for a rim / outline glow — canvas shadow in 2D; additive bloom pass in engine. */
+export type GlowRecipe = {
+  /** If omitted, no shadow is drawn (flat stroke only). */
+  shadowColor?: string
+  shadowBlur: number
+  strokeWidth: number
+  note?: string
+}
+
+export type GlowRecipes = {
+  archRim: GlowRecipe
+  /** WN-only: ember glow around central stage base. */
+  platformEmber?: GlowRecipe
+  /** Outer border of HUD pill / panel. */
+  hudBorder: GlowRecipe
+  /** WN-only: ember bloom on targeted orb. CP omits in favor of higher alpha. */
+  targetedOrb?: GlowRecipe
+}
+
 export type XrTheme = {
   void: { clear: string }
   skydome: { top: string; horizon: string; bottom: string }
@@ -78,6 +140,12 @@ export type XrTheme = {
     textMuted: string
   }
   ar: { stroke: string; opacity: number }
+  /** Selection-target orb colors per state — design handoff v0.2. */
+  orb: OrbTheme
+  /** Per-method affordance hint tint colors. */
+  affordance: AffordanceTheme
+  /** Rim / bloom glow recipes — canvas shadow values, engine-side additive hints. */
+  glow: GlowRecipes
 }
 
 export type LabAccentPair = { primary: string; secondary: string }
@@ -190,6 +258,62 @@ const defaultXr: XrTheme = {
     stroke: '#829AA2',
     opacity: 0.42,
   },
+  // Warm Night orb / affordance / glow tokens per design-handoff-v0.2.
+  // TOKENS_JSON['warm-night'] in docs/design-handoff/project/XR Themes Design.html.
+  orb: {
+    idle: { core: '#F5EDE0', mid: '#6E5E50', rim: '#281C10', base: '#6E5E50' },
+    targeted: {
+      core: '#F5EDE0',
+      mid: '#B58866',
+      rim: '#3E2818',
+      base: '#C85F58',
+      ring: 'rgba(200,95,88,.8)',
+      ringOuter: 'rgba(200,95,88,.52)',
+      ringGlow: 'rgba(200,95,88,.5)',
+    },
+    confirmed: {
+      core: '#F5EDE0',
+      mid: '#8ABFB0',
+      rim: '#2F6A5E',
+      base: '#7FD4B8',
+      halo: 'rgba(140,220,195,.3)',
+    },
+  },
+  affordance: {
+    rayArrow: 'rgba(200,95,88,.45)',
+    pinchCalipers: 'rgba(240,170,100,.88)',
+    touchRing: 'rgba(130,200,180,.7)',
+    controllerRay: 'rgba(200,95,88,.85)',
+    proximityRing: 'rgba(200,95,88,.35)',
+    dockEmpty: 'rgba(200,95,88,.45)',
+    dockActive: 'rgba(160,200,220,.75)',
+  },
+  glow: {
+    archRim: {
+      shadowColor: 'rgba(200,95,88,.5)',
+      shadowBlur: 18,
+      strokeWidth: 4,
+      note: 'Ember ring; additive pass in engine.',
+    },
+    platformEmber: {
+      shadowColor: 'rgba(200,95,88,.45)',
+      shadowBlur: 10,
+      strokeWidth: 2,
+      note: 'Around base of central stage only.',
+    },
+    hudBorder: {
+      shadowColor: 'rgba(200,95,88,.84)',
+      shadowBlur: 7,
+      strokeWidth: 1.4,
+      note: 'Fallback: CSS box-shadow on HTML layer.',
+    },
+    targetedOrb: {
+      shadowColor: 'rgba(200,95,88,.5)',
+      shadowBlur: 12,
+      strokeWidth: 2,
+      note: 'Mirrors orb.targeted.ringGlow. CP omits.',
+    },
+  },
 }
 
 const defaultLabAccents: Record<LabId, LabAccentPair> = {
@@ -284,6 +408,48 @@ const cloudParkXr: XrTheme = {
     stroke: '#2FAFC6',
     opacity: 0.48,
   },
+  // Cloud Park orb / affordance / glow tokens per design-handoff-v0.2.
+  // TOKENS_JSON['cloud-park'] in docs/design-handoff/project/XR Themes Design.html.
+  orb: {
+    idle: { core: '#FFFAEE', mid: '#EDD8A0', rim: '#C4A070', base: '#C9A86C' },
+    targeted: {
+      core: '#FFFAEE',
+      mid: '#FFDF8A',
+      rim: '#E0A840',
+      base: '#FFD166',
+      ring: 'rgba(255,209,102,.78)',
+      ringOuter: 'rgba(255,209,102,.50)',
+    },
+    confirmed: {
+      core: '#FFFAEE',
+      mid: '#B8E8CC',
+      rim: '#6DCFAA',
+      base: '#6DCFAA',
+      halo: 'rgba(109,207,170,.32)',
+    },
+  },
+  affordance: {
+    rayArrow: 'rgba(255,209,102,.35)',
+    pinchCalipers: 'rgba(255,209,102,.8)',
+    touchRing: 'rgba(109,207,170,.75)',
+    controllerRay: 'rgba(230,100,86,.8)',
+    proximityRing: 'rgba(255,209,102,.38)',
+    dockEmpty: 'rgba(255,209,102,.45)',
+    dockActive: 'rgba(47,175,198,.7)',
+  },
+  glow: {
+    archRim: {
+      shadowBlur: 0,
+      strokeWidth: 4,
+      note: 'No bloom in bright daytime; keep flat.',
+    },
+    hudBorder: {
+      shadowColor: 'rgba(255,209,102,.88)',
+      shadowBlur: 7,
+      strokeWidth: 1.4,
+      note: 'Fallback: CSS box-shadow on HTML layer.',
+    },
+  },
 }
 
 const cloudParkLabAccents: Record<LabId, LabAccentPair> = {
@@ -311,6 +477,84 @@ export const playgroundPresets: PlaygroundThemePreset[] = [
     labAccents: cloudParkLabAccents,
   },
 ]
+
+/**
+ * Typography tokens shared across both themes per design handoff v0.2.
+ * Not yet applied to existing UI — reserved for Phase 2+ rewrites.
+ * Existing `ShellTheme.font` strings remain the runtime source for current callers.
+ */
+export type TypographyScalePx = {
+  hudFpsMin: number
+  hudFpsExp: number
+  hudMetric: number
+  hudMuted: number
+  hudLabel: number
+  sceneLabel: number
+  sceneSub: number
+  stateTag: number
+  shellH1: number
+  shellBody: number
+  shellMuted: number
+}
+
+export type TypographyWeights = {
+  regular: number
+  medium: number
+  semibold: number
+  bold: number
+}
+
+export type TypographyTokens = {
+  sans: string
+  mono: string
+  scalePx: TypographyScalePx
+  weights: TypographyWeights
+}
+
+export const TYPOGRAPHY: TypographyTokens = {
+  sans: '"DM Sans", ui-sans-serif, system-ui, sans-serif',
+  mono: '"DM Mono", ui-monospace, SFMono-Regular, monospace',
+  scalePx: {
+    hudFpsMin: 16,
+    hudFpsExp: 32,
+    hudMetric: 13.5,
+    hudMuted: 11,
+    hudLabel: 9,
+    sceneLabel: 11,
+    sceneSub: 10,
+    stateTag: 9.5,
+    shellH1: 16,
+    shellBody: 12.5,
+    shellMuted: 11,
+  },
+  weights: { regular: 400, medium: 500, semibold: 600, bold: 700 },
+}
+
+/**
+ * HUD pill / panel dimensions shared across both themes per design handoff v0.2.
+ * All values in CSS pixels; `strokeW` is border width.
+ */
+export type HudDimensions = {
+  minimizedW: number
+  minimizedH: number
+  expandedW: number
+  expandedMinH: number
+  radiusMin: number
+  radiusExp: number
+  strokeW: number
+  panelShadow: string
+}
+
+export const HUD_DIMS: HudDimensions = {
+  minimizedW: 158,
+  minimizedH: 38,
+  expandedW: 295,
+  expandedMinH: 168,
+  radiusMin: 19,
+  radiusExp: 13,
+  strokeW: 1.4,
+  panelShadow: '0 6px 28px rgba(0,0,0,.5)',
+}
 
 export function isValidPresetId(id: string): boolean {
   return playgroundPresets.some((p) => p.id === id)

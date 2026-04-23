@@ -1,6 +1,6 @@
 # Design handoff · implementation plan
 
-**Status:** Phase 0 complete · Phase 1 next
+**Status:** Phase 1 complete · Phase 2 next
 **Working branch:** `claude/3d-handoff-spec` (single branch — spec + impl + living plan all live here)
 **Spec snapshot tag:** `design-handoff-v0.2` → commit [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1)
 **Spec artifact:** [design-handoff/project/XR Themes Design.html](design-handoff/project/XR%20Themes%20Design.html) — open the Handoff tab
@@ -38,23 +38,22 @@ Apply the v0.2 design handoff spec (tokens, materials, transitions, 8 intentiona
 - [x] Baseline verified at `http://localhost:50563/`: title "WebXR Playground", all 4 labs render (Selection · Placement · Locomotion · Manipulation), Enter VR/AR buttons present, 4 canvases alive, no runtime errors from cherry-picked code.
 - [x] Handoff tab available at `/docs/design-handoff/project/XR%20Themes%20Design.html` for side-by-side reference.
 
-## Phase 1 · Tokens foundation
+## Phase 1 · Tokens foundation ✅
 
-One central source; everything else reads from it. No visible change yet.
+Added additively; existing callers untouched. Not wired into runtime visuals yet — Phase 2+ components will read these new tokens.
 
-**Target files:**
-- [src/config/playgroundTheme.ts](../src/config/playgroundTheme.ts) — extend to match Handoff Section 01
-
-**What to add:**
-- Full CP + WN palettes per spec (orb states, affordances, HUD, shell)
-- Typography scale (DM Sans / DM Mono, size tokens)
-- HUD dimensions (minimized 158×38, expanded 295+, radii)
-- Glow recipes (CP ambient-only, WN ember blur values)
+**What landed in [src/config/playgroundTheme.ts](../src/config/playgroundTheme.ts):**
+- New types: `OrbStateColors`, `OrbTargetedState`, `OrbConfirmedState`, `OrbTheme`, `AffordanceTheme`, `GlowRecipe`, `GlowRecipes`
+- Required fields added to `XrTheme`: `orb`, `affordance`, `glow`
+- CP preset (`cloudParkXr`) populated with Cloud Park values from `TOKENS_JSON['cloud-park']`
+- WN preset (`defaultXr`) populated with Warm Night values from `TOKENS_JSON['warm-night']`
+  - Note: code's dark preset is still `id: 'default'` / label "Patina Instrument Lab" — didn't rename. Values match the spec's "warm-night" palette.
+- New top-level exports: `TYPOGRAPHY` (DM Sans/Mono, scale, weights), `HUD_DIMS` (pill + panel dimensions)
 
 **Checks:**
-- [ ] Existing callers still compile
-- [ ] No visual regression with current cubes
-- [ ] Copy values from `TOKENS_JSON` in the Handoff tab verbatim (don't re-type)
+- [x] Existing callers still compile (`tsc --noEmit` clean)
+- [x] No visual regression — app loads at `http://localhost:50563/`, all 4 labs render, no new console errors
+- [x] Values copied verbatim from `TOKENS_JSON` in the Handoff tab (no re-typing)
 
 ## Phase 2 · Selection Lab
 
@@ -244,3 +243,4 @@ Add future tags here as milestones land (e.g. `impl-phase-2-selection`, `impl-co
 | 2026-04-23 | — | [`4a91f36`](https://github.com/kewanglab/webxr-playground/commit/4a91f36) | Plan authored. |
 | 2026-04-23 | — | [`89b8b4a`](https://github.com/kewanglab/webxr-playground/commit/89b8b4a) | Switched from two-branch to single-branch + tag strategy. Plan Phase 0 wording corrected. |
 | 2026-04-23 | 0 | [`e07b1f8`](https://github.com/kewanglab/webxr-playground/commit/e07b1f8) | Phase 0 complete. Cherry-picked `9aacc18` with SelectionLab.tsx skipped (7 conflicts deferred to Phase 2 rewrite). Baseline app verified green. |
+| 2026-04-23 | 1 | (this commit) | Phase 1 complete. Added `orb` / `affordance` / `glow` fields to `XrTheme` (both presets populated) + top-level `TYPOGRAPHY` / `HUD_DIMS` exports. No existing callers touched. |
