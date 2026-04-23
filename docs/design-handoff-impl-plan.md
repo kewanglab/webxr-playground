@@ -1,7 +1,8 @@
 # Design handoff · implementation plan
 
 **Status:** not started
-**Base branch:** `claude/3d-handoff-spec`
+**Working branch:** `claude/3d-handoff-spec` (single branch — spec + impl + living plan all live here)
+**Spec snapshot tag:** `design-handoff-v0.2` → commit [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1)
 **Spec artifact:** [design-handoff/project/XR Themes Design.html](design-handoff/project/XR%20Themes%20Design.html) — open the Handoff tab
 **Last updated:** 2026-04-23
 
@@ -15,9 +16,13 @@ Apply the v0.2 design handoff spec (tokens, materials, transitions, 8 intentiona
 
 ## Branching strategy
 
-This branch (`claude/3d-handoff-spec`) is the base. Implementation commits land here.
+**Single branch with a tag for the spec snapshot** (decided 2026-04-23, reversed from earlier two-branch plan).
 
-**Why this base (decided 2026-04-23):**
+- `claude/3d-handoff-spec` is the one working branch. Cherry-pick, all phases, plan updates, and progress log entries land here.
+- The **tag `design-handoff-v0.2`** (at [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1)) freezes the spec as-delivered. Diff against it at any point: `git diff design-handoff-v0.2 HEAD -- docs/design-handoff/`.
+- No separate `claude/impl-design-spec` branch. That was earlier thinking — rejected because it forced a plan-doc sync dance between branches and bought only what a tag already gives us.
+
+**Why this base:**
 - Sits on top of `codex/cloud-park-captures` → both CP + WN theme foundations present in code.
 - Inherits the scene kit + 3D model packs from `feature/xr-scene-enhancement`.
 - The design handoff artifact lives in-repo at `docs/design-handoff/` → implementer opens the Handoff tab next to the code they're editing.
@@ -26,7 +31,7 @@ This branch (`claude/3d-handoff-spec`) is the base. Implementation commits land 
 
 ## Phase 0 · Pre-impl setup
 
-- [ ] Cherry-pick `9aacc18` onto this branch: `git cherry-pick 9aacc18`
+- [ ] Cherry-pick `9aacc18` onto `claude/3d-handoff-spec` (this working branch): `git cherry-pick 9aacc18`
 - [ ] Resolve conflicts if any (likely minimal — the cloud-park commits mostly touched scenery, not lab logic).
 - [ ] Run `npm run dev`, verify baseline:
   - Both themes switch (Cloud Park · Warm Night)
@@ -224,8 +229,20 @@ Shared across all VR labs. Biggest new content.
 - [ ] Should the "dock snap tolerance" (0.04 m + 10°) be exposed as a Leva tunable so we can playtest feel on-device, or locked per spec?
 - [ ] Multi-step teleport Locomotion: do we retain the old "comfort target" mode behind a toggle, or fully replace it?
 
+## Snapshots
+
+Tags mark frozen reference points. Diff any of them against `HEAD` to see what has changed since.
+
+| Tag | Commit | What it freezes |
+|---|---|---|
+| `design-handoff-v0.2` | [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1) | Spec as delivered to engineering: tokens, materials, transitions, 8 spatial overrides |
+
+Add future tags here as milestones land (e.g. `impl-phase-2-selection`, `impl-complete-v1`).
+
 ## Progress log
 
 | Date | Phase | Commit | Notes |
 |---|---|---|---|
-| 2026-04-23 | — | [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1) | Plan authored, spec committed to this branch. |
+| 2026-04-23 | — | [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1) | Spec v0.2 committed. Tagged `design-handoff-v0.2`. |
+| 2026-04-23 | — | [`4a91f36`](https://github.com/kewanglab/webxr-playground/commit/4a91f36) | Plan authored. |
+| 2026-04-23 | — | (this commit) | Switched from two-branch to single-branch + tag strategy. Plan Phase 0 wording corrected. |
