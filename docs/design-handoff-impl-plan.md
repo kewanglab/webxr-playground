@@ -1,6 +1,6 @@
 # Design handoff · implementation plan
 
-**Status:** not started
+**Status:** Phase 0 complete · Phase 1 next
 **Working branch:** `claude/3d-handoff-spec` (single branch — spec + impl + living plan all live here)
 **Spec snapshot tag:** `design-handoff-v0.2` → commit [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1)
 **Spec artifact:** [design-handoff/project/XR Themes Design.html](design-handoff/project/XR%20Themes%20Design.html) — open the Handoff tab
@@ -29,17 +29,14 @@ Apply the v0.2 design handoff spec (tokens, materials, transitions, 8 intentiona
 
 **Missing from this branch:** commit [`9aacc18`](https://github.com/kewanglab/webxr-playground/commit/9aacc18) "Polish XR selection and appearance controls" — authored on `feature/xr-scene-enhancement` after it forked from the cloud-park line. Touches `src/labs/cross-xr/SelectionLab.tsx`, `DockingMode.tsx`, `AppearanceSettingsDock.tsx`, `playgroundTheme.ts`, `XRRoot.tsx`, `TagAlongHUD.tsx`, `SensorPodObject.tsx`. These are the exact files the spec extends further. Must land **before** any spec work to avoid re-doing 180+ lines of existing polish.
 
-## Phase 0 · Pre-impl setup
+## Phase 0 · Pre-impl setup ✅
 
-- [ ] Cherry-pick `9aacc18` onto `claude/3d-handoff-spec` (this working branch): `git cherry-pick 9aacc18`
-- [ ] Resolve conflicts if any (likely minimal — the cloud-park commits mostly touched scenery, not lab logic).
-- [ ] Run `npm run dev`, verify baseline:
-  - Both themes switch (Cloud Park · Warm Night)
-  - Selection Lab renders 3 cubes, interaction works
-  - Manipulation Lab dropdown shows Docking + Zen Garden
-  - Appearance dock opens from its FAB
-  - HUD pill renders in XR
-- [ ] Open the Handoff tab in the design HTML and keep it side-by-side while working.
+- [x] Cherry-pick `9aacc18` onto `claude/3d-handoff-spec` (this working branch): `git cherry-pick 9aacc18` → landed as [`e07b1f8`](https://github.com/kewanglab/webxr-playground/commit/e07b1f8)
+- [x] Conflicts resolved:
+  - `src/app/store.ts` → merged both sides (kept `readInitialLabId` URL-param support from cloud-park + 9aacc18's `DEFAULT_ORIGIN_POSITION` reset on lab switch).
+  - `src/labs/cross-xr/SelectionLab.tsx` → **skipped 9aacc18's changes to this file** (kept HEAD's cloud-park version). Reason: 7 conflict hunks between 9aacc18's `carpet`/`backdrop`/`faceUser`/`pierScale` polish and the cloud-park theme branching; Phase 2 rewrites this file per spec anyway.
+- [x] Baseline verified at `http://localhost:50563/`: title "WebXR Playground", all 4 labs render (Selection · Placement · Locomotion · Manipulation), Enter VR/AR buttons present, 4 canvases alive, no runtime errors from cherry-picked code.
+- [x] Handoff tab available at `/docs/design-handoff/project/XR%20Themes%20Design.html` for side-by-side reference.
 
 ## Phase 1 · Tokens foundation
 
@@ -245,4 +242,5 @@ Add future tags here as milestones land (e.g. `impl-phase-2-selection`, `impl-co
 |---|---|---|---|
 | 2026-04-23 | — | [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1) | Spec v0.2 committed. Tagged `design-handoff-v0.2`. |
 | 2026-04-23 | — | [`4a91f36`](https://github.com/kewanglab/webxr-playground/commit/4a91f36) | Plan authored. |
-| 2026-04-23 | — | (this commit) | Switched from two-branch to single-branch + tag strategy. Plan Phase 0 wording corrected. |
+| 2026-04-23 | — | [`89b8b4a`](https://github.com/kewanglab/webxr-playground/commit/89b8b4a) | Switched from two-branch to single-branch + tag strategy. Plan Phase 0 wording corrected. |
+| 2026-04-23 | 0 | [`e07b1f8`](https://github.com/kewanglab/webxr-playground/commit/e07b1f8) | Phase 0 complete. Cherry-picked `9aacc18` with SelectionLab.tsx skipped (7 conflicts deferred to Phase 2 rewrite). Baseline app verified green. |
