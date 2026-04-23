@@ -1,0 +1,2108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>XR Playground · Theme Design v2</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080B0D;color:#E8E4DF;font-family:'DM Sans',ui-sans-serif,sans-serif;min-height:100vh}
+button{font-family:inherit;border:none;cursor:pointer;outline:none}
+button:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+input[type=range]{cursor:pointer;height:4px;border-radius:2px}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
+.hud-widget{position:absolute;bottom:16px;right:16px;z-index:10}
+.hud-pill{display:flex;align-items:center;gap:8px;padding:0 14px;height:36px;border-radius:18px;cursor:pointer;transition:all .2s}
+.hud-expanded{padding:14px 16px;border-radius:12px;min-width:280px;cursor:default}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel">
+const {useState,useRef,useEffect,useCallback,useMemo}=React;
+
+const CP={
+  hudFill:'rgba(18,62,70,.94)',hudBorder:'rgba(255,209,102,.88)',hudText:'#FFF8E2',hudMetric:'#A8E3EC',hudMuted:'#7AABAF',hudAccent:'#FFD166',hudGood:'#6DCFAA',
+  shellBg:'#EAF8F1',shellElevated:'#FFF8E8',shellSubtle:'#DDF3E8',shellBorder:'#76BBB6',shellBorderSubtle:'#B6DDD2',shellText:'#24484B',shellMuted:'#5D7F7E',
+  accentPrimary:'#D65F55',accentHover:'#B94B45',accentSoft:'rgba(214,95,85,.15)',accentBorder:'#D65F55',
+};
+const WN={
+  hudFill:'rgba(60,48,42,.94)',hudBorder:'rgba(200,95,88,.84)',hudText:'#FFF5EA',hudMetric:'#B4C7CC',hudMuted:'#8A7A72',hudAccent:'#C85F58',hudGood:'#6AAFAA',
+  shellBg:'#F0E3D4',shellElevated:'#FBF7EF',shellSubtle:'#E8D7CA',shellBorder:'#B99B89',shellBorderSubtle:'#D3BCAC',shellText:'#3A2820',shellMuted:'#6B5A50',
+  accentPrimary:'#B9564E',accentHover:'#97463F',accentSoft:'rgba(185,86,78,.14)',accentBorder:'#B9564E',
+};
+
+/* ─ Canvas helpers ─ */
+function rrect(ctx,x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
+
+function drawCloud(ctx,cx,cy,s,a=1){
+  ctx.save();ctx.globalAlpha=a;ctx.fillStyle='#FFFDF0';
+  [[0,0,1],[.82,-.28,.76],[-.72,.1,.66],[1.58,.08,.55],[-.35,-.52,.6],[1.05,-.48,.48],[-.95,.35,.42]]
+    .forEach(([dx,dy,sr])=>{ctx.beginPath();ctx.arc(cx+dx*s*44,cy+dy*s*44,s*44*sr,0,Math.PI*2);ctx.fill();});
+  ctx.globalAlpha=a*.14;ctx.fillStyle='#907840';
+  ctx.beginPath();ctx.ellipse(cx+s*12,cy+s*30,s*80,s*12,0,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+// 3-D island — CP
+function drawIsland(ctx,cx,cy,rx,ry,a=1){
+  ctx.save();ctx.globalAlpha=a;
+  // drop shadow
+  const sh=ctx.createRadialGradient(cx,cy+ry*1.2,0,cx,cy+ry*1.2,rx*.9);
+  sh.addColorStop(0,'rgba(40,120,70,.22)');sh.addColorStop(1,'transparent');
+  ctx.fillStyle=sh;ctx.beginPath();ctx.ellipse(cx,cy+ry*1.3,rx*.8,ry*.5,0,0,Math.PI*2);ctx.fill();
+  // side face (ellipse shifted down)
+  const side=ctx.createLinearGradient(cx,cy+ry*.2,cx,cy+ry*1.5);
+  side.addColorStop(0,'#C9A86C');side.addColorStop(.6,'#9B7440');side.addColorStop(1,'#6B4C28');
+  ctx.fillStyle=side;ctx.beginPath();ctx.ellipse(cx,cy+ry*.65,rx*.97,ry*.82,0,0,Math.PI*2);ctx.fill();
+  // top face
+  const top=ctx.createRadialGradient(cx-rx*.24,cy-ry*.26,0,cx,cy,rx);
+  top.addColorStop(0,'#FFFAEC');top.addColorStop(.55,'#F0DC9E');top.addColorStop(1,'#C9A86C');
+  ctx.fillStyle=top;ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.fill();
+  // specular
+  const sp=ctx.createRadialGradient(cx-rx*.28,cy-ry*.28,0,cx-rx*.18,cy-ry*.18,rx*.34);
+  sp.addColorStop(0,'rgba(255,255,246,.7)');sp.addColorStop(1,'transparent');
+  ctx.fillStyle=sp;ctx.beginPath();ctx.ellipse(cx-rx*.2,cy-ry*.2,rx*.3,ry*.2,-.3,0,Math.PI*2);ctx.fill();
+  // edge
+  ctx.strokeStyle='rgba(200,175,120,.5)';ctx.lineWidth=1.2;ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();
+  // scatter dots (hand-crafted feel)
+  [[-.3,-.1],[.18,.22],[.05,-.28],[-.15,.32],[.38,-.05]].forEach(([dx,dy])=>{
+    const px=cx+dx*rx,py=cy+dy*ry;
+    if(Math.hypot(dx,dy)<.6){
+      ctx.fillStyle='rgba(255,209,102,.65)';ctx.beginPath();ctx.arc(px,py,2.2,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(255,255,240,.8)';ctx.beginPath();ctx.arc(px,py,.9,0,Math.PI*2);ctx.fill();
+    }
+  });
+  ctx.restore();
+}
+
+// 3-D platform — WN
+function drawPlatform(ctx,cx,cy,rx,ry,a=1){
+  ctx.save();ctx.globalAlpha=a;
+  // under glow
+  const gw=ctx.createRadialGradient(cx,cy+ry*1.1,0,cx,cy+ry*1.1,rx*.9);
+  gw.addColorStop(0,'rgba(200,95,88,.3)');gw.addColorStop(1,'transparent');
+  ctx.fillStyle=gw;ctx.beginPath();ctx.ellipse(cx,cy+ry*1.1,rx*.85,ry*.55,0,0,Math.PI*2);ctx.fill();
+  // side
+  const sd=ctx.createLinearGradient(cx,cy+ry*.2,cx,cy+ry*1.4);
+  sd.addColorStop(0,'#3E3028');sd.addColorStop(1,'#1E1610');
+  ctx.fillStyle=sd;ctx.beginPath();ctx.ellipse(cx,cy+ry*.62,rx*.97,ry*.78,0,0,Math.PI*2);ctx.fill();
+  // top
+  const tp=ctx.createRadialGradient(cx-rx*.2,cy-ry*.2,0,cx,cy,rx);
+  tp.addColorStop(0,'#6E6058');tp.addColorStop(1,'#4A3C34');
+  ctx.fillStyle=tp;ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.fill();
+  // grid rings
+  ctx.strokeStyle='rgba(200,185,172,.16)';ctx.lineWidth=.8;
+  [.6,.3].forEach(f=>{ctx.beginPath();ctx.ellipse(cx,cy,rx*f,ry*f,0,0,Math.PI*2);ctx.stroke();});
+  // ember rim
+  ctx.save();ctx.shadowColor='rgba(200,95,88,.45)';ctx.shadowBlur=10;
+  ctx.strokeStyle='rgba(200,95,88,.68)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();
+  ctx.restore();
+  ctx.restore();
+}
+
+// Arch + columns
+function drawArch(ctx,vx,vy,radius,stoneColor,rimColor,isCp){
+  ctx.lineWidth=isCp?24:26;ctx.strokeStyle=stoneColor;ctx.lineCap='round';
+  ctx.beginPath();ctx.arc(vx,vy+radius*.12,radius,Math.PI,0);ctx.stroke();
+  ctx.save();
+  if(!isCp){ctx.shadowColor='rgba(200,95,88,.5)';ctx.shadowBlur=18;}
+  ctx.lineWidth=4;ctx.strokeStyle=rimColor;ctx.shadowBlur=isCp?0:18;
+  ctx.beginPath();ctx.arc(vx,vy+radius*.12,radius-8,Math.PI,0);ctx.stroke();
+  ctx.restore();
+  // columns
+  const colH=90;
+  [vx-radius,vx+radius].forEach(x=>{
+    const cg=ctx.createLinearGradient(x-14,0,x+14,0);
+    if(isCp){cg.addColorStop(0,'#E5EAD5');cg.addColorStop(.45,'#FFF8E2');cg.addColorStop(1,'#D5C295');}
+    else{cg.addColorStop(0,'#3D3530');cg.addColorStop(.5,'#524740');cg.addColorStop(1,'#2D2924');}
+    ctx.fillStyle=cg;ctx.fillRect(x-14,vy+radius*.12,28,colH);
+    ctx.fillStyle=isCp?'#EDEADB':'#524540';
+    ctx.beginPath();ctx.ellipse(x,vy+radius*.12,18,5,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(x,vy+radius*.12+colH,18,5,0,0,Math.PI*2);ctx.fill();
+    if(!isCp){
+      ctx.save();ctx.shadowColor='rgba(200,95,88,.35)';ctx.shadowBlur=8;
+      ctx.strokeStyle='rgba(200,95,88,.45)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.ellipse(x,vy+radius*.12,18,5,0,Math.PI,0);ctx.stroke();
+      ctx.restore();
+    }
+  });
+}
+
+// HUD pill drawn on canvas (mini, bottom-right)
+function drawHUDMini(ctx,W,H,pal){
+  const pw=158,ph=38,px=W-pw-16,py=H-ph-14;
+  ctx.save();
+  rrect(ctx,px,py,pw,ph,ph/2);ctx.fillStyle=pal.hudFill;ctx.fill();
+  ctx.shadowColor=pal.hudAccent;ctx.shadowBlur=7;
+  rrect(ctx,px,py,pw,ph,ph/2);ctx.strokeStyle=pal.hudBorder;ctx.lineWidth=1.4;ctx.stroke();
+  ctx.shadowBlur=0;
+  // green status dot
+  ctx.fillStyle=pal.hudGood;ctx.beginPath();ctx.arc(px+16,py+ph/2,4,0,Math.PI*2);ctx.fill();
+  // fps
+  ctx.font='bold 14px DM Mono,monospace';ctx.fillStyle=pal.hudMetric;ctx.textAlign='left';
+  const fps='60';ctx.fillText(fps,px+27,py+ph*.66);
+  ctx.font='8.5px DM Sans,sans-serif';ctx.fillStyle=pal.hudMuted;ctx.fillText('FPS',px+50,py+ph*.66);
+  // divider
+  ctx.strokeStyle=pal.hudAccent+'30';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(px+72,py+8);ctx.lineTo(px+72,py+ph-8);ctx.stroke();
+  // trial
+  ctx.font='11px DM Sans,sans-serif';ctx.fillStyle=pal.hudMuted;
+  ctx.fillText('T1/18',px+81,py+ph*.64);
+  // expand icon
+  ctx.font='11px sans-serif';ctx.fillStyle=pal.hudAccent;ctx.textAlign='right';
+  ctx.fillText('⌃',px+pw-10,py+ph*.65);
+  ctx.restore();
+}
+
+/* ─ VR scene draws ─ */
+function drawCPVR(canvas,lab){
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,vx=W/2,vy=H*.528;
+  ctx.clearRect(0,0,W,H);
+  // sky
+  const sg=ctx.createLinearGradient(0,0,0,vy+30);
+  sg.addColorStop(0,'#5DC4DF');sg.addColorStop(.5,'#96D8EE');sg.addColorStop(.88,'#CBE8F5');sg.addColorStop(1,'#FFE8B5');
+  ctx.fillStyle=sg;ctx.fillRect(0,0,W,vy+35);
+  // sun
+  const sx=W*.26,sy=H*.17;
+  const sunG=ctx.createRadialGradient(sx,sy,0,sx,sy,200);
+  sunG.addColorStop(0,'rgba(255,253,242,.99)');sunG.addColorStop(.12,'rgba(255,248,210,.92)');
+  sunG.addColorStop(.35,'rgba(255,228,145,.38)');sunG.addColorStop(1,'transparent');
+  ctx.fillStyle=sunG;ctx.beginPath();ctx.arc(sx,sy,200,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(255,254,250,.97)';ctx.beginPath();ctx.arc(sx,sy,18,0,Math.PI*2);ctx.fill();
+  // horizon haze
+  const hz=ctx.createLinearGradient(0,vy-50,0,vy+28);
+  hz.addColorStop(0,'transparent');hz.addColorStop(.5,'rgba(255,235,185,.2)');hz.addColorStop(1,'rgba(195,240,218,.38)');
+  ctx.fillStyle=hz;ctx.fillRect(0,vy-50,W,78);
+  // clouds
+  drawCloud(ctx,W*.08,H*.1,1.36,.88);drawCloud(ctx,W*.74,H*.08,1.05,.82);
+  drawCloud(ctx,W*.53,H*.21,.68,.7);drawCloud(ctx,W*.88,H*.27,.52,.58);drawCloud(ctx,W*.16,H*.3,.46,.52);
+  // floor
+  const fg=ctx.createLinearGradient(0,vy,0,H);
+  fg.addColorStop(0,'#C5EED8');fg.addColorStop(.3,'#9EDDB5');fg.addColorStop(1,'#78C895');
+  ctx.fillStyle=fg;ctx.fillRect(0,vy-6,W,H-vy+6);
+  // floor grid
+  ctx.lineWidth=.7;ctx.strokeStyle='rgba(180,228,200,.42)';
+  for(let i=-12;i<=12;i++){ctx.beginPath();ctx.moveTo(vx,vy);ctx.lineTo(vx+i*W*.1,H);ctx.stroke();}
+  for(let t=.07;t<1;t+=.14){const y=vy+(H-vy)*t;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  // background islands — 3D
+  [[W*.22,H*.78,80,18,.88],[W*.78,H*.79,72,16,.84],[W*.38,H*.93,105,23,.9],[W*.68,H*.94,94,20,.86]].forEach(([cx,cy,rx,ry,a])=>drawIsland(ctx,cx,cy,rx,ry,a));
+  // arch
+  drawArch(ctx,vx,vy,255,'#FFF5DA','rgba(255,209,102,.88)',true);
+  // center platform (3D)
+  drawIsland(ctx,vx,vy+62,145,30,1);
+
+  // lab-specific content
+  if(lab==='selection'){
+    // Pinch + Touch at arm's reach (same near level, side by side).
+    // Ray sits in the middle, pushed back into the distance (smaller, higher up).
+    const orbs=[
+      {x:vx,y:vy-60,r:20,method:'ray',label:'RAY',sub:'far · controller',state:'idle',showLabel:true},
+      {x:vx-120,y:vy+32,r:30,method:'pinch',label:'PINCH',sub:'near · hand',state:'targeted',showLabel:true},
+      {x:vx+120,y:vy+32,r:30,method:'touch',label:'TOUCH',sub:'near · finger',state:'confirmed',showLabel:true},
+    ];
+    orbs.forEach(({x,y,r,method,label,sub,state,showLabel})=>{
+      // Method-specific affordance hint
+      if(method==='ray'&&state!=='idle'){
+        ctx.save();ctx.globalAlpha=.5;
+        ctx.fillStyle='rgba(255,209,102,.35)';
+        for(let k=0;k<2;k++){
+          const cx=x-r-16-k*7,cy=y;
+          ctx.beginPath();ctx.moveTo(cx,cy-4);ctx.lineTo(cx+5,cy);ctx.lineTo(cx,cy+4);ctx.closePath();ctx.fill();
+        }
+        ctx.restore();
+      }
+      if(method==='pinch'&&state!=='idle'){
+        ctx.save();const off=r+10;
+        [[0,-1,0,1],[0,1,0,-1],[-1,0,1,0],[1,0,-1,0]].forEach(([dx,dy,tx,ty])=>{
+          const px=x+dx*off,py=y+dy*off;
+          ctx.fillStyle='rgba(255,209,102,.8)';
+          ctx.beginPath();ctx.moveTo(px,py);
+          ctx.lineTo(px+tx*4+(dy?5:0),py+ty*4+(dx?5:0));
+          ctx.lineTo(px+tx*4-(dy?5:0),py+ty*4-(dx?5:0));
+          ctx.closePath();ctx.fill();
+        });ctx.restore();
+      }
+      if(method==='touch'&&state!=='idle'){
+        ctx.save();ctx.setLineDash([3,3]);ctx.strokeStyle='rgba(109,207,170,.75)';ctx.lineWidth=1.2;
+        ctx.beginPath();ctx.arc(x,y,r+8,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+      }
+      if(state==='targeted'){
+        ctx.save();ctx.globalAlpha=.85;
+        [r+14,r+24].forEach((rr,i)=>{
+          ctx.strokeStyle=`rgba(255,209,102,${.78-.28*i})`;ctx.lineWidth=i===0?2:1;
+          ctx.beginPath();ctx.arc(x,y,rr,0,Math.PI*2);ctx.stroke();
+        });ctx.restore();
+      }
+      if(state==='confirmed'){
+        const cg=ctx.createRadialGradient(x,y,r*.2,x,y,r*2);
+        cg.addColorStop(0,'rgba(109,207,170,.32)');cg.addColorStop(1,'transparent');
+        ctx.fillStyle=cg;ctx.beginPath();ctx.arc(x,y,r*2,0,Math.PI*2);ctx.fill();
+      }
+      const sg2=ctx.createRadialGradient(x-r*.3,y-r*.32,0,x,y,r);
+      sg2.addColorStop(0,'#FFFAEE');
+      sg2.addColorStop(.55,state==='confirmed'?'#B8E8CC':state==='targeted'?'#FFDF8A':'#EDD8A0');
+      sg2.addColorStop(1,state==='confirmed'?'#6DCFAA':state==='targeted'?'#E0A840':'#C4A070');
+      ctx.fillStyle=sg2;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+      ctx.textAlign='center';
+      if(method==='ray'){
+        ctx.strokeStyle='rgba(36,72,75,.85)';ctx.lineWidth=1.8;
+        ctx.beginPath();ctx.moveTo(x-5,y);ctx.lineTo(x+4,y);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(x+2,y-3);ctx.lineTo(x+6,y);ctx.lineTo(x+2,y+3);ctx.stroke();
+      } else if(method==='pinch'){
+        ctx.fillStyle='rgba(36,72,75,.85)';
+        ctx.beginPath();ctx.moveTo(x-6,y-3);ctx.lineTo(x-2,y);ctx.lineTo(x-6,y+3);ctx.closePath();ctx.fill();
+        ctx.beginPath();ctx.moveTo(x+6,y-3);ctx.lineTo(x+2,y);ctx.lineTo(x+6,y+3);ctx.closePath();ctx.fill();
+      } else {
+        ctx.fillStyle='rgba(36,72,75,.85)';
+        ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='rgba(36,72,75,.6)';ctx.lineWidth=1;
+        ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);ctx.stroke();
+      }
+      if(showLabel){
+        ctx.font='bold 11px DM Sans,sans-serif';ctx.fillStyle='#1C3E3E';ctx.textAlign='center';
+        ctx.fillText(label,x,y+r+18);
+        ctx.font='10px DM Sans,sans-serif';ctx.fillStyle='rgba(28,62,62,.72)';
+        ctx.fillText(sub,x,y+r+31);
+        if(state==='targeted'){ctx.font='bold 9.5px DM Sans,sans-serif';ctx.fillStyle='#B56C00';ctx.fillText('· TARGETING ·',x,y+r+44);}
+        if(state==='confirmed'){ctx.font='bold 9.5px DM Sans,sans-serif';ctx.fillStyle='#1F7A53';ctx.fillText('✓ CONFIRMED',x,y+r+44);}
+      }
+    });
+    // Controller ray line from bottom-right to the distant RAY orb
+    ctx.save();ctx.globalAlpha=.42;ctx.setLineDash([6,7]);ctx.strokeStyle='rgba(230,100,86,.8)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(W*.82,H*.92);ctx.lineTo(vx,vy-60);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+  }
+  if(lab==='placement'){
+    // Surface quad — detected floor
+    const gx=vx-160,gy=vy+18,gw=320,gh=72;
+    ctx.strokeStyle='rgba(47,175,198,.55)';ctx.lineWidth=.9;
+    for(let i=0;i<=10;i++){const x=gx+i*gw/10;ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x,gy+gh);ctx.stroke();}
+    for(let j=0;j<=4;j++){const y=gy+j*gh/4;ctx.beginPath();ctx.moveTo(gx,y);ctx.lineTo(gx+gw,y);ctx.stroke();}
+    // Tiny placed crystals helper
+    const drawCrystal=(x,y,h,w,col,glowCol)=>{
+      // drop shadow
+      ctx.save();ctx.globalAlpha=.3;
+      ctx.fillStyle='rgba(24,56,70,.6)';
+      ctx.beginPath();ctx.ellipse(x,y+3,w*.75,w*.22,0,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+      if(glowCol){
+        const gg=ctx.createRadialGradient(x,y-h*.35,0,x,y-h*.35,w*1.8);
+        gg.addColorStop(0,glowCol);gg.addColorStop(1,'transparent');
+        ctx.fillStyle=gg;ctx.beginPath();ctx.arc(x,y-h*.35,w*1.8,0,Math.PI*2);ctx.fill();
+      }
+      // crystal body — diamond prism
+      const g2=ctx.createLinearGradient(x-w,y-h,x+w,y);
+      g2.addColorStop(0,col[0]);g2.addColorStop(.5,col[1]);g2.addColorStop(1,col[2]);
+      ctx.fillStyle=g2;
+      ctx.beginPath();
+      ctx.moveTo(x,y-h);ctx.lineTo(x+w,y-h*.55);ctx.lineTo(x,y);ctx.lineTo(x-w,y-h*.55);
+      ctx.closePath();ctx.fill();
+      // highlight seam
+      ctx.strokeStyle='rgba(255,252,230,.65)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x,y-h);ctx.lineTo(x,y);ctx.stroke();
+    };
+    // Placed crystals (already confirmed)
+    drawCrystal(gx+50,gy+24,26,14,['#FFF5B8','#FFD97A','#C99040']);
+    drawCrystal(gx+105,gy+44,22,12,['#FFE8A0','#FFCB5E','#B87830']);
+    drawCrystal(gx+250,gy+32,20,11,['#FFF2B5','#E8B854','#A0702A']);
+    // Ghost preview (hand-pinch) — blue halo
+    drawCrystal(gx+175,gy+38,24,13,['rgba(180,230,245,.5)','rgba(120,200,230,.45)','rgba(80,160,200,.45)'],'rgba(47,175,198,.35)');
+    // Blue pinch-halo ring + drop line
+    ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(47,175,198,.85)';ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.ellipse(gx+175,gy+40,16,5,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+    ctx.save();ctx.globalAlpha=.5;ctx.setLineDash([3,4]);ctx.strokeStyle='rgba(47,175,198,.75)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(gx+175,gy+40-24);ctx.lineTo(gx+175,gy+40);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+    // Pinch icon above ghost
+    ctx.save();ctx.fillStyle='rgba(47,175,198,.95)';
+    const px=gx+175,py=gy+40-44;
+    ctx.beginPath();ctx.moveTo(px-8,py-4);ctx.lineTo(px-3,py);ctx.lineTo(px-8,py+4);ctx.closePath();ctx.fill();
+    ctx.beginPath();ctx.moveTo(px+8,py-4);ctx.lineTo(px+3,py);ctx.lineTo(px+8,py+4);ctx.closePath();ctx.fill();
+    ctx.font='bold 9px DM Sans,sans-serif';ctx.fillStyle='#1C5C70';ctx.textAlign='center';
+    ctx.fillText('HAND PINCH',px,py-12);
+    ctx.restore();
+
+    // Controller-ray aimpoint on the right (red/warm)
+    const rx=gx+285,ry=gy+50;
+    ctx.save();ctx.globalAlpha=.75;ctx.setLineDash([6,6]);ctx.strokeStyle='rgba(230,100,86,.8)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(W*.88,H*.92);ctx.lineTo(rx,ry);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+    // Reticle — crosshair on surface
+    ctx.save();ctx.strokeStyle='rgba(230,100,86,.95)';ctx.lineWidth=1.8;
+    ctx.beginPath();ctx.ellipse(rx,ry,14,4.5,0,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(rx-10,ry);ctx.lineTo(rx+10,ry);ctx.moveTo(rx,ry-6);ctx.lineTo(rx,ry+6);ctx.stroke();
+    ctx.restore();
+    ctx.font='bold 9px DM Sans,sans-serif';ctx.fillStyle='#B84338';ctx.textAlign='center';
+    ctx.fillText('CONTROLLER RAY',rx,ry+18);
+
+    // Surface label
+    ctx.font='10px DM Sans,sans-serif';ctx.fillStyle='rgba(36,72,75,.65)';
+    ctx.textAlign='left';ctx.fillText('Detected surface · floor',gx+4,gy-6);
+  }
+  if(lab==='locomotion'){
+    // Player position (origin)
+    const px=vx-200,py=H*.88;
+    // Multi-step teleport path — 3 waypoints, final destination
+    const waypoints=[
+      {x:vx-85,y:vy+50,step:1},
+      {x:vx+60,y:vy+20,step:2},
+      {x:vx+205,y:vy+42,step:3,final:true},
+    ];
+    // Draw arc between successive points
+    let prev={x:px,y:py};
+    waypoints.forEach((w,i)=>{
+      ctx.save();
+      ctx.setLineDash([7,6]);
+      ctx.strokeStyle=w.final?'rgba(109,207,170,.85)':'rgba(47,175,198,.72)';
+      ctx.lineWidth=w.final?2.5:2;
+      const mx=(prev.x+w.x)/2,my=Math.min(prev.y,w.y)-50;
+      ctx.beginPath();ctx.moveTo(prev.x,prev.y);ctx.quadraticCurveTo(mx,my,w.x,w.y);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      prev=w;
+    });
+    // Waypoint markers
+    waypoints.forEach((w)=>{
+      const col=w.final?'rgba(109,207,170,':'rgba(255,209,102,';
+      // Landing rings (stacked ellipses)
+      [w.final?44:36,w.final?30:24,w.final?18:14].forEach((r,i)=>{
+        ctx.strokeStyle=col+`${.68-.18*i})`;ctx.lineWidth=w.final?2:1.6;
+        if(i===0&&w.final){ctx.save();ctx.shadowColor=col+'.5)';ctx.shadowBlur=12;}
+        ctx.beginPath();ctx.ellipse(w.x,w.y+6,r,r*.3,0,0,Math.PI*2);ctx.stroke();
+        if(i===0&&w.final)ctx.restore();
+      });
+      // Center disc
+      const dg=ctx.createRadialGradient(w.x,w.y+4,0,w.x,w.y+4,12);
+      if(w.final){dg.addColorStop(0,'#C8F0DA');dg.addColorStop(1,'#6DCFAA');}
+      else{dg.addColorStop(0,'#FFF5DA');dg.addColorStop(1,'#FFD166');}
+      ctx.fillStyle=dg;
+      ctx.beginPath();ctx.ellipse(w.x,w.y+4,12,4,0,0,Math.PI*2);ctx.fill();
+      // Step number / final flag
+      if(w.final){
+        ctx.font='bold 10px DM Sans,sans-serif';ctx.fillStyle='#0D6A45';ctx.textAlign='center';
+        ctx.fillText('DESTINATION',w.x,w.y-14);
+        // small flag icon
+        ctx.strokeStyle='#2A9A6E';ctx.lineWidth=1.6;
+        ctx.beginPath();ctx.moveTo(w.x,w.y-26);ctx.lineTo(w.x,w.y-8);ctx.stroke();
+        ctx.fillStyle='#6DCFAA';
+        ctx.beginPath();ctx.moveTo(w.x,w.y-26);ctx.lineTo(w.x+9,w.y-23);ctx.lineTo(w.x,w.y-20);ctx.closePath();ctx.fill();
+      } else {
+        ctx.font='bold 11px DM Mono,monospace';ctx.fillStyle='#5A3F08';ctx.textAlign='center';
+        ctx.fillText(w.step,w.x,w.y+7);
+      }
+    });
+    // Origin marker — small ring where player stands
+    ctx.save();ctx.strokeStyle='rgba(36,72,75,.5)';ctx.lineWidth=1.4;ctx.setLineDash([3,4]);
+    ctx.beginPath();ctx.ellipse(px,py,22,7,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+    ctx.restore();
+    ctx.font='10px DM Sans,sans-serif';ctx.fillStyle='rgba(36,72,75,.75)';ctx.textAlign='center';
+    ctx.fillText('YOU',px,py+18);
+
+    // Snap rotation indicator top-left
+    ctx.save();
+    const sax=W*.13,say=H*.28;
+    // arc
+    ctx.strokeStyle='rgba(255,209,102,.72)';ctx.lineWidth=2.4;ctx.lineCap='round';
+    ctx.beginPath();ctx.arc(sax,say,34,-Math.PI*.6,Math.PI*.55);ctx.stroke();
+    // tick marks
+    for(let k=-0.6;k<=0.55;k+=0.23){
+      const tx=sax+34*Math.cos(k*Math.PI),ty=say+34*Math.sin(k*Math.PI);
+      const ox2=sax+40*Math.cos(k*Math.PI),oy2=say+40*Math.sin(k*Math.PI);
+      ctx.strokeStyle='rgba(255,209,102,.55)';ctx.lineWidth=1.2;
+      ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(ox2,oy2);ctx.stroke();
+    }
+    // end dot
+    const ea=Math.PI*.55;
+    ctx.fillStyle='#FFD166';
+    ctx.beginPath();ctx.arc(sax+34*Math.cos(ea),say+34*Math.sin(ea),5,0,Math.PI*2);ctx.fill();
+    // label
+    ctx.font='bold 11px DM Mono,monospace';ctx.fillStyle='#7A5108';ctx.textAlign='center';
+    ctx.fillText('50°',sax,say+4);
+    ctx.font='9px DM Sans,sans-serif';ctx.fillStyle='rgba(36,72,75,.72)';
+    ctx.fillText('SNAP TURN',sax,say-42);
+    ctx.restore();
+  }
+  if(lab==='manipulation'){
+    // Helper: draw an oriented "key crystal" — has a clear top (notched head) and base
+    // params: x,y = base center; rotDeg; scale; ghost=true draws as dashed outline
+    const drawKey=(x,y,rotDeg,scale,ghost)=>{
+      ctx.save();ctx.translate(x,y);ctx.rotate(rotDeg*Math.PI/180);ctx.scale(scale,scale);
+      // base ellipse shadow
+      if(!ghost){
+        ctx.fillStyle='rgba(24,56,70,.28)';
+        ctx.beginPath();ctx.ellipse(0,6,18,5,0,0,Math.PI*2);ctx.fill();
+      }
+      // shaft — vertical rectangle (Y is UP, but canvas Y is down, so negative Y)
+      const shaftH=44,shaftW=14;
+      if(ghost){
+        ctx.setLineDash([4,4]);
+        ctx.strokeStyle='rgba(47,175,198,.85)';ctx.lineWidth=1.6;
+        // shaft outline
+        ctx.beginPath();
+        ctx.rect(-shaftW/2,-shaftH,shaftW,shaftH);
+        ctx.stroke();
+        // notched head (triangle teeth) on top
+        ctx.beginPath();
+        ctx.moveTo(-shaftW/2-6,-shaftH);
+        ctx.lineTo(-shaftW/2-6,-shaftH-14);
+        ctx.lineTo(0,-shaftH-22);
+        ctx.lineTo(shaftW/2+6,-shaftH-14);
+        ctx.lineTo(shaftW/2+6,-shaftH);
+        ctx.closePath();ctx.stroke();
+        // Up-arrow inside head to show orientation
+        ctx.setLineDash([]);
+        ctx.strokeStyle='rgba(47,175,198,.9)';ctx.lineWidth=1.6;
+        ctx.beginPath();ctx.moveTo(0,-shaftH-4);ctx.lineTo(0,-shaftH-18);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(-4,-shaftH-14);ctx.lineTo(0,-shaftH-18);ctx.lineTo(4,-shaftH-14);ctx.stroke();
+        ctx.restore();
+        return;
+      }
+      // solid shaft gradient
+      const sg2=ctx.createLinearGradient(-shaftW/2,0,shaftW/2,0);
+      sg2.addColorStop(0,'#C99040');sg2.addColorStop(.5,'#FFE082');sg2.addColorStop(1,'#B87830');
+      ctx.fillStyle=sg2;
+      ctx.fillRect(-shaftW/2,-shaftH,shaftW,shaftH);
+      // seam
+      ctx.strokeStyle='rgba(255,250,220,.55)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(0,-shaftH);ctx.lineTo(0,0);ctx.stroke();
+      // head
+      const hg=ctx.createLinearGradient(0,-shaftH-22,0,-shaftH);
+      hg.addColorStop(0,'#FFF2B5');hg.addColorStop(1,'#E0B860');
+      ctx.fillStyle=hg;
+      ctx.beginPath();
+      ctx.moveTo(-shaftW/2-6,-shaftH);
+      ctx.lineTo(-shaftW/2-6,-shaftH-14);
+      ctx.lineTo(0,-shaftH-22);
+      ctx.lineTo(shaftW/2+6,-shaftH-14);
+      ctx.lineTo(shaftW/2+6,-shaftH);
+      ctx.closePath();ctx.fill();
+      // edge stroke
+      ctx.strokeStyle='rgba(180,110,40,.55)';ctx.lineWidth=1;ctx.stroke();
+      // UP indicator dot in head (small warm-white circle)
+      ctx.fillStyle='rgba(255,252,230,.88)';
+      ctx.beginPath();ctx.arc(0,-shaftH-11,2.5,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    };
+
+    const ox=vx-20,oy=vy-10;
+    // Grabbed key (tilted -18°, lifted off base)
+    drawKey(ox,oy,-18,1,false);
+    // Proximity / grab ring
+    ctx.save();ctx.setLineDash([4,5]);ctx.strokeStyle='rgba(255,209,102,.38)';ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.arc(ox,oy-16,48,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+    ctx.restore();
+    ctx.font='bold 9px DM Sans,sans-serif';ctx.fillStyle='#7A5108';ctx.textAlign='center';
+    ctx.fillText('GRABBED',ox,oy+22);
+
+    // Ghost target — shows desired orientation (upright) at dock
+    const tx2=vx+155,ty2=vy+54;
+    // Dock slot ellipse
+    ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(47,175,198,.7)';ctx.lineWidth=1.8;
+    ctx.beginPath();ctx.ellipse(tx2,ty2,34,10,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+    ctx.restore();
+    // Ghost key upright
+    drawKey(tx2,ty2,0,.95,true);
+    // Arrow from grabbed → target
+    ctx.save();ctx.globalAlpha=.55;ctx.setLineDash([5,5]);ctx.strokeStyle='rgba(47,175,198,.85)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(ox+20,oy-20);
+    ctx.quadraticCurveTo((ox+tx2)/2,vy-70,tx2-14,ty2-44);ctx.stroke();
+    ctx.setLineDash([]);
+    // arrow head
+    ctx.fillStyle='rgba(47,175,198,.9)';
+    ctx.beginPath();ctx.moveTo(tx2-14,ty2-44);ctx.lineTo(tx2-22,ty2-50);ctx.lineTo(tx2-8,ty2-52);ctx.closePath();ctx.fill();
+    ctx.restore();
+    ctx.font='bold 9px DM Sans,sans-serif';ctx.fillStyle='#1C5C70';ctx.textAlign='center';
+    ctx.fillText('TARGET POSE',tx2,ty2+22);
+    ctx.font='9px DM Sans,sans-serif';ctx.fillStyle='rgba(28,92,112,.75)';
+    ctx.fillText('upright · match rotation',tx2,ty2+34);
+
+    // Empty dock slot (left) for context
+    const sx=vx-180,sy=vy+54;
+    ctx.save();ctx.setLineDash([4,3]);ctx.strokeStyle='rgba(255,209,102,.45)';ctx.lineWidth=1.4;
+    ctx.beginPath();ctx.ellipse(sx,sy,32,9,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+    ctx.restore();
+    ctx.font='8.5px DM Sans,sans-serif';ctx.fillStyle='rgba(122,81,8,.65)';ctx.textAlign='center';
+    ctx.fillText('SLOT 1 · empty',sx,sy+22);
+  }
+
+  // lab label
+  const labNames={selection:'Selection Lab',placement:'Placement Lab',locomotion:'Locomotion Lab',manipulation:'Manipulation Lab'};
+  ctx.font='bold 22px DM Sans,sans-serif';ctx.fillStyle='rgba(36,72,75,.58)';ctx.textAlign='center';
+  ctx.fillText(labNames[lab],vx,H*.27);
+  ctx.font='12.5px DM Sans,sans-serif';ctx.fillStyle='rgba(36,72,75,.38)';ctx.fillText('Cloud Park · VR',vx,H*.305);
+  drawHUDMini(ctx,W,H,CP);
+}
+
+function drawWNVR(canvas,lab){
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,vx=W/2,vy=H*.52;
+  ctx.clearRect(0,0,W,H);
+  // sky
+  const sg=ctx.createLinearGradient(0,0,0,vy+20);
+  sg.addColorStop(0,'#0A0E14');sg.addColorStop(.42,'#161E2A');sg.addColorStop(.78,'#261A16');sg.addColorStop(1,'#4A2C26');
+  ctx.fillStyle=sg;ctx.fillRect(0,0,W,vy+22);
+  // horizon glow
+  const hg=ctx.createRadialGradient(vx,vy,0,vx,vy,W*.56);
+  hg.addColorStop(0,'rgba(150,76,58,.38)');hg.addColorStop(.4,'rgba(125,52,40,.15)');hg.addColorStop(1,'transparent');
+  ctx.fillStyle=hg;ctx.fillRect(0,vy-120,W,240);
+  // stars
+  ctx.fillStyle='rgba(255,248,220,.52)';
+  [[W*.12,H*.07],[W*.42,H*.04],[W*.65,H*.11],[W*.81,H*.05],[W*.25,H*.13],[W*.9,H*.17],[W*.56,H*.09],[W*.34,H*.2],[W*.73,H*.22],[W*.05,H*.15]]
+    .forEach(([sx,sy])=>{ctx.beginPath();ctx.arc(sx,sy,1.1,0,Math.PI*2);ctx.fill();});
+  // floor
+  const fg=ctx.createLinearGradient(0,vy,0,H);
+  fg.addColorStop(0,'#272018');fg.addColorStop(1,'#111009');
+  ctx.fillStyle=fg;ctx.fillRect(0,vy-8,W,H-vy+8);
+  // grid
+  for(let i=-15;i<=15;i++){
+    const maj=i%4===0;
+    ctx.strokeStyle=maj?'rgba(215,170,160,.2)':'rgba(100,90,85,.22)';
+    ctx.lineWidth=maj?1.1:.55;
+    ctx.beginPath();ctx.moveTo(vx,vy);ctx.lineTo(vx+i*W*.088,H);ctx.stroke();
+  }
+  for(let t=.05;t<1;t+=.1){
+    ctx.strokeStyle='rgba(90,82,78,.18)';ctx.lineWidth=.55;
+    ctx.beginPath();ctx.moveTo(0,vy+(H-vy)*t);ctx.lineTo(W,vy+(H-vy)*t);ctx.stroke();
+  }
+  // city blocks
+  ctx.fillStyle='#0F0E0C';
+  [[0,66,W*.16,vy-66],[W*.04,40,W*.1,vy-40],[W*.82,58,W*.18,vy-58],[W*.88,38,W*.1,vy-38]].forEach(([x,bh,w,y])=>ctx.fillRect(x,y,w,bh));
+  // city windows
+  ctx.fillStyle='rgba(200,145,78,.45)';
+  [[W*.07,H*.24],[W*.1,H*.31],[W*.87,H*.26],[W*.92,H*.34],[W*.04,H*.38]].forEach(([wx,wy])=>{
+    ctx.fillRect(wx,wy,3,2.5);ctx.fillRect(wx+8,wy,3,2.5);
+  });
+  // background platforms
+  [[W*.25,H*.79,75,16,.82],[W*.76,H*.8,68,14,.78]].forEach(([cx,cy,rx,ry,a])=>drawPlatform(ctx,cx,cy,rx,ry,a));
+  // arch
+  drawArch(ctx,vx,vy,250,'#62504A','rgba(200,95,88,.8)',false);
+  // center platform
+  drawPlatform(ctx,vx,vy+62,145,30,1);
+
+  // lab content
+  if(lab==='selection'){
+    const orbs=[
+      {x:vx,y:vy-60,r:20,method:'ray',label:'RAY',sub:'far · controller',state:'idle',showLabel:true},
+      {x:vx-120,y:vy+32,r:30,method:'pinch',label:'PINCH',sub:'near · hand',state:'targeted',showLabel:true},
+      {x:vx+120,y:vy+32,r:30,method:'touch',label:'TOUCH',sub:'near · finger',state:'confirmed',showLabel:true},
+    ];
+    orbs.forEach(({x,y,r,method,label,sub,state,showLabel})=>{
+      if(method==='ray'&&state!=='idle'){
+        ctx.save();ctx.globalAlpha=.55;ctx.fillStyle='rgba(200,95,88,.45)';
+        for(let k=0;k<2;k++){const cx=x-r-16-k*7,cy=y;
+          ctx.beginPath();ctx.moveTo(cx,cy-4);ctx.lineTo(cx+5,cy);ctx.lineTo(cx,cy+4);ctx.closePath();ctx.fill();}
+        ctx.restore();
+      }
+      if(method==='pinch'&&state!=='idle'){
+        ctx.save();const off=r+10;
+        [[0,-1,0,1],[0,1,0,-1],[-1,0,1,0],[1,0,-1,0]].forEach(([dx,dy,tx,ty])=>{
+          const px=x+dx*off,py=y+dy*off;ctx.fillStyle='rgba(240,170,100,.88)';
+          ctx.beginPath();ctx.moveTo(px,py);
+          ctx.lineTo(px+tx*4+(dy?5:0),py+ty*4+(dx?5:0));
+          ctx.lineTo(px+tx*4-(dy?5:0),py+ty*4-(dx?5:0));
+          ctx.closePath();ctx.fill();});ctx.restore();
+      }
+      if(method==='touch'&&state!=='idle'){
+        ctx.save();ctx.setLineDash([3,3]);ctx.strokeStyle='rgba(130,200,180,.7)';ctx.lineWidth=1.2;
+        ctx.beginPath();ctx.arc(x,y,r+8,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+      }
+      if(state==='targeted'){
+        ctx.save();ctx.shadowColor='rgba(200,95,88,.5)';ctx.shadowBlur=12;
+        [r+14,r+24].forEach((rr,i)=>{ctx.strokeStyle=`rgba(200,95,88,${.8-.28*i})`;ctx.lineWidth=i===0?2:1;
+          ctx.beginPath();ctx.arc(x,y,rr,0,Math.PI*2);ctx.stroke();});ctx.restore();
+      }
+      if(state==='confirmed'){
+        const cg=ctx.createRadialGradient(x,y,r*.2,x,y,r*2);
+        cg.addColorStop(0,'rgba(140,220,195,.3)');cg.addColorStop(1,'transparent');
+        ctx.fillStyle=cg;ctx.beginPath();ctx.arc(x,y,r*2,0,Math.PI*2);ctx.fill();
+      }
+      const sg2=ctx.createRadialGradient(x-r*.3,y-r*.32,0,x,y,r);
+      sg2.addColorStop(0,'#F5EDE0');
+      sg2.addColorStop(.55,state==='confirmed'?'#8ABFB0':state==='targeted'?'#B58866':'#6E5E50');
+      sg2.addColorStop(1,state==='confirmed'?'#2F6A5E':state==='targeted'?'#3E2818':'#281C10');
+      ctx.fillStyle=sg2;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+      ctx.textAlign='center';
+      if(method==='ray'){
+        ctx.strokeStyle='rgba(255,240,220,.95)';ctx.lineWidth=1.8;
+        ctx.beginPath();ctx.moveTo(x-5,y);ctx.lineTo(x+4,y);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(x+2,y-3);ctx.lineTo(x+6,y);ctx.lineTo(x+2,y+3);ctx.stroke();
+      } else if(method==='pinch'){
+        ctx.fillStyle='rgba(255,240,220,.95)';
+        ctx.beginPath();ctx.moveTo(x-6,y-3);ctx.lineTo(x-2,y);ctx.lineTo(x-6,y+3);ctx.closePath();ctx.fill();
+        ctx.beginPath();ctx.moveTo(x+6,y-3);ctx.lineTo(x+2,y);ctx.lineTo(x+6,y+3);ctx.closePath();ctx.fill();
+      } else {
+        ctx.fillStyle='rgba(255,240,220,.95)';
+        ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='rgba(255,240,220,.65)';ctx.lineWidth=1;
+        ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);ctx.stroke();
+      }
+      if(showLabel){
+        ctx.font='bold 11px DM Sans,sans-serif';ctx.fillStyle='#F5EDE0';ctx.textAlign='center';
+        ctx.fillText(label,x,y+r+18);
+        ctx.font='10px DM Sans,sans-serif';ctx.fillStyle='rgba(220,200,180,.75)';
+        ctx.fillText(sub,x,y+r+31);
+        if(state==='targeted'){ctx.font='bold 9.5px DM Sans,sans-serif';ctx.fillStyle='#F4A07A';ctx.fillText('· TARGETING ·',x,y+r+44);}
+        if(state==='confirmed'){ctx.font='bold 9.5px DM Sans,sans-serif';ctx.fillStyle='#7FD4B8';ctx.fillText('✓ CONFIRMED',x,y+r+44);}
+      }
+    });
+    // Controller ray line to the distant RAY orb
+    ctx.save();ctx.globalAlpha=.5;ctx.setLineDash([6,7]);ctx.strokeStyle='rgba(200,95,88,.85)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(W*.82,H*.92);ctx.lineTo(vx,vy-60);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+  }
+  if(lab==='placement'){
+    const gx=vx-160,gy=vy+20,gw=320,gh=70;
+    ctx.strokeStyle='rgba(130,154,162,.48)';ctx.lineWidth=.8;
+    for(let i=0;i<=10;i++){const x=gx+i*gw/10;ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x,gy+gh);ctx.stroke();}
+    for(let j=0;j<=4;j++){const y=gy+j*gh/4;ctx.beginPath();ctx.moveTo(gx,y);ctx.lineTo(gx+gw,y);ctx.stroke();}
+    const drawCrystal=(x,y,h,w,col,glowCol)=>{
+      ctx.save();ctx.globalAlpha=.5;
+      ctx.fillStyle='rgba(6,4,2,.7)';
+      ctx.beginPath();ctx.ellipse(x,y+3,w*.75,w*.22,0,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+      if(glowCol){
+        const gg=ctx.createRadialGradient(x,y-h*.35,0,x,y-h*.35,w*1.8);
+        gg.addColorStop(0,glowCol);gg.addColorStop(1,'transparent');
+        ctx.fillStyle=gg;ctx.beginPath();ctx.arc(x,y-h*.35,w*1.8,0,Math.PI*2);ctx.fill();
+      }
+      const g2=ctx.createLinearGradient(x-w,y-h,x+w,y);
+      g2.addColorStop(0,col[0]);g2.addColorStop(.5,col[1]);g2.addColorStop(1,col[2]);
+      ctx.fillStyle=g2;
+      ctx.beginPath();
+      ctx.moveTo(x,y-h);ctx.lineTo(x+w,y-h*.55);ctx.lineTo(x,y);ctx.lineTo(x-w,y-h*.55);
+      ctx.closePath();ctx.fill();
+      ctx.strokeStyle='rgba(255,230,200,.6)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x,y-h);ctx.lineTo(x,y);ctx.stroke();
+    };
+    drawCrystal(gx+50,gy+22,26,14,['#F5D8B8','#C88860','#6E3E28']);
+    drawCrystal(gx+105,gy+42,22,12,['#E8C0A0','#B57048','#5A2E18']);
+    drawCrystal(gx+250,gy+30,20,11,['#F0C8A8','#A86848','#642E18']);
+    // Ghost (pinch) — cool-tinted so it reads as "preview"
+    drawCrystal(gx+175,gy+36,24,13,['rgba(180,205,220,.55)','rgba(140,170,195,.5)','rgba(100,135,160,.5)'],'rgba(130,180,210,.35)');
+    ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(160,200,220,.85)';ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.ellipse(gx+175,gy+38,16,5,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+    ctx.save();ctx.globalAlpha=.5;ctx.setLineDash([3,4]);ctx.strokeStyle='rgba(160,200,220,.75)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(gx+175,gy+38-24);ctx.lineTo(gx+175,gy+38);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+    ctx.save();ctx.fillStyle='rgba(160,200,220,.98)';
+    const px=gx+175,py=gy+38-44;
+    ctx.beginPath();ctx.moveTo(px-8,py-4);ctx.lineTo(px-3,py);ctx.lineTo(px-8,py+4);ctx.closePath();ctx.fill();
+    ctx.beginPath();ctx.moveTo(px+8,py-4);ctx.lineTo(px+3,py);ctx.lineTo(px+8,py+4);ctx.closePath();ctx.fill();
+    ctx.font='bold 9px DM Sans,sans-serif';ctx.fillStyle='#A8CBDE';ctx.textAlign='center';
+    ctx.fillText('HAND PINCH',px,py-12);
+    ctx.restore();
+    // Controller ray (warm amber/red)
+    const rx=gx+285,ry=gy+48;
+    ctx.save();ctx.globalAlpha=.82;ctx.setLineDash([6,6]);ctx.strokeStyle='rgba(230,120,90,.85)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(W*.88,H*.92);ctx.lineTo(rx,ry);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+    ctx.save();ctx.shadowColor='rgba(230,120,90,.5)';ctx.shadowBlur=8;
+    ctx.strokeStyle='rgba(255,170,130,.95)';ctx.lineWidth=1.8;
+    ctx.beginPath();ctx.ellipse(rx,ry,14,4.5,0,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(rx-10,ry);ctx.lineTo(rx+10,ry);ctx.moveTo(rx,ry-6);ctx.lineTo(rx,ry+6);ctx.stroke();
+    ctx.restore();
+    ctx.font='bold 9px DM Sans,sans-serif';ctx.fillStyle='#F4A07A';ctx.textAlign='center';
+    ctx.fillText('CONTROLLER RAY',rx,ry+18);
+    ctx.font='10px DM Sans,sans-serif';ctx.fillStyle='rgba(205,188,172,.62)';
+    ctx.textAlign='left';ctx.fillText('Detected surface · floor',gx+4,gy-6);
+  }
+  if(lab==='locomotion'){
+    const px=vx-200,py=H*.88;
+    const waypoints=[
+      {x:vx-85,y:vy+50,step:1},
+      {x:vx+60,y:vy+20,step:2},
+      {x:vx+205,y:vy+42,step:3,final:true},
+    ];
+    let prev={x:px,y:py};
+    waypoints.forEach((w)=>{
+      ctx.save();
+      ctx.setLineDash([7,6]);
+      ctx.strokeStyle=w.final?'rgba(140,220,195,.85)':'rgba(200,95,88,.75)';
+      ctx.lineWidth=w.final?2.5:2;
+      const mx=(prev.x+w.x)/2,my=Math.min(prev.y,w.y)-50;
+      ctx.beginPath();ctx.moveTo(prev.x,prev.y);ctx.quadraticCurveTo(mx,my,w.x,w.y);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      prev=w;
+    });
+    waypoints.forEach((w)=>{
+      const col=w.final?'rgba(140,220,195,':'rgba(200,95,88,';
+      [w.final?44:36,w.final?30:24,w.final?18:14].forEach((r,i)=>{
+        ctx.save();
+        if(i===0){ctx.shadowColor=col+'.5)';ctx.shadowBlur=w.final?14:10;}
+        ctx.strokeStyle=col+`${.72-.2*i})`;ctx.lineWidth=w.final?2:1.6;
+        ctx.beginPath();ctx.ellipse(w.x,w.y+6,r,r*.3,0,0,Math.PI*2);ctx.stroke();
+        ctx.restore();
+      });
+      const dg=ctx.createRadialGradient(w.x,w.y+4,0,w.x,w.y+4,12);
+      if(w.final){dg.addColorStop(0,'#C0E8D8');dg.addColorStop(1,'#5AA896');}
+      else{dg.addColorStop(0,'#F5D8C0');dg.addColorStop(1,'#C85F58');}
+      ctx.fillStyle=dg;
+      ctx.beginPath();ctx.ellipse(w.x,w.y+4,12,4,0,0,Math.PI*2);ctx.fill();
+      if(w.final){
+        ctx.font='bold 10px DM Sans,sans-serif';ctx.fillStyle='#7FD4B8';ctx.textAlign='center';
+        ctx.fillText('DESTINATION',w.x,w.y-14);
+        ctx.strokeStyle='#7FD4B8';ctx.lineWidth=1.6;
+        ctx.beginPath();ctx.moveTo(w.x,w.y-26);ctx.lineTo(w.x,w.y-8);ctx.stroke();
+        ctx.fillStyle='#5AA896';
+        ctx.beginPath();ctx.moveTo(w.x,w.y-26);ctx.lineTo(w.x+9,w.y-23);ctx.lineTo(w.x,w.y-20);ctx.closePath();ctx.fill();
+      } else {
+        ctx.font='bold 11px DM Mono,monospace';ctx.fillStyle='#F5EDE0';ctx.textAlign='center';
+        ctx.fillText(w.step,w.x,w.y+7);
+      }
+    });
+    ctx.save();ctx.strokeStyle='rgba(220,200,180,.55)';ctx.lineWidth=1.4;ctx.setLineDash([3,4]);
+    ctx.beginPath();ctx.ellipse(px,py,22,7,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+    ctx.restore();
+    ctx.font='10px DM Sans,sans-serif';ctx.fillStyle='rgba(220,200,180,.8)';ctx.textAlign='center';
+    ctx.fillText('YOU',px,py+18);
+
+    // Snap rotation top-left
+    ctx.save();
+    const sax=W*.13,say=H*.28;
+    ctx.strokeStyle='rgba(240,170,100,.78)';ctx.lineWidth=2.4;ctx.lineCap='round';
+    ctx.beginPath();ctx.arc(sax,say,34,-Math.PI*.6,Math.PI*.55);ctx.stroke();
+    for(let k=-0.6;k<=0.55;k+=0.23){
+      const tx=sax+34*Math.cos(k*Math.PI),ty=say+34*Math.sin(k*Math.PI);
+      const ox2=sax+40*Math.cos(k*Math.PI),oy2=say+40*Math.sin(k*Math.PI);
+      ctx.strokeStyle='rgba(240,170,100,.6)';ctx.lineWidth=1.2;
+      ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(ox2,oy2);ctx.stroke();
+    }
+    const ea=Math.PI*.55;
+    ctx.fillStyle='#F4B97A';
+    ctx.beginPath();ctx.arc(sax+34*Math.cos(ea),say+34*Math.sin(ea),5,0,Math.PI*2);ctx.fill();
+    ctx.font='bold 11px DM Mono,monospace';ctx.fillStyle='#F4B97A';ctx.textAlign='center';
+    ctx.fillText('50°',sax,say+4);
+    ctx.font='9px DM Sans,sans-serif';ctx.fillStyle='rgba(220,200,180,.78)';
+    ctx.fillText('SNAP TURN',sax,say-42);
+    ctx.restore();
+  }
+  if(lab==='manipulation'){
+    const drawKey=(x,y,rotDeg,scale,ghost)=>{
+      ctx.save();ctx.translate(x,y);ctx.rotate(rotDeg*Math.PI/180);ctx.scale(scale,scale);
+      if(!ghost){
+        ctx.fillStyle='rgba(6,4,2,.55)';
+        ctx.beginPath();ctx.ellipse(0,6,18,5,0,0,Math.PI*2);ctx.fill();
+      }
+      const shaftH=44,shaftW=14;
+      if(ghost){
+        ctx.setLineDash([4,4]);
+        ctx.strokeStyle='rgba(160,200,220,.9)';ctx.lineWidth=1.6;
+        ctx.beginPath();ctx.rect(-shaftW/2,-shaftH,shaftW,shaftH);ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-shaftW/2-6,-shaftH);
+        ctx.lineTo(-shaftW/2-6,-shaftH-14);
+        ctx.lineTo(0,-shaftH-22);
+        ctx.lineTo(shaftW/2+6,-shaftH-14);
+        ctx.lineTo(shaftW/2+6,-shaftH);
+        ctx.closePath();ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.strokeStyle='rgba(160,200,220,.95)';ctx.lineWidth=1.6;
+        ctx.beginPath();ctx.moveTo(0,-shaftH-4);ctx.lineTo(0,-shaftH-18);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(-4,-shaftH-14);ctx.lineTo(0,-shaftH-18);ctx.lineTo(4,-shaftH-14);ctx.stroke();
+        ctx.restore();
+        return;
+      }
+      const sg2=ctx.createLinearGradient(-shaftW/2,0,shaftW/2,0);
+      sg2.addColorStop(0,'#6E3E28');sg2.addColorStop(.5,'#D08860');sg2.addColorStop(1,'#582E18');
+      ctx.fillStyle=sg2;
+      ctx.fillRect(-shaftW/2,-shaftH,shaftW,shaftH);
+      ctx.strokeStyle='rgba(255,220,180,.48)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(0,-shaftH);ctx.lineTo(0,0);ctx.stroke();
+      const hg=ctx.createLinearGradient(0,-shaftH-22,0,-shaftH);
+      hg.addColorStop(0,'#E8C0A0');hg.addColorStop(1,'#B57048');
+      ctx.fillStyle=hg;
+      ctx.beginPath();
+      ctx.moveTo(-shaftW/2-6,-shaftH);
+      ctx.lineTo(-shaftW/2-6,-shaftH-14);
+      ctx.lineTo(0,-shaftH-22);
+      ctx.lineTo(shaftW/2+6,-shaftH-14);
+      ctx.lineTo(shaftW/2+6,-shaftH);
+      ctx.closePath();ctx.fill();
+      ctx.strokeStyle='rgba(60,30,18,.5)';ctx.lineWidth=1;ctx.stroke();
+      // warm highlight dot for UP
+      ctx.fillStyle='rgba(255,230,180,.88)';
+      ctx.beginPath();ctx.arc(0,-shaftH-11,2.5,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    };
+
+    const ox=vx-20,oy=vy-10;
+    ctx.save();ctx.shadowColor='rgba(200,95,88,.28)';ctx.shadowBlur=16;
+    drawKey(ox,oy,-18,1,false);
+    ctx.restore();
+    ctx.save();ctx.setLineDash([4,5]);ctx.strokeStyle='rgba(200,95,88,.35)';ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.arc(ox,oy-16,48,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+    ctx.restore();
+    ctx.font='bold 9px DM Sans,sans-serif';ctx.fillStyle='#F4A07A';ctx.textAlign='center';
+    ctx.fillText('GRABBED',ox,oy+22);
+
+    const tx2=vx+155,ty2=vy+54;
+    ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(160,200,220,.75)';ctx.lineWidth=1.8;
+    ctx.beginPath();ctx.ellipse(tx2,ty2,34,10,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+    ctx.restore();
+    drawKey(tx2,ty2,0,.95,true);
+    ctx.save();ctx.globalAlpha=.6;ctx.setLineDash([5,5]);ctx.strokeStyle='rgba(160,200,220,.85)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(ox+20,oy-20);
+    ctx.quadraticCurveTo((ox+tx2)/2,vy-70,tx2-14,ty2-44);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(160,200,220,.95)';
+    ctx.beginPath();ctx.moveTo(tx2-14,ty2-44);ctx.lineTo(tx2-22,ty2-50);ctx.lineTo(tx2-8,ty2-52);ctx.closePath();ctx.fill();
+    ctx.restore();
+    ctx.font='bold 9px DM Sans,sans-serif';ctx.fillStyle='#A8CBDE';ctx.textAlign='center';
+    ctx.fillText('TARGET POSE',tx2,ty2+22);
+    ctx.font='9px DM Sans,sans-serif';ctx.fillStyle='rgba(168,203,222,.7)';
+    ctx.fillText('upright · match rotation',tx2,ty2+34);
+
+    const sx=vx-180,sy=vy+54;
+    ctx.save();ctx.setLineDash([4,3]);ctx.strokeStyle='rgba(200,95,88,.45)';ctx.lineWidth=1.4;
+    ctx.beginPath();ctx.ellipse(sx,sy,32,9,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+    ctx.restore();
+    ctx.font='8.5px DM Sans,sans-serif';ctx.fillStyle='rgba(244,160,122,.7)';ctx.textAlign='center';
+    ctx.fillText('SLOT 1 · empty',sx,sy+22);
+
+    // ember stripe under arch (kept)
+    ctx.save();ctx.globalAlpha=.45;ctx.lineWidth=5;ctx.strokeStyle='rgba(185,78,72,.75)';ctx.lineCap='round';
+    ctx.beginPath();ctx.arc(vx,vy+250*.12,175,Math.PI,0);ctx.stroke();ctx.restore();
+  }
+
+  const labNames={selection:'Selection Lab',placement:'Placement Lab',locomotion:'Locomotion Lab',manipulation:'Manipulation Lab'};
+  ctx.font='bold 22px DM Sans,sans-serif';ctx.fillStyle='rgba(255,245,234,.86)';ctx.textAlign='center';
+  ctx.fillText(labNames[lab],vx,H*.27);
+  ctx.font='12.5px DM Sans,sans-serif';ctx.fillStyle='rgba(205,188,172,.55)';ctx.fillText('Warm Night · VR',vx,H*.305);
+  drawHUDMini(ctx,W,H,WN);
+}
+
+// AR scenes
+function drawARRoom(ctx,W,H){
+  const rg=ctx.createLinearGradient(0,0,0,H);
+  rg.addColorStop(0,'#D6D2CC');rg.addColorStop(.58,'#CAC6C0');rg.addColorStop(.59,'#BDB8B1');rg.addColorStop(1,'#B2ADA7');
+  ctx.fillStyle=rg;ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(175,170,164,.38)';ctx.lineWidth=.75;
+  for(let x=0;x<W;x+=90){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H*.58);ctx.stroke();}
+  for(let y=0;y<H*.58;y+=66){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  const lg=ctx.createRadialGradient(W*.5,H*.1,10,W*.5,H*.1,240);
+  lg.addColorStop(0,'rgba(255,252,246,.68)');lg.addColorStop(1,'transparent');
+  ctx.fillStyle=lg;ctx.fillRect(0,0,W,H*.6);
+  ctx.strokeStyle='rgba(145,140,134,.36)';ctx.lineWidth=1.8;
+  ctx.beginPath();ctx.moveTo(0,H*.58);ctx.lineTo(W,H*.58);ctx.stroke();
+}
+function drawCPAR(canvas,lab){
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  drawARRoom(ctx,W,H);
+  const vx=W/2,vy=H*.5;
+
+  if(lab==='selection'){
+    // Place selection orbs on detected surface with scan ring
+    ctx.save();ctx.shadowColor='rgba(47,175,198,.3)';ctx.shadowBlur=10;
+    ctx.strokeStyle='rgba(47,175,198,.6)';ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.ellipse(vx,H*.78,200,50,0,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+    ctx.strokeStyle='rgba(47,175,198,.22)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.ellipse(vx,H*.78,228,58,0,0,Math.PI*2);ctx.stroke();
+
+    const orbs=[
+      {x:vx,y:vy-90,r:28,method:'ray',label:'RAY',sub:'far · controller',state:'idle'},
+      {x:vx-52,y:vy-10,r:28,method:'pinch',label:'PINCH',sub:'mid · hand',state:'targeted'},
+      {x:vx+60,y:vy-10,r:28,method:'touch',label:'TOUCH',sub:'near · finger',state:'confirmed'},
+    ];
+    orbs.forEach(({x,y,r,method,label,sub,state})=>{
+      if(method==='touch'){
+        ctx.save();ctx.setLineDash([3,3]);ctx.strokeStyle='rgba(32,145,130,.75)';ctx.lineWidth=1.4;
+        ctx.beginPath();ctx.arc(x,y,r+10,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+      }
+      if(method==='pinch'){
+        ctx.save();const off=r+14;
+        [[0,-1,0,1],[0,1,0,-1],[-1,0,1,0],[1,0,-1,0]].forEach(([dx,dy,tx,ty])=>{
+          const px=x+dx*off,py=y+dy*off;
+          ctx.fillStyle='rgba(255,180,50,.88)';
+          ctx.beginPath();ctx.moveTo(px,py);
+          ctx.lineTo(px+tx*5+(dy?6:0),py+ty*5+(dx?6:0));
+          ctx.lineTo(px+tx*5-(dy?6:0),py+ty*5-(dx?6:0));
+          ctx.closePath();ctx.fill();
+        });ctx.restore();
+      }
+      if(method==='ray'){
+        ctx.save();ctx.globalAlpha=.55;ctx.fillStyle='rgba(255,180,50,.5)';
+        for(let k=0;k<3;k++){const cx=x-r-22-k*9,cy=y;
+          ctx.beginPath();ctx.moveTo(cx,cy-5);ctx.lineTo(cx+6,cy);ctx.lineTo(cx,cy+5);ctx.closePath();ctx.fill();}
+        ctx.restore();
+      }
+      if(state==='targeted'){
+        ctx.save();
+        [r+18,r+30].forEach((rr,i)=>{
+          ctx.strokeStyle=`rgba(230,130,40,${.72-.28*i})`;ctx.lineWidth=i===0?2.2:1;
+          ctx.beginPath();ctx.arc(x,y,rr,0,Math.PI*2);ctx.stroke();
+        });ctx.restore();
+      }
+      if(state==='confirmed'){
+        const cg=ctx.createRadialGradient(x,y,r*.2,x,y,r*2.2);
+        cg.addColorStop(0,'rgba(109,207,170,.35)');cg.addColorStop(1,'transparent');
+        ctx.fillStyle=cg;ctx.beginPath();ctx.arc(x,y,r*2.2,0,Math.PI*2);ctx.fill();
+      }
+      const sg=ctx.createRadialGradient(x-r*.3,y-r*.32,0,x,y,r);
+      sg.addColorStop(0,'#FFFAEE');
+      sg.addColorStop(.55,state==='confirmed'?'#B8E8CC':state==='targeted'?'#FFDF8A':'#EDD8A0');
+      sg.addColorStop(1,state==='confirmed'?'#6DCFAA':state==='targeted'?'#E0A840':'#C4A070');
+      ctx.fillStyle=sg;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+      ctx.textAlign='center';
+      if(method==='ray'){
+        ctx.strokeStyle='rgba(36,72,75,.85)';ctx.lineWidth=2.2;
+        ctx.beginPath();ctx.moveTo(x-6,y);ctx.lineTo(x+5,y);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(x+3,y-4);ctx.lineTo(x+7,y);ctx.lineTo(x+3,y+4);ctx.stroke();
+      } else if(method==='pinch'){
+        ctx.fillStyle='rgba(36,72,75,.85)';
+        ctx.beginPath();ctx.moveTo(x-7,y-4);ctx.lineTo(x-2,y);ctx.lineTo(x-7,y+4);ctx.closePath();ctx.fill();
+        ctx.beginPath();ctx.moveTo(x+7,y-4);ctx.lineTo(x+2,y);ctx.lineTo(x+7,y+4);ctx.closePath();ctx.fill();
+      } else {
+        ctx.fillStyle='rgba(36,72,75,.85)';
+        ctx.beginPath();ctx.arc(x,y,4.5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='rgba(36,72,75,.6)';ctx.lineWidth=1.3;
+        ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.stroke();
+      }
+      ctx.font='bold 11px DM Sans,sans-serif';ctx.fillStyle='#1C3E3E';
+      ctx.fillText(label,x,y+r+16);
+      ctx.font='9.5px DM Sans,sans-serif';ctx.fillStyle='rgba(28,62,62,.7)';
+      ctx.fillText(sub,x,y+r+28);
+      if(state==='targeted'){ctx.font='bold 9px DM Sans,sans-serif';ctx.fillStyle='#B56C00';ctx.fillText('· TARGETING ·',x,y+r+40);}
+      if(state==='confirmed'){ctx.font='bold 9px DM Sans,sans-serif';ctx.fillStyle='#1F7A53';ctx.fillText('✓ CONFIRMED',x,y+r+40);}
+    });
+    ctx.font='11.5px DM Sans,sans-serif';ctx.fillStyle='rgba(47,175,198,.82)';ctx.textAlign='center';
+    ctx.fillText('Selection Lab · AR passthrough',vx,H*.93);
+  } else {
+    // Placement lab
+    const gx=vx-180,gy=H*.7,gw=360,gh=82;
+    ctx.save();ctx.strokeStyle='rgba(47,175,198,.6)';ctx.lineWidth=1;
+    for(let i=0;i<=10;i++){const x=gx+i*gw/10;ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x,gy+gh);ctx.stroke();}
+    for(let j=0;j<=4;j++){const y=gy+j*gh/4;ctx.beginPath();ctx.moveTo(gx,y);ctx.lineTo(gx+gw,y);ctx.stroke();}
+    ctx.restore();
+    const drawCrystal=(x,y,h,w,col,glowCol)=>{
+      ctx.save();ctx.globalAlpha=.28;ctx.fillStyle='rgba(24,56,70,.7)';
+      ctx.beginPath();ctx.ellipse(x,y+3,w*.75,w*.22,0,0,Math.PI*2);ctx.fill();ctx.restore();
+      if(glowCol){const gg=ctx.createRadialGradient(x,y-h*.35,0,x,y-h*.35,w*1.8);
+        gg.addColorStop(0,glowCol);gg.addColorStop(1,'transparent');
+        ctx.fillStyle=gg;ctx.beginPath();ctx.arc(x,y-h*.35,w*1.8,0,Math.PI*2);ctx.fill();}
+      const g=ctx.createLinearGradient(x-w,y-h,x+w,y);
+      g.addColorStop(0,col[0]);g.addColorStop(.5,col[1]);g.addColorStop(1,col[2]);
+      ctx.fillStyle=g;
+      ctx.beginPath();ctx.moveTo(x,y-h);ctx.lineTo(x+w,y-h*.55);ctx.lineTo(x,y);ctx.lineTo(x-w,y-h*.55);ctx.closePath();ctx.fill();
+      ctx.strokeStyle='rgba(255,252,230,.65)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x,y-h);ctx.lineTo(x,y);ctx.stroke();
+    };
+    drawCrystal(gx+60,gy+30,30,16,['#FFF5B8','#FFD97A','#C99040']);
+    drawCrystal(gx+130,gy+52,26,14,['#FFE8A0','#FFCB5E','#B87830']);
+    drawCrystal(gx+290,gy+36,24,13,['#FFF2B5','#E8B854','#A0702A']);
+    drawCrystal(gx+200,gy+44,28,15,['rgba(180,230,245,.5)','rgba(120,200,230,.45)','rgba(80,160,200,.45)'],'rgba(47,175,198,.4)');
+    ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(47,175,198,.85)';ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.ellipse(gx+200,gy+46,18,6,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+    ctx.save();ctx.globalAlpha=.5;ctx.setLineDash([3,4]);ctx.strokeStyle='rgba(47,175,198,.75)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(gx+200,gy+46-28);ctx.lineTo(gx+200,gy+46);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+    ctx.fillStyle='rgba(47,175,198,.95)';
+    const px=gx+200,py=gy+46-50;
+    ctx.beginPath();ctx.moveTo(px-8,py-4);ctx.lineTo(px-3,py);ctx.lineTo(px-8,py+4);ctx.closePath();ctx.fill();
+    ctx.beginPath();ctx.moveTo(px+8,py-4);ctx.lineTo(px+3,py);ctx.lineTo(px+8,py+4);ctx.closePath();ctx.fill();
+    ctx.font='bold 9px DM Sans,sans-serif';ctx.fillStyle='#1C5C70';ctx.textAlign='center';
+    ctx.fillText('HAND PINCH',px,py-12);
+    const rx=gx+325,ry=gy+56;
+    ctx.save();ctx.globalAlpha=.75;ctx.setLineDash([6,6]);ctx.strokeStyle='rgba(230,100,86,.8)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(W*.92,H*.95);ctx.lineTo(rx,ry);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+    ctx.save();ctx.strokeStyle='rgba(230,100,86,.95)';ctx.lineWidth=1.8;
+    ctx.beginPath();ctx.ellipse(rx,ry,14,4.5,0,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(rx-10,ry);ctx.lineTo(rx+10,ry);ctx.moveTo(rx,ry-6);ctx.lineTo(rx,ry+6);ctx.stroke();ctx.restore();
+    ctx.font='bold 9px DM Sans,sans-serif';ctx.fillStyle='#B84338';ctx.fillText('CONTROLLER RAY',rx,ry+18);
+    ctx.font='10px DM Sans,sans-serif';ctx.fillStyle='rgba(36,72,75,.7)';ctx.textAlign='left';
+    ctx.fillText('Detected surface · floor',gx+4,gy-6);
+    ctx.font='11.5px DM Sans,sans-serif';ctx.fillStyle='rgba(47,175,198,.82)';ctx.textAlign='center';
+    ctx.fillText('Placement Lab · AR passthrough',vx,H*.95);
+  }
+  drawHUDMini(ctx,W,H,CP);
+}
+function drawWNAR(canvas,lab){
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  drawARRoom(ctx,W,H);
+  // amber dusk wash
+  const ag=ctx.createRadialGradient(W*.5,H*.5,40,W*.5,H*.5,W*.5);
+  ag.addColorStop(0,'rgba(200,95,88,.1)');ag.addColorStop(1,'transparent');
+  ctx.fillStyle=ag;ctx.fillRect(0,0,W,H);
+  const vx=W/2,vy=H*.5;
+
+  if(lab==='selection'){
+    ctx.save();ctx.strokeStyle='rgba(200,95,88,.55)';ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.ellipse(vx,H*.78,200,50,0,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle='rgba(200,95,88,.22)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.ellipse(vx,H*.78,228,58,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+
+    const orbs=[
+      {x:vx,y:vy-90,r:28,method:'ray',label:'RAY',sub:'far · controller',state:'idle'},
+      {x:vx-52,y:vy-10,r:28,method:'pinch',label:'PINCH',sub:'mid · hand',state:'targeted'},
+      {x:vx+60,y:vy-10,r:28,method:'touch',label:'TOUCH',sub:'near · finger',state:'confirmed'},
+    ];
+    orbs.forEach(({x,y,r,method,label,sub,state})=>{
+      if(method==='touch'){
+        ctx.save();ctx.setLineDash([3,3]);ctx.strokeStyle='rgba(130,200,180,.75)';ctx.lineWidth=1.4;
+        ctx.beginPath();ctx.arc(x,y,r+10,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+      }
+      if(method==='pinch'){
+        ctx.save();const off=r+14;
+        [[0,-1,0,1],[0,1,0,-1],[-1,0,1,0],[1,0,-1,0]].forEach(([dx,dy,tx,ty])=>{
+          const px=x+dx*off,py=y+dy*off;
+          ctx.fillStyle='rgba(240,170,100,.88)';
+          ctx.beginPath();ctx.moveTo(px,py);
+          ctx.lineTo(px+tx*5+(dy?6:0),py+ty*5+(dx?6:0));
+          ctx.lineTo(px+tx*5-(dy?6:0),py+ty*5-(dx?6:0));
+          ctx.closePath();ctx.fill();
+        });ctx.restore();
+      }
+      if(method==='ray'){
+        ctx.save();ctx.globalAlpha=.55;ctx.fillStyle='rgba(200,95,88,.55)';
+        for(let k=0;k<3;k++){const cx=x-r-22-k*9,cy=y;
+          ctx.beginPath();ctx.moveTo(cx,cy-5);ctx.lineTo(cx+6,cy);ctx.lineTo(cx,cy+5);ctx.closePath();ctx.fill();}
+        ctx.restore();
+      }
+      if(state==='targeted'){
+        ctx.save();ctx.shadowColor='rgba(200,95,88,.5)';ctx.shadowBlur=14;
+        [r+18,r+30].forEach((rr,i)=>{
+          ctx.strokeStyle=`rgba(200,95,88,${.8-.28*i})`;ctx.lineWidth=i===0?2.2:1;
+          ctx.beginPath();ctx.arc(x,y,rr,0,Math.PI*2);ctx.stroke();
+        });ctx.restore();
+      }
+      if(state==='confirmed'){
+        const cg=ctx.createRadialGradient(x,y,r*.2,x,y,r*2.2);
+        cg.addColorStop(0,'rgba(140,220,195,.32)');cg.addColorStop(1,'transparent');
+        ctx.fillStyle=cg;ctx.beginPath();ctx.arc(x,y,r*2.2,0,Math.PI*2);ctx.fill();
+      }
+      const sg=ctx.createRadialGradient(x-r*.3,y-r*.32,0,x,y,r);
+      sg.addColorStop(0,'#F5EDE0');
+      sg.addColorStop(.55,state==='confirmed'?'#8ABFB0':state==='targeted'?'#B58866':'#6E5E50');
+      sg.addColorStop(1,state==='confirmed'?'#2F6A5E':state==='targeted'?'#3E2818':'#281C10');
+      ctx.fillStyle=sg;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+      ctx.textAlign='center';
+      if(method==='ray'){
+        ctx.strokeStyle='rgba(255,240,220,.95)';ctx.lineWidth=2.2;
+        ctx.beginPath();ctx.moveTo(x-6,y);ctx.lineTo(x+5,y);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(x+3,y-4);ctx.lineTo(x+7,y);ctx.lineTo(x+3,y+4);ctx.stroke();
+      } else if(method==='pinch'){
+        ctx.fillStyle='rgba(255,240,220,.95)';
+        ctx.beginPath();ctx.moveTo(x-7,y-4);ctx.lineTo(x-2,y);ctx.lineTo(x-7,y+4);ctx.closePath();ctx.fill();
+        ctx.beginPath();ctx.moveTo(x+7,y-4);ctx.lineTo(x+2,y);ctx.lineTo(x+7,y+4);ctx.closePath();ctx.fill();
+      } else {
+        ctx.fillStyle='rgba(255,240,220,.95)';
+        ctx.beginPath();ctx.arc(x,y,4.5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='rgba(255,240,220,.65)';ctx.lineWidth=1.3;
+        ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.stroke();
+      }
+      // On AR (bright room), use DARK text for readability
+      ctx.font='bold 11px DM Sans,sans-serif';ctx.fillStyle='#3A2418';
+      ctx.fillText(label,x,y+r+16);
+      ctx.font='9.5px DM Sans,sans-serif';ctx.fillStyle='rgba(58,36,24,.72)';
+      ctx.fillText(sub,x,y+r+28);
+      if(state==='targeted'){ctx.font='bold 9px DM Sans,sans-serif';ctx.fillStyle='#B84338';ctx.fillText('· TARGETING ·',x,y+r+40);}
+      if(state==='confirmed'){ctx.font='bold 9px DM Sans,sans-serif';ctx.fillStyle='#1F7A53';ctx.fillText('✓ CONFIRMED',x,y+r+40);}
+    });
+    ctx.font='11.5px DM Sans,sans-serif';ctx.fillStyle='rgba(140,76,68,.85)';ctx.textAlign='center';
+    ctx.fillText('Selection Lab · AR passthrough',vx,H*.93);
+  } else {
+    const gx=vx-180,gy=H*.7,gw=360,gh=82;
+    ctx.save();ctx.strokeStyle='rgba(130,154,162,.6)';ctx.lineWidth=1;
+    for(let i=0;i<=10;i++){const x=gx+i*gw/10;ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x,gy+gh);ctx.stroke();}
+    for(let j=0;j<=4;j++){const y=gy+j*gh/4;ctx.beginPath();ctx.moveTo(gx,y);ctx.lineTo(gx+gw,y);ctx.stroke();}
+    ctx.restore();
+    const drawCrystal=(x,y,h,w,col,glowCol)=>{
+      ctx.save();ctx.globalAlpha=.35;ctx.fillStyle='rgba(20,10,6,.7)';
+      ctx.beginPath();ctx.ellipse(x,y+3,w*.75,w*.22,0,0,Math.PI*2);ctx.fill();ctx.restore();
+      if(glowCol){const gg=ctx.createRadialGradient(x,y-h*.35,0,x,y-h*.35,w*1.8);
+        gg.addColorStop(0,glowCol);gg.addColorStop(1,'transparent');
+        ctx.fillStyle=gg;ctx.beginPath();ctx.arc(x,y-h*.35,w*1.8,0,Math.PI*2);ctx.fill();}
+      const g=ctx.createLinearGradient(x-w,y-h,x+w,y);
+      g.addColorStop(0,col[0]);g.addColorStop(.5,col[1]);g.addColorStop(1,col[2]);
+      ctx.fillStyle=g;
+      ctx.beginPath();ctx.moveTo(x,y-h);ctx.lineTo(x+w,y-h*.55);ctx.lineTo(x,y);ctx.lineTo(x-w,y-h*.55);ctx.closePath();ctx.fill();
+      ctx.strokeStyle='rgba(255,230,200,.6)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x,y-h);ctx.lineTo(x,y);ctx.stroke();
+    };
+    drawCrystal(gx+60,gy+30,30,16,['#F5D8B8','#C88860','#6E3E28']);
+    drawCrystal(gx+130,gy+52,26,14,['#E8C0A0','#B57048','#5A2E18']);
+    drawCrystal(gx+290,gy+36,24,13,['#F0C8A8','#A86848','#642E18']);
+    drawCrystal(gx+200,gy+44,28,15,['rgba(180,205,220,.55)','rgba(140,170,195,.5)','rgba(100,135,160,.5)'],'rgba(130,180,210,.35)');
+    ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(160,200,220,.85)';ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.ellipse(gx+200,gy+46,18,6,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+    ctx.save();ctx.globalAlpha=.5;ctx.setLineDash([3,4]);ctx.strokeStyle='rgba(160,200,220,.75)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(gx+200,gy+46-28);ctx.lineTo(gx+200,gy+46);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+    ctx.fillStyle='rgba(160,200,220,.98)';
+    const px=gx+200,py=gy+46-50;
+    ctx.beginPath();ctx.moveTo(px-8,py-4);ctx.lineTo(px-3,py);ctx.lineTo(px-8,py+4);ctx.closePath();ctx.fill();
+    ctx.beginPath();ctx.moveTo(px+8,py-4);ctx.lineTo(px+3,py);ctx.lineTo(px+8,py+4);ctx.closePath();ctx.fill();
+    ctx.font='bold 9px DM Sans,sans-serif';ctx.fillStyle='#2C4C5E';ctx.textAlign='center';
+    ctx.fillText('HAND PINCH',px,py-12);
+    const rx=gx+325,ry=gy+56;
+    ctx.save();ctx.globalAlpha=.82;ctx.setLineDash([6,6]);ctx.strokeStyle='rgba(200,80,60,.85)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(W*.92,H*.95);ctx.lineTo(rx,ry);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+    ctx.save();ctx.strokeStyle='rgba(220,90,70,.95)';ctx.lineWidth=1.8;
+    ctx.beginPath();ctx.ellipse(rx,ry,14,4.5,0,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(rx-10,ry);ctx.lineTo(rx+10,ry);ctx.moveTo(rx,ry-6);ctx.lineTo(rx,ry+6);ctx.stroke();ctx.restore();
+    ctx.font='bold 9px DM Sans,sans-serif';ctx.fillStyle='#A63C30';ctx.fillText('CONTROLLER RAY',rx,ry+18);
+    ctx.font='10px DM Sans,sans-serif';ctx.fillStyle='rgba(80,60,50,.75)';ctx.textAlign='left';
+    ctx.fillText('Detected surface · floor',gx+4,gy-6);
+    ctx.font='11.5px DM Sans,sans-serif';ctx.fillStyle='rgba(140,76,68,.85)';ctx.textAlign='center';
+    ctx.fillText('Placement Lab · AR passthrough',vx,H*.95);
+  }
+  drawHUDMini(ctx,W,H,WN);
+}
+
+/* ─ SceneCanvas ─ */
+function SceneCanvas({drawFn}){
+  const ref=useRef();
+  useEffect(()=>{if(ref.current)drawFn(ref.current);},[drawFn]);
+  return <canvas ref={ref} width={1200} height={675} style={{width:'100%',height:'auto',display:'block'}}/>;
+}
+
+/* ─ HUD React widget (interactive, both states) ─ */
+function HUDWidget({isCp,defaultExpanded=false}){
+  const [expanded,setExpanded]=useState(defaultExpanded);
+  const p=isCp?CP:WN;
+  const fill=p.hudFill,border=p.hudBorder,text=p.hudText,metric=p.hudMetric,muted=p.hudMuted,accent=p.hudAccent;
+  const glow={boxShadow:`0 0 0 1.5px ${border}, 0 6px 28px rgba(0,0,0,.5)${!isCp?', 0 0 24px rgba(200,95,88,.18)':''}`};
+  if(!expanded) return (
+    <div onClick={()=>setExpanded(true)} style={{
+      display:'inline-flex',alignItems:'center',gap:8,padding:'0 14px',height:38,borderRadius:19,
+      background:fill,...glow,cursor:'pointer',transition:'all .2s',userSelect:'none'}}>
+      <div style={{width:8,height:8,borderRadius:'50%',background:accent,boxShadow:`0 0 6px ${accent}`}}/>
+      <span style={{fontSize:16,fontWeight:'bold',color:metric,fontFamily:'DM Mono,monospace',lineHeight:1}}>60</span>
+      <span style={{fontSize:9,color:muted,marginLeft:-4}}>FPS</span>
+      <div style={{width:1,height:18,background:border+'30',margin:'0 2px'}}/>
+      <span style={{fontSize:11,color:muted}}>T1/18</span>
+      <span style={{fontSize:11,color:accent,marginLeft:4}}>⌃</span>
+    </div>);
+  return (
+    <div style={{
+      width:295,borderRadius:13,background:fill,...glow,
+      padding:'15px 17px',display:'flex',flexDirection:'column',gap:11,userSelect:'none'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+        <div style={{display:'flex',alignItems:'baseline',gap:6}}>
+          <span style={{fontSize:32,fontWeight:'bold',color:metric,fontFamily:'DM Mono,monospace',lineHeight:1}}>60</span>
+          <span style={{fontSize:11,color:muted}}>FPS</span>
+        </div>
+        <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:2}}>
+          <span style={{fontSize:12,fontWeight:600,color:text}}>Trial 1 / 18</span>
+          <span style={{fontSize:10,color:muted}}>translation</span>
+          <button onClick={()=>setExpanded(false)} style={{background:'none',border:'none',color:accent,fontSize:13,cursor:'pointer',lineHeight:1,padding:0,marginTop:2}}>⌄</button>
+        </div>
+      </div>
+      <div style={{height:1,background:border+'35'}}/>
+      <div style={{display:'flex',gap:0}}>
+        {[['Target','0.28'],['Boost','0.15'],['Haptics','ON'],['Audio','OFF']].map(([l,v])=>(
+          <div key={l} style={{flex:1}}>
+            <div style={{fontSize:9,color:muted,textTransform:'uppercase',letterSpacing:'.04em'}}>{l}</div>
+            <div style={{fontSize:13.5,fontWeight:'bold',color:text,marginTop:2}}>{v}</div>
+          </div>))}
+      </div>
+      <div style={{background:accent+'1E',borderRadius:7,padding:'6px 12px',textAlign:'center',fontSize:11.5,color:accent,fontWeight:500}}>
+        Direct touch (hands)
+      </div>
+    </div>);
+}
+
+/* ─ HUD section ─ */
+function HUDSection({isCp}){
+  const skyBg=isCp
+    ?'linear-gradient(150deg,#5DC4DF 0%,#9AD8EE 45%,#FFE8B5 100%)'
+    :'linear-gradient(150deg,#0A0E14 0%,#161E2A 55%,#452A22 100%)';
+  return (
+    <div style={{background:skyBg,minHeight:340,position:'relative',overflow:'hidden',borderRadius:'0 0 10px 10px',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:24,padding:32}}>
+      {isCp&&<>
+        <div style={{position:'absolute',top:'7%',left:'5%',width:88,height:48,borderRadius:'50%',background:'rgba(255,253,240,.85)',filter:'blur(3px)'}}/>
+        <div style={{position:'absolute',top:'5%',right:'9%',width:62,height:36,borderRadius:'50%',background:'rgba(255,249,226,.8)',filter:'blur(2px)'}}/>
+        <div style={{position:'absolute',bottom:0,left:0,right:0,height:'42%',background:'linear-gradient(to bottom,#C5EED8,#78C895)',borderRadius:'0 0 10px 10px'}}/>
+        <div style={{position:'absolute',bottom:'41%',left:'50%',transform:'translateX(-50%)',width:280,height:52,borderTop:'18px solid #FFF5DAcc',borderLeft:'18px solid transparent',borderRight:'18px solid transparent',borderRadius:6}}/>
+      </>}
+      {!isCp&&<>
+        <div style={{position:'absolute',bottom:0,left:0,right:0,height:'40%',background:'rgba(18,13,10,.85)',borderRadius:'0 0 10px 10px'}}/>
+        {[[12,7],[42,4],[66,11],[80,5],[24,14],[90,17],[55,9],[34,20],[72,22]].map(([lx,ly],i)=>(
+          <div key={i} style={{position:'absolute',width:1.5,height:1.5,borderRadius:'50%',background:'rgba(255,248,220,.5)',top:`${ly}%`,left:`${lx}%`}}/>))}
+        <div style={{position:'absolute',bottom:'40%',width:220,height:44,borderTop:'16px solid #62504Acc',borderLeft:'14px solid transparent',borderRight:'14px solid transparent',borderRadius:4,left:'50%',transform:'translateX(-50%)'}}/>
+      </>}
+      <div style={{position:'relative',zIndex:2,textAlign:'center'}}>
+        <div style={{fontSize:11,fontWeight:600,color:'rgba(255,255,255,.75)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:10,textShadow:'0 1px 3px rgba(0,0,0,.5)'}}>Minimized · default on launch</div>
+        <HUDWidget isCp={isCp} defaultExpanded={false}/>
+      </div>
+      <div style={{position:'relative',zIndex:2,textAlign:'center'}}>
+        <div style={{fontSize:11,fontWeight:600,color:'rgba(255,255,255,.75)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:10,textShadow:'0 1px 3px rgba(0,0,0,.5)'}}>Expanded</div>
+        <HUDWidget isCp={isCp} defaultExpanded={true}/>
+      </div>
+    </div>);
+}
+
+/* ─ Scene Objects ─ */
+const LABS=[
+  {id:'selection',label:'Selection Lab',modes:'VR · AR',desc:'Three selection methods — ray (far), pinch (mid), direct touch (near) — each with distinct affordances and state feedback (idle → targeted → confirmed).'},
+  {id:'placement',label:'Placement Lab',modes:'AR only',desc:'Small crystals get anchored onto detected surfaces. Hand-pinch drops cool-tinted ghosts; controller ray shows a warm aimpoint reticle.'},
+  {id:'locomotion',label:'Locomotion Lab',modes:'VR only',desc:'Multi-step teleport: numbered waypoints link via dashed arcs to a final destination marker. Snap-turn wheel shows the discrete rotation amount.'},
+  {id:'manipulation',label:'Manipulation Lab',modes:'VR only',desc:'Oriented key crystal is grabbed and must match a ghost target pose in an empty dock slot. The ghost shows the required rotation.'},
+];
+
+function SceneObjectsSection({isCp}){
+  const [lab,setLab]=useState('selection');
+  const meta=LABS.find(l=>l.id===lab);
+  const p=isCp?CP:WN;
+  const bg=isCp?'#142A2E':'#120E0C';
+  const dim=isCp?'rgba(36,72,75,.48)':'rgba(200,185,175,.4)';
+
+  // Mini arch + column (shared across labs)
+  const MiniArch=()=>(
+    <div style={{position:'relative',width:100,height:64}}>
+      <div style={{position:'absolute',bottom:0,left:'50%',transform:'translateX(-50%)',width:90,height:50,
+        border:`9px solid ${isCp?'#FFF5DA':'#62504A'}`,borderBottom:'none',borderTopLeftRadius:47,borderTopRightRadius:47,
+        boxShadow:`inset 0 0 0 2px ${isCp?'rgba(255,209,102,.75)':'rgba(200,95,88,.7)'}${!isCp?',0 0 10px rgba(200,95,88,.3)':''}`}}/>
+    </div>);
+  const MiniColumn=({lit=false})=>(
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
+      {/* crown */}
+      <div style={{width:18,height:5,borderRadius:2,background:lit?(isCp?'#FFD166':'rgba(200,95,88,.9)'):(isCp?'#EDEADB':'#514540'),
+        boxShadow:lit&&!isCp?'0 0 8px rgba(200,95,88,.7)':'none',marginBottom:1}}/>
+      {lit&&<div style={{width:28,height:6,borderRadius:'50%',border:`1px solid ${isCp?'rgba(255,209,102,.55)':'rgba(200,95,88,.5)'}`,marginBottom:-2}}/>}
+      <div style={{width:14,height:48,background:isCp?'linear-gradient(to right,#E5EAD5,#FFF8E2,#D5C295)':'linear-gradient(to right,#3D3530,#524740,#2D2924)',borderRadius:'2px 2px 0 0'}}/>
+      <div style={{width:20,height:5,borderRadius:'0 0 3px 3px',background:isCp?'#EDEADB':'#514540'}}/>
+    </div>);
+  const MiniIsland=({ghost=false,glow=false})=>(
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:0,opacity:ghost?.42:1}}>
+      <div style={{width:70,height:10,borderRadius:'50%',
+        background:isCp?'linear-gradient(180deg,#FFFAEC,#C9A86C)':'linear-gradient(180deg,#6E6058,#4A3C34)',
+        border:glow?`1.5px solid ${isCp?'rgba(47,175,198,.7)':'rgba(130,154,162,.6)'}`:'none',
+        boxShadow:glow?'none':(isCp?'none':`0 0 8px rgba(200,95,88,.3)`),
+        borderRadius:'50% 50% 0 0'}}/>
+      <div style={{width:70,height:5,borderRadius:'0 0 50% 50%',background:isCp?'#9B7440':'#1E1610',opacity:.6}}/>
+    </div>);
+  const TargetOrb=({col,size=34,state='idle',method})=>(
+    <div style={{position:'relative',display:'flex',alignItems:'center',justifyContent:'center',width:size+36,height:size+36}}>
+      {state==='targeted'&&[size+8,size+18,size+28].map((r,i)=>(
+        <div key={i} style={{position:'absolute',width:r,height:r,borderRadius:'50%',
+          border:`${i===0?2:1}px solid ${isCp?`rgba(255,209,102,${.75-.22*i})`:`rgba(200,95,88,${.7-.22*i})`}`}}/>))}
+      <div style={{width:size,height:size,borderRadius:'50%',
+        background:`radial-gradient(circle at 35% 32%,#FFFDE8,${col}EE 55%,${col}99)`,
+        boxShadow:`0 0 ${size*.55}px ${col}55,0 0 ${size}px ${col}18`,
+        border:state==='confirmed'?`2px solid ${isCp?'rgba(130,225,160,.9)':'rgba(140,220,195,.85)'}`:'none',
+        position:'relative',zIndex:1,display:'flex',alignItems:'center',justifyContent:'center'}}>
+        {method==='ray'&&<svg width={18} height={12} viewBox="0 0 18 12"><path d="M2,6 L14,6 M10,2 L14,6 L10,10" stroke={isCp?'#24484B':'#F5EDE0'} strokeWidth={2.2} fill="none" strokeLinecap="round"/></svg>}
+        {method==='pinch'&&<svg width={14} height={12} viewBox="0 0 14 12"><path d="M1,2 L5,6 L1,10 Z M13,2 L9,6 L13,10 Z" fill={isCp?'#24484B':'#F5EDE0'}/></svg>}
+        {method==='touch'&&<svg width={18} height={18} viewBox="0 0 18 18"><circle cx="9" cy="9" r="3.5" fill={isCp?'#24484B':'#F5EDE0'}/><circle cx="9" cy="9" r="7" stroke={isCp?'rgba(36,72,75,.7)':'rgba(245,237,224,.7)'} strokeWidth={1.3} fill="none"/></svg>}
+      </div>
+    </div>);
+
+  // Crystal (placed/ghost) — small diamond prism
+  const Crystal=({tone='warm',ghost=false})=>{
+    const col=ghost?(isCp?['rgba(180,230,245,.5)','rgba(120,200,230,.5)','rgba(80,160,200,.5)']:['rgba(180,205,220,.55)','rgba(140,170,195,.5)','rgba(100,135,160,.5)']):(isCp?(tone==='warm'?['#FFE8A0','#FFCB5E','#B87830']:['#FFF5B8','#FFD97A','#C99040']):['#E8C0A0','#B57048','#5A2E18']);
+    return (
+      <svg width={50} height={70} viewBox="0 0 50 70">
+        <ellipse cx={25} cy={64} rx={14} ry={4} fill="rgba(0,0,0,.22)"/>
+        {ghost&&<defs><pattern id={`hatch-${tone}`} width={4} height={4} patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1={0} y1={0} x2={0} y2={4} stroke={isCp?'rgba(47,175,198,.4)':'rgba(160,200,220,.5)'} strokeWidth={1}/></pattern></defs>}
+        <polygon points="25,6 44,26 25,60 6,26"
+          fill={ghost?`url(#hatch-${tone})`:`url(#grad-${tone})`}
+          stroke={ghost?(isCp?'rgba(47,175,198,.85)':'rgba(160,200,220,.9)'):'rgba(60,30,10,.35)'}
+          strokeWidth={ghost?1.6:1}
+          strokeDasharray={ghost?'4,4':''}/>
+        {!ghost&&<defs><linearGradient id={`grad-${tone}`} x1={0} y1={0} x2={1} y2={1}><stop offset="0%" stopColor={col[0]}/><stop offset="50%" stopColor={col[1]}/><stop offset="100%" stopColor={col[2]}/></linearGradient></defs>}
+        <line x1={25} y1={6} x2={25} y2={60} stroke={ghost?(isCp?'rgba(47,175,198,.85)':'rgba(160,200,220,.9)'):'rgba(255,252,220,.6)'} strokeWidth={1}/>
+      </svg>);
+  };
+
+  // Waypoint marker
+  const Waypoint=({step,final=false})=>{
+    const col=final?(isCp?'#6DCFAA':'#7FD4B8'):(isCp?'#FFD166':'#E87664');
+    const dark=final?(isCp?'#0D6A45':'#2A8A72'):(isCp?'#5A3F08':'#6B2A24');
+    return (
+      <svg width={72} height={68} viewBox="0 0 72 68">
+        {[36,28,18].map((r,i)=>(
+          <ellipse key={i} cx={36} cy={48} rx={r} ry={r*.3} fill="none" stroke={col} strokeWidth={i===0?2:1.4} opacity={0.72-0.18*i}/>
+        ))}
+        <ellipse cx={36} cy={46} rx={13} ry={4.5} fill={col}/>
+        {final&&<>
+          <line x1={36} y1={16} x2={36} y2={42} stroke={dark} strokeWidth={1.8}/>
+          <polygon points="36,16 48,20 36,23" fill={col}/>
+        </>}
+        {!final&&<text x={36} y={50} textAnchor="middle" fontSize={12} fontWeight="bold" fill={dark} fontFamily="DM Mono,monospace">{step}</text>}
+      </svg>);
+  };
+
+  // Oriented key (grabbed or ghost)
+  const KeyCrystal=({ghost=false,rot=0})=>{
+    const col=ghost?null:(isCp?['#FFE082','#FFF2B5','#E0B860','#C99040','#B87830']:['#D08860','#E8C0A0','#B57048','#6E3E28','#582E18']);
+    const gCol=isCp?'rgba(47,175,198,.85)':'rgba(160,200,220,.9)';
+    return (
+      <svg width={60} height={90} viewBox="0 0 60 90" style={{transform:`rotate(${rot}deg)`}}>
+        {!ghost&&<ellipse cx={30} cy={84} rx={16} ry={4.5} fill="rgba(0,0,0,.3)"/>}
+        {/* head */}
+        <polygon points="15,14 15,28 30,4 45,14 45,28"
+          fill={ghost?'none':(isCp?'#FFE082':'#B57048')}
+          stroke={ghost?gCol:(isCp?'rgba(180,110,40,.5)':'rgba(60,30,18,.4)')}
+          strokeWidth={ghost?1.6:1}
+          strokeDasharray={ghost?'4,4':''}/>
+        {/* shaft */}
+        <rect x={23} y={28} width={14} height={52}
+          fill={ghost?'none':(isCp?'#D8A848':'#8A4E32')}
+          stroke={ghost?gCol:'none'}
+          strokeWidth={ghost?1.6:0}
+          strokeDasharray={ghost?'4,4':''}/>
+        {!ghost&&<line x1={30} y1={28} x2={30} y2={80} stroke="rgba(255,250,220,.5)" strokeWidth={1}/>}
+        {/* UP indicator */}
+        {ghost&&<>
+          <line x1={30} y1={20} x2={30} y2={8} stroke={gCol} strokeWidth={1.6}/>
+          <polyline points="26,12 30,8 34,12" stroke={gCol} strokeWidth={1.6} fill="none"/>
+        </>}
+        {!ghost&&<circle cx={30} cy={17} r={2.5} fill="rgba(255,252,230,.9)"/>}
+      </svg>);
+  };
+
+  // Controller-ray aim reticle
+  const RayReticle=()=>(
+    <svg width={64} height={40} viewBox="0 0 64 40">
+      <ellipse cx={32} cy={24} rx={22} ry={7} fill="none" stroke={isCp?'#E06456':'#E87864'} strokeWidth={1.8}/>
+      <line x1={14} y1={24} x2={50} y2={24} stroke={isCp?'#E06456':'#E87864'} strokeWidth={1.5}/>
+      <line x1={32} y1={16} x2={32} y2={32} stroke={isCp?'#E06456':'#E87864'} strokeWidth={1.5}/>
+      <path d="M58,2 L32,20" stroke={isCp?'rgba(224,100,86,.55)':'rgba(232,120,100,.6)'} strokeWidth={1.6} strokeDasharray="5,4"/>
+    </svg>);
+
+  // Pinch-halo ring (from above)
+  const PinchHalo=()=>(
+    <svg width={60} height={36} viewBox="0 0 60 36">
+      <ellipse cx={30} cy={26} rx={18} ry={5} fill="none" stroke={isCp?'rgba(47,175,198,.85)':'rgba(160,200,220,.9)'} strokeWidth={1.6} strokeDasharray="4,4"/>
+      <polygon points="22,6 27,10 22,14" fill={isCp?'#2EAEC3':'#A8CBDE'}/>
+      <polygon points="38,6 33,10 38,14" fill={isCp?'#2EAEC3':'#A8CBDE'}/>
+      <line x1={30} y1={13} x2={30} y2={22} stroke={isCp?'rgba(47,175,198,.6)':'rgba(160,200,220,.7)'} strokeWidth={1} strokeDasharray="2,3"/>
+    </svg>);
+
+  const objects={
+    selection:[
+      {label:'Ray · idle',el:<TargetOrb col={isCp?'#C9A86C':'#8A7060'} state='idle' size={32} method='ray'/>},
+      {label:'Pinch · targeted',el:<TargetOrb col={isCp?'#FFD166':'#E87664'} state='targeted' size={36} method='pinch'/>},
+      {label:'Touch · confirmed',el:<TargetOrb col={isCp?'#6DCFAA':'#7FD4B8'} state='confirmed' size={30} method='touch'/>},
+      {label:'Arch frame',el:<div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}><MiniArch/><div style={{display:'flex',gap:8}}><MiniColumn/><MiniColumn/></div></div>},
+    ],
+    placement:[
+      {label:'Surface quad',el:(
+        <div style={{width:92,height:56,border:`1.5px solid ${isCp?'rgba(47,175,198,.6)':'rgba(130,154,162,.55)'}`,borderRadius:2,position:'relative',background:isCp?'rgba(47,175,198,.05)':'rgba(130,154,162,.05)'}}>
+          {[1,2,3].map(i=><div key={i} style={{position:'absolute',left:`${i*25}%`,top:0,bottom:0,borderLeft:`1px solid ${isCp?'rgba(47,175,198,.3)':'rgba(130,154,162,.25)'}`}}/>)}
+          <div style={{position:'absolute',top:'50%',left:0,right:0,borderTop:`1px solid ${isCp?'rgba(47,175,198,.25)':'rgba(130,154,162,.22)'}`}}/>
+        </div>)},
+      {label:'Placed crystal',el:<Crystal tone='warm'/>},
+      {label:'Ghost preview',el:(
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+          <PinchHalo/>
+          <div style={{marginTop:-10}}><Crystal ghost/></div>
+        </div>)},
+      {label:'Controller ray',el:<RayReticle/>},
+    ],
+    locomotion:[
+      {label:'Waypoint 1',el:<Waypoint step={1}/>},
+      {label:'Waypoint 2',el:<Waypoint step={2}/>},
+      {label:'Destination',el:<Waypoint step={3} final/>},
+      {label:'Snap turn',el:(
+        <svg width={76} height={56} viewBox="0 0 76 56" fill="none">
+          <path d="M8,48 A36,36 0 0,1 68,48" stroke={isCp?'#FFD166':'#F4B97A'} strokeWidth="2.5" strokeLinecap="round"/>
+          {[0,1,2,3,4].map(i=>{const a=Math.PI+(Math.PI/4)*i;const x=38+36*Math.cos(a);const y=48+36*Math.sin(a);const x2=38+42*Math.cos(a);const y2=48+42*Math.sin(a);return <line key={i} x1={x} y1={y} x2={x2} y2={y2} stroke={isCp?'rgba(255,209,102,.6)':'rgba(244,185,122,.6)'} strokeWidth={1.2}/>;})}
+          <circle cx={68} cy={48} r={5} fill={isCp?'#FFD166':'#F4B97A'}/>
+          <text x="38" y="34" textAnchor="middle" style={{fontSize:12,fill:isCp?'#7A5108':'#F4B97A',fontFamily:'DM Mono,monospace',fontWeight:'bold'}}>50°</text>
+        </svg>)},
+    ],
+    manipulation:[
+      {label:'Grabbed key',el:<div style={{transform:'rotate(-18deg)'}}><KeyCrystal/></div>},
+      {label:'Target pose',el:(
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+          <KeyCrystal ghost/>
+          <svg width={46} height={14} viewBox="0 0 46 14"><ellipse cx={23} cy={7} rx={20} ry={5} fill="none" stroke={isCp?'rgba(47,175,198,.75)':'rgba(160,200,220,.75)'} strokeWidth={1.5} strokeDasharray="4,4"/></svg>
+        </div>)},
+      {label:'Dock slot',el:(
+        <div style={{width:74,height:36,position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{width:70,height:22,borderRadius:'50%',border:`1.5px dashed ${isCp?'rgba(255,209,102,.55)':'rgba(200,95,88,.52)'}`}}/>
+          <div style={{position:'absolute',fontSize:8,fontWeight:600,color:isCp?'rgba(122,81,8,.65)':'rgba(244,160,122,.7)',textAlign:'center',top:'calc(100% + 4px)',whiteSpace:'nowrap'}}>SLOT 1</div>
+        </div>)},
+      {label:'Proximity ring',el:(
+        <svg width={70} height={70} viewBox="0 0 70 70">
+          <circle cx={35} cy={35} r={30} stroke={isCp?'rgba(255,209,102,.5)':'rgba(200,95,88,.5)'} strokeWidth={1.6} strokeDasharray="4,5" fill="none"/>
+          <circle cx={35} cy={35} r={12} fill={`url(#grab-${isCp?'cp':'wn'})`}/>
+          <defs><radialGradient id={`grab-${isCp?'cp':'wn'}`}><stop offset="0%" stopColor={isCp?'#FFF2B5':'#E8C0A0'}/><stop offset="100%" stopColor={isCp?'#C99040':'#8A4E32'}/></radialGradient></defs>
+        </svg>)},
+    ],
+  };
+  const items=objects[lab]||[];
+
+  // Selection lab gets a dedicated 3×3 spec matrix (handoff asset) instead of the regular object row.
+  const SelectionMatrix=()=>{
+    const methods=[
+      {id:'ray',label:'RAY',sub:'far · controller'},
+      {id:'pinch',label:'PINCH',sub:'near · hand'},
+      {id:'touch',label:'TOUCH',sub:'near · finger'},
+    ];
+    const states=[
+      {id:'idle',label:'IDLE',hint:'default · dormant'},
+      {id:'targeted',label:'TARGETED',hint:'hover · ready to confirm'},
+      {id:'confirmed',label:'CONFIRMED',hint:'selection committed'},
+    ];
+    const stateColor=s=>s==='idle'?(isCp?'rgba(230,230,222,.55)':'rgba(220,200,180,.58)'):s==='targeted'?(isCp?'#FFD166':'#F4A07A'):(isCp?'#6DCFAA':'#7FD4B8');
+    const baseCol=s=>s==='idle'?(isCp?'#C9A86C':'#6E5E50'):s==='targeted'?(isCp?'#FFD166':'#C85F58'):(isCp?'#6DCFAA':'#7FD4B8');
+    const rowHeader=(m)=>(
+      <div style={{display:'flex',flexDirection:'column',alignItems:'flex-start',justifyContent:'center',paddingRight:12,borderRight:`1px solid ${isCp?'rgba(255,209,102,.18)':'rgba(200,95,88,.22)'}`}}>
+        <div style={{fontSize:11,fontWeight:700,color:isCp?'#FFD166':'#F4A07A',letterSpacing:'.08em'}}>{m.label}</div>
+        <div style={{fontSize:9.5,color:isCp?'rgba(230,230,222,.55)':'rgba(220,200,180,.55)',marginTop:2}}>{m.sub}</div>
+      </div>);
+    const cell=(m,s)=>{
+      const col=baseCol(s.id);
+      return (
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'6px 4px'}}>
+          <TargetOrb col={col} state={s.id} size={32} method={m.id}/>
+          <div style={{fontSize:9,fontWeight:700,color:stateColor(s.id),letterSpacing:'.04em',textTransform:'uppercase',marginTop:-2}}>
+            {s.id==='targeted'?'· targeting ·':s.id==='confirmed'?'✓ confirmed':'idle'}
+          </div>
+        </div>);
+    };
+    return (
+      <div style={{padding:'16px 20px 18px',background:bg,borderRadius:'0 0 10px 10px'}}>
+        {/* column headers */}
+        <div style={{display:'grid',gridTemplateColumns:'88px repeat(3,1fr)',gap:6,marginBottom:6,paddingLeft:2}}>
+          <div/>
+          {states.map(s=>(
+            <div key={s.id} style={{textAlign:'center',padding:'4px 0 6px',borderBottom:`2px solid ${stateColor(s.id)}44`}}>
+              <div style={{fontSize:10.5,fontWeight:700,color:stateColor(s.id),letterSpacing:'.08em'}}>{s.label}</div>
+              <div style={{fontSize:9,color:isCp?'rgba(230,230,222,.5)':'rgba(220,200,180,.55)',marginTop:2}}>{s.hint}</div>
+            </div>))}
+        </div>
+        {/* rows */}
+        {methods.map((m,ri)=>(
+          <div key={m.id} style={{display:'grid',gridTemplateColumns:'88px repeat(3,1fr)',gap:6,alignItems:'stretch',
+            borderTop:ri>0?`1px dashed ${isCp?'rgba(255,209,102,.12)':'rgba(200,95,88,.14)'}`:'none',padding:'2px 0'}}>
+            {rowHeader(m)}
+            {states.map(s=>(<div key={s.id}>{cell(m,s)}</div>))}
+          </div>))}
+        {/* footer key */}
+        <div style={{marginTop:14,paddingTop:10,borderTop:`1px solid ${isCp?'rgba(255,209,102,.14)':'rgba(200,95,88,.16)'}`,display:'flex',flexWrap:'wrap',gap:16,fontSize:9.5,color:isCp?'rgba(230,230,222,.6)':'rgba(220,200,180,.62)',letterSpacing:'.02em'}}>
+          <span><span style={{fontWeight:700,color:isCp?'#FFD166':'#F4A07A'}}>→</span> ray arrow · feed-forward aim</span>
+          <span><span style={{fontWeight:700,color:isCp?'#FFD166':'#F4A07A'}}>◂ ▸</span> pinch calipers · mid-air</span>
+          <span><span style={{fontWeight:700,color:isCp?'#FFD166':'#F4A07A'}}>○</span> touch ring · contact radius</span>
+        </div>
+      </div>);
+  };
+  return (
+    <div style={{display:'flex',flexDirection:'column'}}>
+      {/* tab bar */}
+      <div style={{display:'flex',gap:4,padding:'10px 14px 0',background:'rgba(255,255,255,.02)',borderBottom:'1px solid rgba(255,255,255,.06)'}}>
+        {LABS.map(l=>(
+          <button key={l.id} onClick={()=>setLab(l.id)} style={{padding:'5px 13px',borderRadius:'6px 6px 0 0',fontSize:12,fontWeight:lab===l.id?600:400,
+            background:lab===l.id?bg:'transparent',border:'none',
+            borderBottom:lab===l.id?`2px solid ${isCp?'#FFD166':'#C85F58'}`:'2px solid transparent',
+            color:lab===l.id?'#E8E4DF':'rgba(255,255,255,.36)',cursor:'pointer',fontFamily:'DM Sans,sans-serif',transition:'all .15s'}}>{l.label}</button>))}
+      </div>
+      {/* desc */}
+      <div style={{padding:'10px 14px',fontSize:12,color:'rgba(255,255,255,.62)',lineHeight:1.55,background:bg+'CC',borderBottom:'1px solid rgba(255,255,255,.05)'}}><span style={{fontWeight:600,color:'rgba(255,255,255,.82)'}}>{meta.modes}</span> · {meta.desc}</div>
+      {/* content */}
+      {lab==='selection'?<SelectionMatrix/>:
+        <div style={{background:bg,padding:'24px 16px 20px',display:'flex',flexWrap:'wrap',gap:18,justifyContent:'center',alignItems:'flex-end',minHeight:190,borderRadius:'0 0 10px 10px'}}>
+          {items.map(({label,el})=>(
+            <div key={label} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,minWidth:95}}>
+              <div style={{width:130,height:108,display:'flex',alignItems:'center',justifyContent:'center'}}>{el}</div>
+              <div style={{fontSize:10.5,fontWeight:600,color:isCp?'rgba(230,230,222,.92)':'rgba(235,225,215,.88)',letterSpacing:'.05em',textTransform:'uppercase',textAlign:'center'}}>{label}</div>
+            </div>))}
+        </div>}
+    </div>);
+}
+
+/* ─ Desktop UI ─ */
+const DESKLABS=[
+  {id:'selection',name:'Selection Lab',vr:true,ar:true,desc:'Target 0.28 · Confirm boost 0.15 · Haptics on · Audio off'},
+  {id:'placement',name:'Placement Lab',vr:false,ar:true,desc:'Place objects on detected surfaces using hit test.'},
+  {id:'locomotion',name:'Locomotion Lab',vr:true,ar:false,desc:'Right stick · Move 50.0 · Snap turn 50°'},
+  {id:'manipulation',name:'Manipulation Lab',vr:true,ar:false,desc:'Docking · Proximity pinch · Integrated 6DOF'},
+];
+function DesktopUI({isCp}){
+  const t=isCp?CP:WN;
+  const [activeLab,setActiveLab]=useState('selection');
+  const [hoverLab,setHoverLab]=useState(null);
+  const [hoverVR,setHoverVR]=useState(false);
+  const [hoverAR,setHoverAR]=useState(false);
+  const [railOpen,setRailOpen]=useState(true);
+  const [objSize,setObjSize]=useState(35);
+  const [opacity,setOpacity]=useState(70);
+  const [haptics,setHaptics]=useState(true);
+  const [audio,setAudio]=useState(false);
+  const [lightRef,setLightRef]=useState(false);
+  const [themeOpen,setThemeOpen]=useState(false);
+  const lab=DESKLABS.find(l=>l.id===activeLab);
+  const vrDis=!lab.vr,arDis=!lab.ar;
+  const Toggle=({on,onToggle})=>(
+    <button onClick={onToggle} style={{width:34,height:20,borderRadius:10,background:on?t.accentPrimary:t.shellBorderSubtle,position:'relative',border:'none',cursor:'pointer',transition:'background .18s',flexShrink:0}}>
+      <div style={{position:'absolute',top:2,left:on?16:2,width:16,height:16,borderRadius:8,background:'#fff',transition:'left .18s',boxShadow:'0 1px 4px rgba(0,0,0,.22)'}}/>
+    </button>);
+  const Num=({v,set,step=5,min=0,max=100})=>(
+    <div style={{display:'flex',alignItems:'center',gap:4}}>
+      <button onClick={()=>set(Math.max(min,v-step))} style={{width:24,height:24,borderRadius:5,border:`1px solid ${t.shellBorder}`,background:t.shellBg,color:t.shellText,fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>−</button>
+      <div style={{width:34,height:24,borderRadius:5,border:`1px solid ${t.shellBorder}`,background:t.shellBg,color:t.shellText,fontSize:12,display:'flex',alignItems:'center',justifyContent:'center'}}>{v}</div>
+      <button onClick={()=>set(Math.min(max,v+step))} style={{width:24,height:24,borderRadius:5,border:`1px solid ${t.shellBorder}`,background:t.shellBg,color:t.shellText,fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>+</button>
+    </div>);
+  return (
+    <div style={{display:'flex',gap:12,alignItems:'flex-start',padding:'18px',fontFamily:'DM Sans,sans-serif'}}>
+      {/* left panel */}
+      <div style={{background:t.shellElevated,border:`1px solid ${t.shellBorder}`,borderRadius:12,padding:16,display:'flex',flexDirection:'column',gap:12,flex:'0 0 355px',boxShadow:'0 4px 20px rgba(0,0,0,.09)'}}>
+        <div>
+          <div style={{fontSize:16,fontWeight:600,color:t.shellText,letterSpacing:'-.02em'}}>WebXR Playground</div>
+          <div style={{fontSize:12,color:t.shellMuted,marginTop:2}}>Pick a lab, then enter VR or AR.</div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:7}}>
+          {DESKLABS.map(l=>(
+            <button key={l.id}
+              onMouseEnter={()=>setHoverLab(l.id)} onMouseLeave={()=>setHoverLab(null)}
+              onClick={()=>setActiveLab(l.id)}
+              style={{padding:'8px 10px',border:`1.5px solid ${l.id===activeLab?t.accentBorder:t.shellBorder}`,borderRadius:9,
+                background:l.id===activeLab?t.accentSoft:hoverLab===l.id?t.shellSubtle:t.shellBg,
+                color:t.shellText,fontSize:12.5,fontWeight:l.id===activeLab?600:400,cursor:'pointer',textAlign:'center',minHeight:38,transition:'all .12s'}}>{l.name}</button>))}
+        </div>
+        <div style={{background:t.shellSubtle,border:`1px solid ${t.shellBorderSubtle}`,borderRadius:9,padding:11}}>
+          <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:6}}>
+            {lab.vr&&<span style={{display:'inline-flex',alignItems:'center',padding:'2px 7px',borderRadius:99,fontSize:10.5,fontWeight:600,border:`1px solid ${t.shellBorder}`,background:t.shellBg,color:t.shellText}}>VR</span>}
+            {lab.ar&&<span style={{display:'inline-flex',alignItems:'center',padding:'2px 7px',borderRadius:99,fontSize:10.5,fontWeight:600,border:`1px solid ${t.shellBorder}`,background:t.shellBg,color:t.shellText}}>AR</span>}
+          </div>
+          <div style={{fontSize:12,color:t.shellMuted}}>{lab.desc}</div>
+        </div>
+        <div style={{display:'flex',gap:7}}>
+          <button disabled={vrDis} onMouseEnter={()=>setHoverVR(true)} onMouseLeave={()=>setHoverVR(false)}
+            style={{flex:1,minHeight:40,borderRadius:9,fontSize:13,fontWeight:600,border:`2px solid ${vrDis?t.shellBorderSubtle:t.accentBorder}`,
+              background:hoverVR&&!vrDis?t.shellSubtle:t.shellBg,color:vrDis?t.shellMuted:t.accentPrimary,opacity:vrDis?.42:1,cursor:vrDis?'not-allowed':'pointer',transition:'all .12s'}}>Enter VR</button>
+          <button disabled={arDis} onMouseEnter={()=>setHoverAR(true)} onMouseLeave={()=>setHoverAR(false)}
+            style={{flex:1,minHeight:40,borderRadius:9,fontSize:13,fontWeight:600,border:`2px solid ${arDis?t.shellBorderSubtle:t.accentBorder}`,
+              background:arDis?t.shellBg:hoverAR?t.accentHover:t.accentPrimary,color:arDis?t.shellMuted:'#fff',opacity:arDis?.42:1,cursor:arDis?'not-allowed':'pointer',transition:'all .12s'}}>Enter AR</button>
+        </div>
+      </div>
+      {/* right col */}
+      <div style={{display:'flex',flexDirection:'column',gap:9,flex:'0 0 290px'}}>
+        <div style={{background:t.shellElevated,border:`1px solid ${t.shellBorder}`,borderRadius:12,overflow:'hidden',boxShadow:'0 4px 20px rgba(0,0,0,.09)'}}>
+          <div onClick={()=>setRailOpen(v=>!v)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'9px 13px',background:t.shellSubtle,borderBottom:`1px solid ${t.shellBorderSubtle}`,cursor:'pointer'}}>
+            <span style={{fontSize:10.5,fontWeight:600,color:t.shellMuted,letterSpacing:'.06em',textTransform:'uppercase'}}>Settings</span>
+            <span style={{color:t.shellMuted,fontSize:13}}>{railOpen?'▾':'▸'}</span>
+          </div>
+          {railOpen&&<div style={{padding:'11px 13px',display:'flex',flexDirection:'column',gap:11}}>
+            <div>
+              <div style={{fontSize:10,fontWeight:600,color:t.shellMuted,letterSpacing:'.07em',textTransform:'uppercase',marginBottom:6}}>Debug</div>
+              <div style={{display:'flex',alignItems:'center',gap:8}}><span style={{fontSize:12.5,color:t.shellText,flex:1}}>showLightRef</span><Toggle on={lightRef} onToggle={()=>setLightRef(v=>!v)}/></div>
+            </div>
+            <div>
+              <div style={{fontSize:10,fontWeight:600,color:t.shellMuted,letterSpacing:'.07em',textTransform:'uppercase',marginBottom:6}}>Placement</div>
+              <div style={{display:'flex',flexDirection:'column',gap:9}}>
+                <div>
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}><span style={{fontSize:12.5,color:t.shellText,flex:1}}>objectSize</span><Num v={objSize} set={setObjSize}/></div>
+                  <input type="range" min={0} max={100} value={objSize} onChange={e=>setObjSize(+e.target.value)} style={{width:'100%',accentColor:t.accentPrimary}}/>
+                </div>
+                <div>
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}><span style={{fontSize:12.5,color:t.shellText,flex:1}}>previewOpacity</span><Num v={opacity} set={setOpacity}/></div>
+                  <input type="range" min={0} max={100} value={opacity} onChange={e=>setOpacity(+e.target.value)} style={{width:'100%',accentColor:t.accentPrimary}}/>
+                </div>
+              </div>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:9}}>
+              <div style={{display:'flex',alignItems:'center',gap:8}}><span style={{fontSize:12.5,color:t.shellText,flex:1}}>enableHaptics</span><Toggle on={haptics} onToggle={()=>setHaptics(v=>!v)}/></div>
+              <div style={{display:'flex',alignItems:'center',gap:8}}><span style={{fontSize:12.5,color:t.shellText,flex:1}}>enableAudio</span><Toggle on={audio} onToggle={()=>setAudio(v=>!v)}/></div>
+            </div>
+            <div style={{borderTop:`1px solid ${t.shellBorderSubtle}`,paddingTop:9}}>
+              <div style={{fontSize:12,color:t.shellMuted,cursor:'pointer'}}>▸ Session log</div>
+            </div>
+          </div>}
+        </div>
+        {/* Appearance FAB */}
+        <div style={{position:'relative',alignSelf:'flex-end'}}>
+          {themeOpen&&<div style={{position:'absolute',bottom:52,right:0,width:270,background:t.shellElevated,border:`1px solid ${t.shellBorderSubtle}`,borderRadius:12,padding:15,boxShadow:'0 8px 32px rgba(0,0,0,.12)',display:'flex',flexDirection:'column',gap:11,zIndex:10}}>
+            <div style={{fontSize:14,fontWeight:600,color:t.shellText}}>Appearance</div>
+            <label style={{display:'flex',flexDirection:'column',gap:3}}>
+              <span style={{fontSize:12,fontWeight:600,color:t.shellText}}>Theme</span>
+              <select style={{height:38,border:`1px solid ${t.shellBorder}`,borderRadius:8,background:t.shellBg,color:t.shellText,fontSize:13,padding:'0 8px',fontFamily:'inherit'}}>
+                <option>Warm Night</option><option>Cloud Park</option>
+              </select>
+            </label>
+            <label style={{display:'flex',alignItems:'flex-start',gap:8,cursor:'pointer'}}>
+              <input type="checkbox" defaultChecked style={{width:17,height:17,marginTop:1,accentColor:t.accentPrimary}}/>
+              <div>
+                <div style={{fontSize:12.5,fontWeight:600,color:t.shellText}}>Show HUD in headset</div>
+                <div style={{fontSize:11,color:t.shellMuted,marginTop:1}}>Floating FPS + trial metrics widget.</div>
+              </div>
+            </label>
+            <label style={{display:'flex',alignItems:'flex-start',gap:8,cursor:'pointer'}}>
+              <input type="checkbox" defaultChecked style={{width:17,height:17,marginTop:1,accentColor:t.accentPrimary}}/>
+              <div>
+                <div style={{fontSize:12.5,fontWeight:600,color:t.shellText}}>AR alignment ring</div>
+                <div style={{fontSize:11,color:t.shellMuted,marginTop:1}}>Thin floor ring in passthrough AR.</div>
+              </div>
+            </label>
+            <button style={{height:36,borderRadius:8,border:`1px solid ${t.shellBorder}`,background:t.shellBg,color:t.shellText,fontSize:13,fontWeight:600,cursor:'pointer'}} onClick={()=>setThemeOpen(false)}>Done</button>
+          </div>}
+          <button onClick={()=>setThemeOpen(v=>!v)} style={{width:42,height:42,borderRadius:999,border:`1px solid ${t.shellBorder}`,background:t.shellElevated,color:t.shellText,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',boxShadow:'0 2px 10px rgba(0,0,0,.09)'}}>
+            <svg width={19} height={19} viewBox="0 0 24 24" fill="none"><path d="M12 3a9 9 0 1 0 9 9c0-.55-.45-1-1-1h-3a2 2 0 0 1-2-2V7a1 1 0 0 0-1-1Z" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"/><circle cx="7.5" cy="10.5" r="1.25" fill="currentColor"/><circle cx="10.5" cy="7.5" r="1.25" fill="currentColor"/><circle cx="15" cy="7.5" r="1.25" fill="currentColor"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>);
+}
+
+/* ─ Handoff spec (source of truth for engineers) ─ */
+const TOKENS_JSON={
+  'cloud-park':{
+    meta:{name:'Cloud Park',mood:'Painterly daytime · pastel · Half+Half-inspired'},
+    palette:{
+      sky:['#5DC4DF','#96D8EE','#CBE8F5','#FFE8B5'],
+      sun:{core:'#FFFEFA',halo:'rgba(255,248,210,.92)',bloom:'rgba(255,228,145,.38)'},
+      ground:['#C5EED8','#9EDDB5','#78C895'],
+      island:{topGrad:['#FFFAEC','#F0DC9E','#C9A86C'],sideGrad:['#C9A86C','#9B7440','#6B4C28'],edge:'rgba(200,175,120,.5)',scatterGold:'rgba(255,209,102,.65)'},
+      arch:{stone:'#FFF5DA',rim:'rgba(255,209,102,.88)'},
+      column:['#E5EAD5','#FFF8E2','#D5C295'],
+      cloud:'#FFFDF0',
+    },
+    orb:{
+      idle:{core:'#FFFAEE',mid:'#EDD8A0',rim:'#C4A070',base:'#C9A86C'},
+      targeted:{core:'#FFFAEE',mid:'#FFDF8A',rim:'#E0A840',base:'#FFD166',ring:'rgba(255,209,102,.78)',ringOuter:'rgba(255,209,102,.50)'},
+      confirmed:{core:'#FFFAEE',mid:'#B8E8CC',rim:'#6DCFAA',base:'#6DCFAA',halo:'rgba(109,207,170,.32)'},
+    },
+    affordance:{
+      rayArrow:'rgba(255,209,102,.35)',
+      pinchCalipers:'rgba(255,209,102,.8)',
+      touchRing:'rgba(109,207,170,.75)',
+      controllerRay:'rgba(230,100,86,.8)',
+      proximityRing:'rgba(255,209,102,.38)',
+      dockEmpty:'rgba(255,209,102,.45)',
+      dockActive:'rgba(47,175,198,.7)',
+    },
+    hud:{fill:'rgba(18,62,70,.94)',border:'rgba(255,209,102,.88)',text:'#FFF8E2',metric:'#A8E3EC',muted:'#7AABAF',accent:'#FFD166',good:'#6DCFAA'},
+    shell:{bg:'#EAF8F1',elevated:'#FFF8E8',subtle:'#DDF3E8',border:'#76BBB6',borderSubtle:'#B6DDD2',text:'#24484B',muted:'#5D7F7E'},
+    accent:{primary:'#D65F55',hover:'#B94B45',soft:'rgba(214,95,85,.15)',border:'#D65F55'},
+  },
+  'warm-night':{
+    meta:{name:'Warm Night',mood:'Late-night city · amber glow · Fifth Element-inspired'},
+    palette:{
+      sky:['#0A0E14','#161E2A','#261A16','#4A2C26'],
+      horizonGlow:'rgba(150,76,58,.38)',
+      stars:'rgba(255,248,220,.52)',
+      ground:['#272018','#111009'],
+      platform:{topGrad:['#6E6058','#4A3C34'],sideGrad:['#3E3028','#1E1610'],emberRim:'rgba(200,95,88,.68)',rimGlow:'rgba(200,95,88,.45)',gridRings:'rgba(200,185,172,.16)'},
+      arch:{stone:'#62504A',rim:'rgba(200,95,88,.8)',rimGlow:'rgba(200,95,88,.5)'},
+      column:['#3D3530','#524740','#2D2924'],
+      cityFacade:'#0F0E0C',
+      cityWindow:'rgba(200,145,78,.45)',
+    },
+    orb:{
+      idle:{core:'#F5EDE0',mid:'#6E5E50',rim:'#281C10',base:'#6E5E50'},
+      targeted:{core:'#F5EDE0',mid:'#B58866',rim:'#3E2818',base:'#C85F58',ring:'rgba(200,95,88,.8)',ringOuter:'rgba(200,95,88,.52)',ringGlow:'rgba(200,95,88,.5)'},
+      confirmed:{core:'#F5EDE0',mid:'#8ABFB0',rim:'#2F6A5E',base:'#7FD4B8',halo:'rgba(140,220,195,.3)'},
+    },
+    affordance:{
+      rayArrow:'rgba(200,95,88,.45)',
+      pinchCalipers:'rgba(240,170,100,.88)',
+      touchRing:'rgba(130,200,180,.7)',
+      controllerRay:'rgba(200,95,88,.85)',
+      proximityRing:'rgba(200,95,88,.35)',
+      dockEmpty:'rgba(200,95,88,.45)',
+      dockActive:'rgba(160,200,220,.75)',
+    },
+    hud:{fill:'rgba(60,48,42,.94)',border:'rgba(200,95,88,.84)',text:'#FFF5EA',metric:'#B4C7CC',muted:'#8A7A72',accent:'#C85F58',good:'#6AAFAA'},
+    shell:{bg:'#F0E3D4',elevated:'#FBF7EF',subtle:'#E8D7CA',border:'#B99B89',borderSubtle:'#D3BCAC',text:'#3A2820',muted:'#6B5A50'},
+    accent:{primary:'#B9564E',hover:'#97463F',soft:'rgba(185,86,78,.14)',border:'#B9564E'},
+  },
+  typography:{
+    sans:'"DM Sans", ui-sans-serif, system-ui, sans-serif',
+    mono:'"DM Mono", ui-monospace, SFMono-Regular, monospace',
+    scalePx:{hudFpsMin:16,hudFpsExp:32,hudMetric:13.5,hudMuted:11,hudLabel:9,sceneLabel:11,sceneSub:10,stateTag:9.5,shellH1:16,shellBody:12.5,shellMuted:11},
+    weights:{regular:400,medium:500,semibold:600,bold:700},
+  },
+  hudDims:{minimizedW:158,minimizedH:38,expandedW:295,expandedMinH:168,radiusMin:19,radiusExp:13,strokeW:1.4,panelShadow:'0 6px 28px rgba(0,0,0,.5)'},
+  glowRecipes:{
+    cpArchRim:{shadowBlur:0,strokeWidth:4,note:'No bloom in bright daytime; keep flat.'},
+    wnArchRim:{shadowBlur:18,shadowColor:'rgba(200,95,88,.5)',strokeWidth:4,note:'Ember ring; additive pass in engine.'},
+    wnPlatformEmber:{shadowBlur:10,shadowColor:'rgba(200,95,88,.45)',strokeWidth:2,note:'Around base of central stage only.'},
+    hudBorder:{shadowBlur:7,shadowColor:'{accent}',strokeWidth:1.4,note:'Fallback: CSS box-shadow on HTML layer.'},
+    targetedOrb:{shadowBlur:12,shadowColor:'{orb.targeted.ring}',strokeWidth:2,note:'WN only; CP targeted has no shadow, higher ring alpha instead.'},
+  },
+};
+
+const MATERIALS=[
+  ['Target orb · idle','Sphere · diameter = code `targetSize` (0.28 m default, 0.1–1.0 m Leva range)','Base color, no emissive, ring dormant','base #C9A86C · roughness 0.75 · metallic 0 · no ring','base #6E5E50 · roughness 0.80 · metallic 0 · no ring'],
+  ['Target orb · targeted','Sphere (same)','Emissive peak; 2 concentric rings at +25 / +45 mm radial from surface','base #FFD166 · emissive #FFCC44 @ 1.6× · rough 0.40 · ring rgba(255,209,102,.78) · no shadow','base #C85F58 · emissive #E07A70 @ 1.8× · rough 0.35 · ring rgba(200,95,88,.8) · ember shadow blur 12'],
+  ['Target orb · confirmed','Sphere (same)','Rings collapse; radial green halo','base #6DCFAA · halo rgba(109,207,170,.32) → transparent over r×2 · rough 0.55','base #7FD4B8 · halo rgba(140,220,195,.30) → transparent · rough 0.50'],
+  ['Arch frame','Gateway arc + 2 columns · scaled to frame the stage island beneath','Scenery framing (new · see section 04); rim-lit on WN','stone #FFF5DA · rim rgba(255,209,102,.88) · roughness 0.95 · no shadow','stone #62504A · rim rgba(200,95,88,.8) · ember shadow blur 18 alpha .5 · rough 0.95'],
+  ['Stage island / platform','Oval disk ~1.6 × 0.35 m at y=0','Central stage beneath arch (new · see section 04)','top grad #FFFAEC→#C9A86C · side #C9A86C→#6B4C28 · scatter gold dots · edge stroke rgba(200,175,120,.5)','top grad #6E6058→#4A3C34 · side #3E3028→#1E1610 · grid rings rgba(200,185,172,.16) · ember rim rgba(200,95,88,.68) blur 10'],
+  ['Placement crystal','Diamond prism · height = code `objectSize` (swap geometry only)','AR anchor on detected surface','grad #FFE8A0→#FFCB5E→#B87830 · seam rgba(255,250,220,.55) · rough 0.25 · slight SSS','grad #E8C0A0→#B57048→#5A2E18 · seam rgba(255,230,200,.6) · rough 0.30'],
+  ['Ghost crystal preview','Same silhouette · hatched/dashed','Floor-locked; follows pinch','hatch 45° rgba(47,175,198,.4) · outline dashed rgba(47,175,198,.85) · 50% alpha · halo rgba(47,175,198,.35)','hatch rgba(160,200,220,.5) · outline dashed rgba(160,200,220,.9) · halo rgba(130,180,210,.35)'],
+  ['Waypoint · step','3 stacked oval rings + disc (see section 04 — new multi-step lab)','Teleport intermediate','rings rgba(255,209,102, .72→.32) · disc grad #FFF5DA→#FFD166 · step numeral DM Mono bold 11','rings rgba(200,95,88, .72→.32) · disc grad #F5D8C0→#C85F58 · numeral #F5EDE0'],
+  ['Waypoint · destination','Same + pulse + flag','Teleport endpoint','rings rgba(109,207,170, .72→.32) · shadow blur 14 · disc #C8F0DA→#6DCFAA · flag pole #2A9A6E · flag #6DCFAA','rings rgba(140,220,195, .72→.32) · shadow blur 14 · disc #C0E8D8→#5AA896 · flag #7FD4B8'],
+  ['Key crystal · grabbed','Shaft + notched head with UP dot · height = code `objectSize`','Follows controller / pinch pose (docking mode only; Zen Garden mode unchanged)','shaft grad #C99040→#FFE082→#B87830 · head #FFF2B5→#E0B860 · UP dot rgba(255,252,230,.88) · rough 0.4','shaft #6E3E28→#D08860→#582E18 · head #E8C0A0→#B57048 · UP dot warm cream · ember shadow blur 16'],
+  ['Key crystal · ghost','Dashed outline only · no fill','Target pose at dock','stroke dashed rgba(47,175,198,.85) lw 1.6 · UP arrow inside head','stroke dashed rgba(160,200,220,.9) · UP arrow inside head'],
+  ['Dock slot','Flat oval ring sized to match key footprint','Docking target (active) + empty preview','active dashed rgba(47,175,198,.7) · empty dashed rgba(255,209,102,.45)','active dashed rgba(160,200,220,.75) · empty dashed rgba(200,95,88,.45)'],
+  ['Surface quad (debug)','Plane 2×1m · grid 10×4','Placeholder viz of detected floor; hide in prod','grid rgba(47,175,198,.55) lw 0.9','grid rgba(130,154,162,.48) lw 0.8'],
+  ['Controller ray','Dashed line segment · lw 2 · gap 6/7','From controller tip to hit point','rgba(230,100,86,.8) · no glow','rgba(200,95,88,.85) · ember bloom optional'],
+  ['Snap-turn dial','Arc + tick marks + end dot','Top-left HUD corner · 50° default','arc rgba(255,209,102,.72) lw 2.4 · dot #FFD166 · label #7A5108','arc rgba(240,170,100,.78) · dot #F4B97A · label #F4B97A'],
+];
+
+const TRANSITIONS=[
+  ['idle → targeted','Ring opacity 0→1 · pulse starts','120ms ease-out · loop 833ms (1.2Hz)','Inner ring at r+25mm, outer at r+45mm. Pulse ±15% opacity, amplitude 0.2. Haptic 5ms light.'],
+  ['targeted (hold)','Emissive intensity 1.6↔1.9 · ring opacity 0.78↔0.55','loop, 833ms period, sine','Feed-forward "ready to confirm". No cursor lock.'],
+  ['targeted → confirmed','Rings collapse · halo expands · scale pulse 1→1.08→1','180ms + 220ms + 220ms · ease-out then cubic','Radial halo peaks at r×2, fades over 400ms hold. Haptic 30ms success burst. SFX confirm ping.'],
+  ['confirmed → idle','Halo fade · emissive decay','400ms ease-in','Auto-revert 2000ms after confirm (unless re-targeted).'],
+  ['hover enter / leave (near)','Proximity outline fade-in','100ms ease-out / 160ms ease-in','Near-hand only (pinch, touch). Outline at visual r + 30mm; opacity 0.35. Off when hand retracts > 0.4m.'],
+  ['snap turn','Camera yaw step','80ms snap + 60ms settle (ease-out-back 1.8)','Default 50° increments (configurable 30/45/50/60). Vignette fade in/out 40ms for comfort.'],
+  ['teleport confirm','Fade-to-black → translate → fade-back','80 + 0 + 80ms','Instant translation between the two black frames. Whoosh SFX.'],
+  ['grab','Outline collapses · object reparents to controller','80ms ease-out','Haptic 20ms thunk. Drop shadow stays world-aligned.'],
+  ['release','Velocity transfer · outline fade','160ms ease-out','Inherit controller linear + angular velocity. Ghost reappears at last valid dock slot if any.'],
+  ['dock snap','Position + rotation lerp to target pose','240ms ease-out-back','Triggers within 0.04m position + 10° rotation of target. Haptic 30ms success. Ghost disappears.'],
+  ['AR scan reveal','Ring pulse outward from origin','600ms ease-out · single','On session start. Fills surface-quad grid progressively.'],
+];
+
+// Only intentional design overrides to the code's current spatial layout.
+// Everything not listed here should STAY as-is in src/config/labs.ts and src/labs/*.
+// Format: [lab, aspect, currentCode, designTarget, why]
+const SPATIAL_CHANGES=[
+  ['Selection','Target geometry','3 cubes (boxGeometry) · edge = `targetSize` (default 0.28 m / 0.32 m hand)','3 spheres (sphereGeometry) · diameter = same `targetSize`, unchanged tuning range','Orb silhouette reads as a painterly, pick-uppable form. Swap geometry only — keep the Leva `targetSize` tunable.'],
+  ['Selection','Ray target position','(−0.45, 1.25, −1.25) · left of centre, same depth as the others','(0, 1.60, −2.20) · eye-level, 2.2 m forward, alone','Design mock comment: "Ray sits in the middle, pushed back into the distance (smaller, higher up)." Ray = "across the room" reading.'],
+  ['Selection','Pinch + Touch positions','Mixed: touch at (0, 1.45, −0.9); pinch at (0.45, 1.25, −1.25)','Symmetric pair: pinch (−0.30, 1.35, −0.55) · touch (+0.30, 1.35, −0.55)','Both are near-hand methods and should share the same spatial role. Mock pairs them L/R at arm reach.'],
+  ['All VR labs','Scenery','No scenery — origin-only scene','Add arch (2.4 m wide × 1.6 m tall, centred at origin, base y=0) + oval stage island / platform (1.6 × 0.35 m, y=0)','Mock frames every VR scene with arch + stage. Provides spatial anchor and theme identity (CP island vs WN platform with ember rim).'],
+  ['Placement','Crystal geometry','Cube (boxGeometry) · edge = `objectSize` (default 0.12–0.14 m)','Diamond-prism silhouette · same `objectSize` as characteristic dimension','Mock draws a faceted prism with highlight seam. Swap geometry only — keep tuning range.'],
+  ['Locomotion','Lab concept','3 static "comfort target" rings at fixed positions [(±2, 0.01, −3), (0, 0.01, −5)]','3 numbered waypoints (1 → 2 → 3) linked by teleport arcs to a flagged destination','Different lab demo entirely. Mock shows multi-step teleport with labeled destination flag; current code is passive comfort markers.'],
+  ['Manipulation · docking','Grabbable geometry','Cube (boxGeometry) · edge = `objectSize` (default 0.125 m)','Key-crystal silhouette · shaft + notched head with UP indicator · same `objectSize`','Orientation matters for this puzzle. Key shape makes correct rotation legible from any angle.'],
+  ['Manipulation · docking','Dock snap tolerance','0.30 m position + 45° rotation (very forgiving)','0.04 m position + 10° rotation (tight · skill-based)','Tight snap makes alignment feel like a lock, not a vacuum. Turns the task into a genuine precision challenge.'],
+];
+
+const ENGINE_NOTES={
+  selection:'World-locked. Single directional key light (warm sun CP / cool moon WN) + ambient IBL sampled from skybox. Target 90 fps VR / 72 fps AR. Orbs are primitive spheres with emissive maps; rings are CircleGeometry with opacity animation. Controller ray = dashed LineSegments. Both hand-tracking AND controllers must work simultaneously.',
+  placement:'Anchored to WebXR hit-test results. Enable light-estimation in AR. Crystals final (low-poly BufferGeometry prism, ~200 tris). Surface quad is debug-only — gate behind showSurfaceQuad flag. 72 fps AR budget — keep shader cost low.',
+  locomotion:'Teleport arc = CatmullRom spline, 20 samples, alpha gradient along length. Waypoints = 3 stacked rings (per-ring opacity animated); destination adds additive bloom pass on WN only. Snap-turn uses camera yaw step with 40 ms comfort vignette (fade dark → translucent).',
+  manipulation:'Key crystal reparents to controller/hand on grab event. Dock slot uses trigger volume (ellipse cylinder, half-height). Snap-on-enter within tolerance. Rings billboarded (yaw-only) for aim clarity. Material tip: bump shaft roughness to 0.5 during grab for tactile look; revert on release.',
+};
+
+function HandoffSection(){
+  const [copied,setCopied]=useState(null);
+  const copy=(text,id)=>{
+    try{navigator.clipboard.writeText(text);}catch(e){}
+    setCopied(id);setTimeout(()=>setCopied(null),1500);
+  };
+  const CopyBtn=({id,text,label='Copy JSON'})=>(
+    <button onClick={()=>copy(text,id)} style={{padding:'4px 11px',borderRadius:5,border:'1px solid rgba(255,255,255,.12)',background:copied===id?'rgba(109,207,170,.12)':'rgba(255,255,255,.04)',color:copied===id?'#6DCFAA':'rgba(255,255,255,.72)',fontSize:10.5,fontFamily:'DM Mono,monospace',cursor:'pointer',transition:'all .15s'}}>{copied===id?'✓ Copied':label}</button>
+  );
+  const Block=({num,title,right,children})=>(
+    <div style={{background:'#0D1114',border:'1px solid rgba(255,255,255,.06)',borderRadius:10,overflow:'hidden'}}>
+      <div style={{padding:'11px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'rgba(255,255,255,.02)',borderBottom:'1px solid rgba(255,255,255,.05)'}}>
+        <div style={{display:'flex',alignItems:'baseline',gap:12}}>
+          <span style={{fontSize:10,color:'rgba(255,255,255,.36)',fontFamily:'DM Mono,monospace',letterSpacing:'.1em'}}>{num}</span>
+          <span style={{fontSize:13.5,fontWeight:600,color:'#E8E4DF',letterSpacing:'-.01em'}}>{title}</span>
+        </div>
+        {right}
+      </div>
+      <div style={{padding:'16px 18px'}}>{children}</div>
+    </div>
+  );
+  const Table=({headers,rows,mono=true,firstCol='bold'})=>(
+    <table style={{width:'100%',borderCollapse:'collapse',fontFamily:'DM Sans,sans-serif'}}>
+      <thead>
+        <tr style={{borderBottom:'1px solid rgba(255,255,255,.1)'}}>
+          {headers.map((h,i)=>(<th key={i} style={{padding:'6px 10px',fontSize:9.5,fontWeight:600,color:'rgba(255,255,255,.42)',textAlign:'left',letterSpacing:'.08em',textTransform:'uppercase',verticalAlign:'bottom'}}>{h}</th>))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r,ri)=>(
+          <tr key={ri} style={{borderBottom:'1px solid rgba(255,255,255,.04)'}}>
+            {r.map((c,ci)=>(
+              <td key={ci} style={{padding:'8px 10px',fontSize:11.5,lineHeight:1.5,color:ci===0&&firstCol==='bold'?'#E8E4DF':'rgba(232,228,223,.82)',fontWeight:ci===0&&firstCol==='bold'?600:400,fontFamily:mono&&ci>0?'DM Mono,monospace':'DM Sans,sans-serif',verticalAlign:'top',whiteSpace:'pre-wrap',wordBreak:'break-word'}}>{c}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+  const Swatch=({color,name,role})=>(
+    <div style={{display:'flex',alignItems:'center',gap:10,padding:'5px 0',borderBottom:'1px solid rgba(255,255,255,.04)'}}>
+      <div style={{width:26,height:26,borderRadius:5,background:color,boxShadow:'inset 0 0 0 1px rgba(255,255,255,.1), 0 0 0 1px rgba(0,0,0,.2)',flexShrink:0}}/>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:11,fontFamily:'DM Mono,monospace',color:'#E8E4DF',lineHeight:1.3}}>{name}</div>
+        <div style={{fontSize:10,color:'rgba(255,255,255,.48)',marginTop:1}}>{role}</div>
+      </div>
+      <div style={{fontSize:10,color:'rgba(255,255,255,.38)',fontFamily:'DM Mono,monospace',textAlign:'right',whiteSpace:'nowrap'}}>{color}</div>
+    </div>
+  );
+  const JSONBlock=({children,id})=>(
+    <div style={{marginTop:14,position:'relative'}}>
+      <div style={{position:'absolute',top:7,right:9,zIndex:2}}>
+        <CopyBtn id={id} text={children} label="Copy"/>
+      </div>
+      <pre style={{margin:0,padding:'12px 14px',background:'#07090B',border:'1px solid rgba(255,255,255,.06)',borderRadius:6,fontSize:10.5,lineHeight:1.5,color:'#B8D4C4',fontFamily:'DM Mono,monospace',overflowX:'auto',maxHeight:320,overflowY:'auto'}}>{children}</pre>
+    </div>
+  );
+
+  // Flatten palette into displayable swatch rows (per theme).
+  const flattenSwatches=(theme)=>{
+    const t=TOKENS_JSON[theme];
+    const out=[];
+    const push=(name,val,role)=>{if(typeof val==='string')out.push({name,color:val,role});};
+    // orb states
+    ['idle','targeted','confirmed'].forEach(s=>{
+      push(`orb.${s}.base`,t.orb[s].base,`Target orb · ${s}`);
+      if(t.orb[s].ring)push(`orb.${s}.ring`,t.orb[s].ring,`${s} ring · pulses`);
+      if(t.orb[s].halo)push(`orb.${s}.halo`,t.orb[s].halo,`${s} halo · radial`);
+    });
+    // arch + frame
+    push('arch.stone',t.palette.arch.stone,'Arch stone');
+    push('arch.rim',t.palette.arch.rim,'Arch rim · rim-lit on WN');
+    // affordance accents
+    push('affordance.controllerRay',t.affordance.controllerRay,'Controller dashed ray');
+    push('affordance.pinchCalipers',t.affordance.pinchCalipers,'Pinch caliper chevrons');
+    push('affordance.touchRing',t.affordance.touchRing,'Touch contact ring');
+    // HUD
+    push('hud.accent',t.hud.accent,'HUD rim + accent');
+    push('hud.text',t.hud.text,'HUD body text');
+    push('hud.good',t.hud.good,'HUD "good" state');
+    // shell
+    push('shell.bg',t.shell.bg,'Shell background');
+    push('shell.text',t.shell.text,'Shell body text');
+    push('accent.primary',t.accent.primary,'Shell primary action');
+    return out;
+  };
+
+  const typoRows=[
+    ['typography.sans','"DM Sans", ui-sans-serif, system-ui, sans-serif','Body + UI · weights 300/400/500/600'],
+    ['typography.mono','"DM Mono", ui-monospace, monospace','FPS counter, step numbers, tokens'],
+    ['scale.hudFpsMin','16 px (bold)','Minimized FPS numeral'],
+    ['scale.hudFpsExp','32 px (bold)','Expanded FPS numeral'],
+    ['scale.sceneLabel','11 px (bold)','Orb labels in scene'],
+    ['scale.stateTag','9.5 px (bold)','· TARGETING · / ✓ CONFIRMED'],
+    ['hudDims.minimizedW','158 × 38 px (rounded 19)','HUD pill collapsed'],
+    ['hudDims.expandedW','295 × 168+ px (rounded 13)','HUD panel expanded'],
+  ];
+
+  const glowRows=[
+    ['cpArchRim','stroke 4 px, no shadow','Bright daytime — keep flat, no bloom'],
+    ['wnArchRim','stroke 4 px · shadow blur 18 · alpha .5 rgba(200,95,88)','Ember ring; additive pass in engine'],
+    ['wnPlatformEmber','stroke 2 px · shadow blur 10','Around stage base only'],
+    ['hudBorder','stroke 1.4 px · shadow blur 7 @ accent','Outer glow; CSS box-shadow on HTML'],
+    ['targetedOrb (WN)','shadow blur 12 @ ring color','CP targeted has no shadow — uses higher ring alpha instead'],
+  ];
+
+  const tokensStr=JSON.stringify(TOKENS_JSON,null,2);
+  const materialsStr=JSON.stringify(MATERIALS.map(([name,dims,intent,cp,wn])=>({name,dims,intent,cp,wn})),null,2);
+  const transitionsStr=JSON.stringify(TRANSITIONS.map(([trigger,property,timing,notes])=>({trigger,property,timing,notes})),null,2);
+  const spatialChangesArr=SPATIAL_CHANGES.map(([lab,aspect,currentCode,designTarget,why])=>({lab,aspect,currentCode,designTarget,why}));
+  const spatialStr=JSON.stringify({note:'Only intentional design overrides to the code. See src/config/labs.ts for the full spatial layout.',changes:spatialChangesArr},null,2);
+  const fullStr=JSON.stringify({
+    version:'0.2',
+    scope:'Visual-first handoff. Spatial layout lives in src/config/labs.ts; only intentional overrides are listed under spatialChanges.',
+    tokens:TOKENS_JSON,
+    materials:MATERIALS.map(([name,dims,intent,cp,wn])=>({name,dims,intent,cp,wn})),
+    transitions:TRANSITIONS.map(([trigger,property,timing,notes])=>({trigger,property,timing,notes})),
+    spatialChanges:spatialChangesArr,
+    engineNotes:ENGINE_NOTES,
+  },null,2);
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:13}}>
+      {/* Intro */}
+      <div style={{padding:'14px 18px',background:'rgba(255,209,102,.04)',border:'1px solid rgba(255,209,102,.12)',borderRadius:10}}>
+        <div style={{fontSize:12.5,color:'#FFD166',marginBottom:5,fontWeight:600,letterSpacing:'.02em'}}>Handoff spec · v0.2 · visual-first</div>
+        <div style={{fontSize:11.5,color:'rgba(232,228,223,.82)',lineHeight:1.6,maxWidth:900}}>
+          Source of truth for the Cloud Park and Warm Night themes. Read top to bottom, then mirror values into runtime theme config. Units are <span style={{fontFamily:'DM Mono,monospace',color:'#FFD166'}}>meters</span> in world space; colors are sRGB (convert hex → linear for emissive intensity &gt; 1). Copy the JSON blocks directly — do not re-type. Missing a value? Raise before implementing; don't fill in from guesswork.
+        </div>
+        <div style={{marginTop:10,padding:'9px 12px',background:'rgba(47,175,198,.08)',border:'1px solid rgba(47,175,198,.2)',borderRadius:6,fontSize:11,color:'rgba(232,228,223,.85)',lineHeight:1.55}}>
+          <span style={{fontWeight:700,color:'#6BC8D8'}}>Scope:</span> This handoff is visual-first — tokens, materials, motion. Spatial layout (positions, radii, Leva tunables) lives in <span style={{fontFamily:'DM Mono,monospace',color:'#FFD166'}}>src/config/labs.ts</span> + <span style={{fontFamily:'DM Mono,monospace',color:'#FFD166'}}>src/labs/*</span> and is the engineer's source of truth. Section 04 lists <em>only the intentional spatial changes</em> the design overrides in code; everything else stays as-is.
+        </div>
+      </div>
+
+      {/* 1 · Tokens */}
+      <Block num="01" title="Tokens · colors, type, dimensions" right={<CopyBtn id="t-json" text={tokensStr}/>}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24,marginBottom:18}}>
+          {['cloud-park','warm-night'].map(k=>(
+            <div key={k}>
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+                <div style={{width:8,height:8,borderRadius:'50%',background:k==='cloud-park'?'#FFD166':'#C85F58'}}/>
+                <div style={{fontSize:11,fontWeight:700,color:k==='cloud-park'?'#FFD166':'#C85F58',letterSpacing:'.08em',textTransform:'uppercase'}}>{TOKENS_JSON[k].meta.name}</div>
+                <div style={{fontSize:10,color:'rgba(255,255,255,.4)',marginLeft:4}}>{TOKENS_JSON[k].meta.mood}</div>
+              </div>
+              {flattenSwatches(k).map((s,i)=><Swatch key={i} {...s}/>)}
+            </div>
+          ))}
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24}}>
+          <div>
+            <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.5)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:6}}>Typography &amp; dims</div>
+            <Table headers={['token','value','notes']} rows={typoRows}/>
+          </div>
+          <div>
+            <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.5)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:6}}>Glow recipes</div>
+            <Table headers={['recipe','spec','notes']} rows={glowRows}/>
+          </div>
+        </div>
+        <JSONBlock id="tokens-json-body">{tokensStr}</JSONBlock>
+      </Block>
+
+      {/* 2 · Materials */}
+      <Block num="02" title="Materials · scene objects" right={<CopyBtn id="m-json" text={materialsStr}/>}>
+        <div style={{fontSize:11,color:'rgba(255,255,255,.55)',marginBottom:8,lineHeight:1.5}}>
+          One row per object × theme. "Intent" is the visual role; the per-theme columns give material recipe (base / emissive / roughness / ring / shadow). States use additive deltas from the idle row — see Transitions for timing.
+        </div>
+        <div style={{overflowX:'auto'}}>
+          <Table headers={['Object','Dimensions','Intent','Cloud Park','Warm Night']} rows={MATERIALS}/>
+        </div>
+        <JSONBlock id="mat-json-body">{materialsStr}</JSONBlock>
+      </Block>
+
+      {/* 3 · Transitions */}
+      <Block num="03" title="Transitions · state changes &amp; animations" right={<CopyBtn id="tr-json" text={transitionsStr}/>}>
+        <Table headers={['Trigger','Property animated','Curve · Duration','Notes']} rows={TRANSITIONS}/>
+        <JSONBlock id="tr-json-body">{transitionsStr}</JSONBlock>
+      </Block>
+
+      {/* 4 · Spatial changes (design overrides only) */}
+      <Block num="04" title="Spatial changes · design overrides to src/config/labs.ts" right={<CopyBtn id="sp-json" text={spatialStr}/>}>
+        <div style={{fontSize:11,color:'rgba(255,255,255,.6)',marginBottom:10,lineHeight:1.55,maxWidth:920}}>
+          Only the intentional spatial deltas the design introduces. Everything else — target sizes, Leva ranges, snap-turn angle, Zen Garden mode, camera height — should stay as-is in <span style={{fontFamily:'DM Mono,monospace',color:'#FFD166'}}>src/config/labs.ts</span> / <span style={{fontFamily:'DM Mono,monospace',color:'#FFD166'}}>src/labs/*</span>. If a value isn't listed here, the engineer should not change it.
+        </div>
+        <div style={{overflowX:'auto'}}>
+          <Table headers={['Lab','Aspect','Code today','Design target','Why']} rows={SPATIAL_CHANGES}/>
+        </div>
+        <div style={{marginTop:12,padding:'9px 12px',background:'rgba(255,255,255,.03)',border:'1px dashed rgba(255,255,255,.08)',borderRadius:6,fontSize:10.5,color:'rgba(255,255,255,.58)',lineHeight:1.6}}>
+          <span style={{fontWeight:700,color:'rgba(255,255,255,.8)'}}>Explicitly unchanged from code:</span>{' '}
+          snap-turn angle (<span style={{fontFamily:'DM Mono,monospace'}}>45°</span>) ·
+          near-target size (<span style={{fontFamily:'DM Mono,monospace'}}>targetSize</span> default 0.28 m) ·
+          crystal/key size (<span style={{fontFamily:'DM Mono,monospace'}}>objectSize</span> defaults) ·
+          Manipulation Zen Garden mode (parallel dropdown option) ·
+          camera / eye height (WebXR device default) ·
+          collider vs visual radius (no separate collider today).
+        </div>
+        <JSONBlock id="sp-json-body">{spatialStr}</JSONBlock>
+      </Block>
+
+      {/* 5 · Engine notes */}
+      <Block num="05" title="Engine notes · per lab">
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+          {Object.entries(ENGINE_NOTES).map(([lab,note])=>(
+            <div key={lab} style={{padding:'12px 14px',background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)',borderRadius:7}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#FFD166',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:5}}>{lab}</div>
+              <div style={{fontSize:11.5,color:'rgba(232,228,223,.85)',lineHeight:1.6}}>{note}</div>
+            </div>
+          ))}
+        </div>
+      </Block>
+
+      {/* 6 · Full JSON */}
+      <Block num="06" title="Full handoff bundle · one JSON" right={<CopyBtn id="full-json" text={fullStr} label="Copy full bundle"/>}>
+        <div style={{fontSize:11,color:'rgba(255,255,255,.55)',marginBottom:8,lineHeight:1.5}}>
+          Everything above, collapsed into a single copyable object. Use this as the import shape for a theme-registry module. Version-stamped so the engineer can detect drift.
+        </div>
+        <JSONBlock id="full-json-body">{fullStr}</JSONBlock>
+      </Block>
+    </div>
+  );
+}
+
+/* ─ App shell ─ */
+const SECTIONS=[
+  {id:'vr',label:'VR World'},
+  {id:'objects',label:'Scene Objects'},
+  {id:'hud',label:'HUD Panel'},
+  {id:'ar',label:'AR Mode'},
+  {id:'desktop',label:'Desktop UI'},
+  {id:'handoff',label:'Handoff'},
+];
+const VR_LABS=[
+  {id:'selection',label:'Selection'},
+  {id:'placement',label:'Placement'},
+  {id:'locomotion',label:'Locomotion'},
+  {id:'manipulation',label:'Manipulation'},
+];
+
+function ThemeCard({label,accent,children}){
+  return (
+    <div style={{borderRadius:10,border:'1.5px solid rgba(255,255,255,.07)',overflow:'hidden',boxShadow:'0 4px 16px rgba(0,0,0,.22)'}}>
+      <div style={{padding:'8px 13px',background:'rgba(255,255,255,.03)',borderBottom:'1px solid rgba(255,255,255,.05)',display:'flex',alignItems:'center',gap:7}}>
+        <div style={{width:7,height:7,borderRadius:'50%',background:accent}}/>
+        <span style={{fontSize:12,fontWeight:600,color:'#BCBCBC'}}>{label}</span>
+      </div>
+      {children}
+    </div>);
+}
+
+function App(){
+  const [theme,setTheme]=useState(()=>localStorage.getItem('xrd2-theme')||'cloud-park');
+  const [section,setSection]=useState(()=>localStorage.getItem('xrd2-section')||'vr');
+  const [vrLab,setVrLab]=useState('selection');
+  const [arLab,setArLab]=useState('selection');
+  useEffect(()=>{localStorage.setItem('xrd2-theme',theme);},[theme]);
+  useEffect(()=>{localStorage.setItem('xrd2-section',section);},[section]);
+  const isCp=theme==='cloud-park';
+  const navAcc=isCp?'#FFD166':'#C85F58';
+  const navBg=isCp?'#14282C':'#110D09';
+
+  const cpDraw=useCallback(c=>drawCPVR(c,vrLab),[vrLab]);
+  const wnDraw=useCallback(c=>drawWNVR(c,vrLab),[vrLab]);
+  const cpAR=useCallback(c=>drawCPAR(c,arLab),[arLab]);
+  const wnAR=useCallback(c=>drawWNAR(c,arLab),[arLab]);
+
+  return (
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column'}}>
+      {/* nav */}
+      <div style={{background:navBg,borderBottom:'1px solid rgba(255,255,255,.06)',padding:'0 18px',display:'flex',alignItems:'center',gap:18,height:50,position:'sticky',top:0,zIndex:100,flexShrink:0}}>
+        <div style={{fontSize:12.5,fontWeight:600,color:'rgba(255,255,255,.38)',whiteSpace:'nowrap'}}>XR Playground · Themes</div>
+        <div style={{display:'flex',gap:1,background:'rgba(255,255,255,.07)',borderRadius:7,padding:3,flexShrink:0}}>
+          {[['cloud-park','☁ Cloud Park','#244C54'],['warm-night','🌆 Warm Night','#4E2018']].map(([id,lbl,abg])=>(
+            <button key={id} onClick={()=>setTheme(id)} style={{padding:'4px 12px',borderRadius:5,border:'none',cursor:'pointer',fontSize:12,fontWeight:theme===id?600:400,background:theme===id?abg:'transparent',color:theme===id?navAcc:'rgba(255,255,255,.38)',transition:'all .15s',fontFamily:'DM Sans,sans-serif'}}>{lbl}</button>))}
+        </div>
+        <div style={{fontSize:11,color:'rgba(255,255,255,.22)',flexShrink:0}}>{isCp?'Painterly · pastel · Half+Half inspired':'Late-night city · amber glow · Fifth Element inspired'}</div>
+        <div style={{display:'flex',gap:2,marginLeft:'auto'}}>
+          {SECTIONS.map(s=>(
+            <button key={s.id} onClick={()=>setSection(s.id)} style={{padding:'4px 11px',borderRadius:6,border:'none',cursor:'pointer',fontSize:12,background:section===s.id?navAcc+'22':'transparent',color:section===s.id?navAcc:'rgba(255,255,255,.34)',fontWeight:section===s.id?600:400,transition:'all .15s',fontFamily:'DM Sans,sans-serif'}}>{s.label}</button>))}
+        </div>
+      </div>
+
+      <div style={{flex:1,background:'#080B0D',overflowY:'auto'}}>
+        <div style={{padding:'18px',display:'flex',flexDirection:'column',gap:14,maxWidth:2200,margin:'0 auto'}}>
+
+          {section==='vr'&&<>
+            {/* lab picker */}
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              <span style={{fontSize:11,color:'rgba(255,255,255,.28)',marginRight:4}}>Lab:</span>
+              {VR_LABS.map(l=>(
+                <button key={l.id} onClick={()=>setVrLab(l.id)} style={{padding:'4px 12px',borderRadius:6,border:`1px solid ${vrLab===l.id?navAcc+'88':'rgba(255,255,255,.1)'}`,background:vrLab===l.id?navAcc+'14':'transparent',color:vrLab===l.id?navAcc:'rgba(255,255,255,.4)',fontSize:12,fontWeight:vrLab===l.id?600:400,cursor:'pointer',transition:'all .15s',fontFamily:'DM Sans,sans-serif'}}>{l.label}</button>))}
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:13}}>
+              <ThemeCard label={`Cloud Park · ${VR_LABS.find(l=>l.id===vrLab).label} Lab · VR`} accent="#FFD166"><SceneCanvas drawFn={cpDraw}/></ThemeCard>
+              <ThemeCard label={`Warm Night · ${VR_LABS.find(l=>l.id===vrLab).label} Lab · VR`} accent="#C85F58"><SceneCanvas drawFn={wnDraw}/></ThemeCard>
+            </div>
+          </>}
+
+          {section==='objects'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:13}}>
+            <ThemeCard label="Cloud Park · Scene Objects" accent="#FFD166"><SceneObjectsSection isCp={true}/></ThemeCard>
+            <ThemeCard label="Warm Night · Scene Objects" accent="#C85F58"><SceneObjectsSection isCp={false}/></ThemeCard>
+          </div>}
+
+          {section==='hud'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:13}}>
+            <ThemeCard label="Cloud Park · HUD Panel" accent="#FFD166"><HUDSection isCp={true}/></ThemeCard>
+            <ThemeCard label="Warm Night · HUD Panel" accent="#C85F58"><HUDSection isCp={false}/></ThemeCard>
+          </div>}
+
+          {section==='ar'&&<>
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              <span style={{fontSize:11,color:'rgba(255,255,255,.28)',marginRight:4}}>Lab (AR-capable):</span>
+              {[{id:'selection',label:'Selection'},{id:'placement',label:'Placement'}].map(l=>(
+                <button key={l.id} onClick={()=>setArLab(l.id)} style={{padding:'4px 12px',borderRadius:6,border:`1px solid ${arLab===l.id?navAcc+'88':'rgba(255,255,255,.1)'}`,background:arLab===l.id?navAcc+'14':'transparent',color:arLab===l.id?navAcc:'rgba(255,255,255,.4)',fontSize:12,fontWeight:arLab===l.id?600:400,cursor:'pointer',transition:'all .15s',fontFamily:'DM Sans,sans-serif'}}>{l.label}</button>))}
+              <span style={{fontSize:11,color:'rgba(255,255,255,.2)',marginLeft:8}}>(Locomotion & Manipulation are VR-only)</span>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:13}}>
+              <ThemeCard label={`Cloud Park · ${arLab==='selection'?'Selection':'Placement'} Lab · AR`} accent="#FFD166"><SceneCanvas drawFn={cpAR}/></ThemeCard>
+              <ThemeCard label={`Warm Night · ${arLab==='selection'?'Selection':'Placement'} Lab · AR`} accent="#C85F58"><SceneCanvas drawFn={wnAR}/></ThemeCard>
+            </div>
+          </>}
+
+          {section==='desktop'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:13}}>
+            <ThemeCard label="Cloud Park · Desktop UI" accent="#FFD166">
+              <div style={{background:'#CAEADB'}}><DesktopUI isCp={true}/></div>
+            </ThemeCard>
+            <ThemeCard label="Warm Night · Desktop UI" accent="#C85F58">
+              <div style={{background:'#E0D4CA'}}><DesktopUI isCp={false}/></div>
+            </ThemeCard>
+          </div>}
+
+          {section==='handoff'&&<HandoffSection/>}
+
+        </div>
+      </div>
+    </div>);
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

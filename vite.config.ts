@@ -129,7 +129,7 @@ function desktopLogApiPlugin(): Plugin {
 export default defineConfig({
   plugins: [react(), desktopLogApiPlugin()],
   server: {
-    port: 5173,
+    port: Number(process.env.PORT) || 5173,
     host: true,
   },
 })
