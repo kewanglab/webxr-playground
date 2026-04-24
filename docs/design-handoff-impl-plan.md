@@ -1,6 +1,6 @@
 # Design handoff · implementation plan
 
-**Status:** Phase 5 complete · Phase 6 next
+**Status:** Phase 6 complete · Phase 7 next
 **Working branch:** `claude/3d-handoff-spec` (single branch — spec + impl + living plan all live here)
 **Spec snapshot tag:** `design-handoff-v0.2` → commit [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1)
 **Spec artifact:** [design-handoff/project/XR Themes Design.html](design-handoff/project/XR%20Themes%20Design.html) — open the Handoff tab
@@ -162,31 +162,32 @@ Reframed from 3 static comfort rings to a numbered teleport sequence (1 → 2 �
 - Text numerals use drei `<Text>` default font (system fallback); spec calls for DM Mono bold. Loading the font via the `<Text>` `font` prop (with a URL) is a Phase 8 polish item.
 - `DestinationPortal` archway at z=-12.2 remains as scenery behind waypoint 3; in the spec it didn't exist as a separate element. Kept for visual continuity with the existing lab; re-evaluate in Phase 8 if it feels redundant with the flag.
 
-## Phase 6 · Scenery (arch + stage island)
+## Phase 6 · Scenery (arch + stage island) ✅
 
-Shared across all VR labs. Biggest new content.
+Net-new shared scenery per spec Section 04 — framing present across all VR labs. Wired into `VRScene` at origin behind a `showSharedScenery` Leva toggle (default on). Existing per-lab scenery (Selection pier, Locomotion StartZone, Manipulation docking table) left in place — the two layers coexist.
 
-**Target files:**
-- [src/xr/visual/CloudParkScenery.tsx](../src/xr/visual/CloudParkScenery.tsx) — extend for arch + island
-- New: `src/xr/visual/WarmNightScenery.tsx` — parallel component for WN theme
-- [src/xr/scene/VRScene.tsx](../src/xr/scene/VRScene.tsx) — wire into shared scene
-
-**Spec changes:**
-
-| Aspect | Target |
-|---|---|
-| Arch | 2.4 m wide × 1.6 m tall, centered at origin, base y=0 |
-| Stage island / platform | 1.6 × 0.35 m oval at origin, y=0 |
-| CP arch material | stone `#FFF5DA`, rim `rgba(255,209,102,.88)`, no shadow |
-| WN arch material | stone `#62504A`, rim `rgba(200,95,88,.8)`, ember shadow blur 18 alpha 0.5 |
-| CP island material | top grad `#FFFAEC → #C9A86C`, side grad `#C9A86C → #6B4C28`, gold scatter dots |
-| WN platform material | top grad `#6E6058 → #4A3C34`, side grad `#3E3028 → #1E1610`, grid rings + ember rim |
+**What landed:**
+- New file [src/xr/visual/SharedScenery.tsx](../src/xr/visual/SharedScenery.tsx) exporting two components:
+  - `SharedArch` — half-torus crown (major radius 1.2 m) on two box legs (0.4 m tall). Spec dimensions 2.4 × 1.6 m. Theme switch:
+    - **CP**: warm stone `#FFF5DA` + amber rim `#FFD166` at low emissive (0.04), flat daytime look.
+    - **WN**: dark stone `#62504A` + ember rim `#C85F58` at higher emissive (0.22), plus an additive-blended halo torus at 1.04× radius approximating the spec's "shadow blur 18." True bloom would need a post-process pass (Phase 8 polish).
+  - `StagePlatform` — oval-scaled cylinder (1.6 m × 0.35 m footprint, 4 cm thick). Theme switch:
+    - **CP**: warm-gold top `#F0DC9E` + scatter gold dots + subtle rim stripe.
+    - **WN**: dark top `#5E5248` + ember-alpha rim + additive underglow ring.
+  - Low 4 cm profile to avoid physical/virtual floor mismatch when the user stands at origin.
+- [src/xr/scene/VRScene.tsx](../src/xr/scene/VRScene.tsx) wiring: `<SharedArch position={[0,0,0]} />` + `<StagePlatform position={[0,0,0]} />` under a new `showSharedScenery` Leva toggle in the Debug folder (default `true`).
 
 **Checks:**
-- [ ] Scenery doesn't occlude lab targets
-- [ ] FPS on Quest 3 stays in budget (90 fps VR)
-- [ ] Scenery switches with theme toggle
-- [ ] Arch doesn't intersect controllers when player stands near origin
+- [x] `tsc --noEmit` clean; app loads without new runtime errors.
+- [x] Theme switches correctly (CP vs WN materials differ at the component level).
+- [ ] Arch doesn't intersect controllers / lab targets at origin — requires headset (Phase 8).
+- [ ] FPS budget on Quest 3 — new geometry is minimal (~6 meshes across arch + platform) so headroom should be fine; verify (Phase 8).
+
+**Notes / small debts:**
+- **Redundancy with per-lab scenery.** Existing labs already have stage-like elements (Selection's circular carpet + piers at z≈-1.48, Locomotion's StartZone ring at z=+0.6, Manipulation's docking table at z=-0.7). The shared arch + platform now sits at origin alongside them. On-device evaluation needed to decide whether to remove per-lab scenery in favor of the shared stage (Phase 8). In the meantime, the Leva toggle `showSharedScenery` lets us flip between the two modes for comparison.
+- **WN ember glow is faked** with an additive halo torus + emissive material. Spec's "shadow blur 18" implies a real bloom pass; deferred to Phase 8.
+- **CP platform "grad `#FFFAEC → #C9A86C`" from spec** simplified to a single emissive-tinted warm gold (`#F0DC9E`). Vertex-color gradients across the platform would require a shader or baked texture — deferred.
+- **WN platform "grid rings" on top** not yet drawn — shown only via the underglow ring. Phase 8 can add a set of concentric emissive rings if needed.
 
 ## Phase 7 · HUD refresh
 
@@ -261,4 +262,5 @@ Add future tags here as milestones land (e.g. `impl-phase-2-selection`, `impl-co
 | 2026-04-23 | 2 | [`46e9677`](https://github.com/kewanglab/webxr-playground/commit/46e9677) | Phase 2 complete. Selection Lab targets: cubes → tri-state spheres (`idle`/`targeted`/`confirmed`). New `StateOrb` + `AffordanceGlyph` components; positions from new `selectionTargetPositions` const. 1.2 Hz pulse, halo-expand choreography, auto-revert. Scenery kept. |
 | 2026-04-24 | 3 | [`724a0b0`](https://github.com/kewanglab/webxr-playground/commit/724a0b0) | Phase 3 complete. Placement Lab crystals: themed pods → `CrystalPrism` (octahedron-based diamond prism, h=`objectSize`, w=`objectSize*0.5`). New `SurfaceReticle` (controller) + `PinchHalo` (hand) source-conditional affordances; ghost wireframe approximates hatched/dashed feel. Desktop showcase simplified to solid+ghost preview pair. |
 | 2026-04-24 | 4 | [`5764c15`](https://github.com/kewanglab/webxr-playground/commit/5764c15) · cleanup [`930d0d8`](https://github.com/kewanglab/webxr-playground/commit/930d0d8) · ring tweaks [`d53ab92`](https://github.com/kewanglab/webxr-playground/commit/d53ab92) [`5eb4ac4`](https://github.com/kewanglab/webxr-playground/commit/5eb4ac4) | Phase 4 complete. Manipulation · Docking grabbed-object + ghost: themed pods → `KeyCrystal` (shaft + notched pentagonal head + UP indicator). New `ProximityRing` (hand-proximity hint). New `snapToleranceM` / `snapToleranceDeg` fields (0.04 m + 10°) with auto-snap on release + 30 ms haptic success burst. Zen Garden mode unaffected. |
-| 2026-04-24 | 5 | (this commit) | Phase 5 complete. Locomotion Lab: 3 static comfort rings → numbered teleport waypoint sequence (1 → 2 → 3-as-flagged-destination) with dashed quadratic arcs origin → W1 → W2 → W3. New `NumberedWaypoint`, `DestinationFlag`, `quadArcPoints` helpers. Snap-turn kept at 45° per design review. |
+| 2026-04-24 | 5 | [`d494d3c`](https://github.com/kewanglab/webxr-playground/commit/d494d3c) | Phase 5 complete. Locomotion Lab: 3 static comfort rings → numbered teleport waypoint sequence (1 → 2 → 3-as-flagged-destination) with dashed quadratic arcs origin → W1 → W2 → W3. New `NumberedWaypoint`, `DestinationFlag`, `quadArcPoints` helpers. Snap-turn kept at 45° per design review. |
+| 2026-04-24 | 6 | (this commit) | Phase 6 complete. New shared VR scenery: `SharedArch` (2.4×1.6 m half-torus + legs) and `StagePlatform` (1.6×0.35 m oval) in `src/xr/visual/SharedScenery.tsx`, themed CP/WN. Wired into `VRScene` at origin behind a `showSharedScenery` Leva toggle. Coexists with per-lab scenery pending Phase 8 on-device evaluation. |
