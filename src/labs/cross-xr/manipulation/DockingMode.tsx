@@ -190,61 +190,42 @@ function KeyCrystal({
 }
 
 /**
- * Dashed proximity ring around the docking object — hint that the hand is within grab range.
- * Built from short vertical cylinder posts arranged in a circle, so the ring stays visible from
- * any horizontal viewing angle (a flat XZ ring vanishes to a line when viewed from the side).
- * Opacity pulses at 1.2 Hz to read as an invitation rather than a static decal.
+ * Proximity hint ring — flat on the XZ plane, Phase 2 selection-ring style.
+ * Radius = `objectSize * 0.75` so the ring sits tight against the key with a slim margin.
+ * Opacity pulses at 1.2 Hz (matches Phase 2 targeted-ring cadence) to invite, not decorate.
  */
 function ProximityRing({
   visible,
-  radius,
+  objectSize,
   tint,
 }: {
   visible: boolean
-  radius: number
+  objectSize: number
   tint: string
 }) {
-  const matRefsRef = useRef<Array<import('three').MeshBasicMaterial | null>>([])
+  const matRef = useRef<import('three').MeshBasicMaterial | null>(null)
 
   useFrame(() => {
     if (!visible) return
     const now = performance.now() / 1000
     const phase = Math.sin(now * 1.2 * Math.PI * 2)
-    const alpha = 0.65 + 0.2 * phase // ~0.45 → 0.85 at 1.2 Hz
-    for (const m of matRefsRef.current) {
-      if (m) m.opacity = alpha
-    }
+    if (matRef.current) matRef.current.opacity = 0.55 + 0.2 * phase // 0.35 → 0.75
   })
 
   if (!visible) return null
 
-  const postCount = 20
-  const postAngleStep = (Math.PI * 2) / postCount
-  const postRadius = 0.005 // 10 mm diameter ticks
-  const postHeight = 0.04 // 4 cm tall — visible from any horizontal angle
-
+  const ringR = objectSize * 0.75
   return (
-    <group>
-      {Array.from({ length: postCount }).map((_, i) => {
-        const angle = i * postAngleStep
-        const x = Math.cos(angle) * radius
-        const z = Math.sin(angle) * radius
-        return (
-          <mesh key={i} position={[x, 0, z]}>
-            <cylinderGeometry args={[postRadius, postRadius, postHeight, 6]} />
-            <meshBasicMaterial
-              ref={(mat) => {
-                matRefsRef.current[i] = mat ?? null
-              }}
-              color={tint}
-              transparent
-              opacity={0.7}
-              depthWrite={false}
-            />
-          </mesh>
-        )
-      })}
-    </group>
+    <mesh rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[ringR - 0.004, ringR + 0.004, 48]} />
+      <meshBasicMaterial
+        ref={matRef}
+        color={tint}
+        transparent
+        opacity={0}
+        depthWrite={false}
+      />
+    </mesh>
   )
 }
 
@@ -677,12 +658,11 @@ export function DockingMode({
           accentColor={labAccents.manipulation.secondary}
           active={state.isManipulating}
         />
-        {/* Proximity ring — radius tied to grabDistance so the visual boundary matches the
-            game-mechanic threshold. Vertical-post pickets stay visible from any angle, and the
-            material pulses at 1.2 Hz inside ProximityRing. */}
+        {/* Proximity hint — flat ring at 0.75 × objectSize, Phase 2 selection-ring style.
+            Material pulse at 1.2 Hz lives inside ProximityRing. */}
         <ProximityRing
           visible={handProximate && !state.isManipulating}
-          radius={grabDistance * 2}
+          objectSize={objectSize}
           tint={xr.affordance.proximityRing}
         />
       </ManipulableObject>
