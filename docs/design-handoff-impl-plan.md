@@ -1,6 +1,6 @@
 # Design handoff · implementation plan
 
-**Status:** Phase 2 complete · Phase 3 next
+**Status:** Phase 3 complete · Phase 4 next
 **Working branch:** `claude/3d-handoff-spec` (single branch — spec + impl + living plan all live here)
 **Spec snapshot tag:** `design-handoff-v0.2` → commit [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1)
 **Spec artifact:** [design-handoff/project/XR Themes Design.html](design-handoff/project/XR%20Themes%20Design.html) — open the Handoff tab
@@ -80,24 +80,31 @@ Replaced themed per-variant tokens (kite/cylinder/capsule on pedestals) with spe
 - [ ] Pulse rate matches 1.2 Hz on the headset (deferred to Phase 8 headset test).
 - [ ] CP ring uses alpha only, no shadow blur; WN uses ember glow blur 12 (WN glow is wired via ringGlow token; full visual verification deferred to Phase 8).
 
-## Phase 3 · Placement Lab
+## Phase 3 · Placement Lab ✅
 
-**Target files:**
-- [src/labs/ar/PlacementLab.tsx](../src/labs/ar/PlacementLab.tsx)
+Replaced themed `SensorPodObject` / `CloudParkBeaconObject` with a single `CrystalPrism` component (octahedron-based diamond prism, h=`objectSize`, w=`objectSize*0.5`). Swapped floor ring + inner circle reticle for source-conditional aim affordances: warm reticle for controller aim, cool halo for pinch aim.
 
-**Spec changes:**
+**What landed in [src/labs/ar/PlacementLab.tsx](../src/labs/ar/PlacementLab.tsx):**
+- New `CrystalPrism({variant: 'solid' | 'ghost'})` component:
+  - Solid: standard material w/ emissive (warm gold CP / amber WN from `labAccents.placement.primary`), vertical highlight seam.
+  - Ghost: soft halo glow + translucent fill + wireframe outline, all cool-tinted from `xr.affordance.dockActive`. Leva `previewOpacity` wired through as `ghostAlpha` and modulates the three layers.
+- New `SurfaceReticle`: flat ellipse ring + crosshair on the surface anchor, tinted from `xr.affordance.controllerRay` (warm). Only rendered when active source is `controller`.
+- New `PinchHalo`: flat ellipse ring above the ghost at ~fingertip height + short vertical drop-line, tinted from `xr.affordance.dockActive` (cool). Only rendered when active source is `hand`.
+- `PlacedArtifact` simplified — now just a `<CrystalPrism variant="solid">`. Theme-specific scenery (FloatingCloudMat, CloudParkBeaconObject, shadow blob, wind lines) removed from placement visuals.
+- `PlacementShowcase` (formerly `CloudParkPlacementShowcase`): simplified desktop preview showing a solid + ghost crystal side-by-side with a "Enter AR to place" label. Theme-agnostic now.
 
-| Aspect | Current code | Target |
-|---|---|---|
-| Crystal geometry | cube, `objectSize` edge | diamond prism, same `objectSize` characteristic dimension |
-| Ghost preview material | basic | hatched 45°, dashed outline, cool-tinted halo (Section 02) |
-| Controller ray reticle | framework default | ellipse + crosshair, warm amber/red per theme |
-| Pinch halo ring | n/a | flat ellipse above fingertip, dashed teal/cool |
+**Removed imports:** `SensorPodObject`, `CloudParkBeaconObject`, `FloatingCloudMat`, `CloudParkShadowBlob`, `CloudParkWindLine`.
 
 **Checks:**
-- [ ] Hit-test still anchors to detected floor
-- [ ] Ghost follows hand; snaps on pinch release
-- [ ] Controller ray reticle visible without covering targets
+- [x] Hit-test still anchors to detected floor (XRHitTest logic untouched).
+- [x] Ghost follows the active source; `onSelectStart` places on pinch / trigger.
+- [x] Controller reticle vs pinch halo — mutually exclusive, source-conditional render.
+- [x] `tsc --noEmit` clean; app loads without new runtime errors.
+- [ ] Visual verification (spec alignment of materials, dashed-feel of outline, halo height) deferred to Phase 8 headset test — drei `<Text>` + canvas content isn't introspectable from the browser DOM.
+
+**Notes / small debts:**
+- Ghost wireframe approximates the spec's "hatched 45° + dashed outline" — true dashed-line rendering would need a custom shader or `Line2` geometry. Callout for Phase 8 if it doesn't read as dashed enough on device.
+- Pinch halo height uses `objectSize * 1.5` as a proxy for "fingertip above surface" since we don't track the actual fingertip mesh separately — close-enough for the ghost's anchor-bound render scope.
 
 ## Phase 4 · Manipulation Lab (Docking mode only)
 
@@ -244,4 +251,5 @@ Add future tags here as milestones land (e.g. `impl-phase-2-selection`, `impl-co
 | 2026-04-23 | — | [`89b8b4a`](https://github.com/kewanglab/webxr-playground/commit/89b8b4a) | Switched from two-branch to single-branch + tag strategy. Plan Phase 0 wording corrected. |
 | 2026-04-23 | 0 | [`e07b1f8`](https://github.com/kewanglab/webxr-playground/commit/e07b1f8) | Phase 0 complete. Cherry-picked `9aacc18` with SelectionLab.tsx skipped (7 conflicts deferred to Phase 2 rewrite). Baseline app verified green. |
 | 2026-04-23 | 1 | [`9b91dbd`](https://github.com/kewanglab/webxr-playground/commit/9b91dbd) | Phase 1 complete. Added `orb` / `affordance` / `glow` fields to `XrTheme` (both presets populated) + top-level `TYPOGRAPHY` / `HUD_DIMS` exports. No existing callers touched. |
-| 2026-04-23 | 2 | (this commit) | Phase 2 complete. Selection Lab targets: cubes → tri-state spheres (`idle`/`targeted`/`confirmed`). New `StateOrb` + `AffordanceGlyph` components; positions from new `selectionTargetPositions` const. 1.2 Hz pulse, halo-expand choreography, auto-revert. Scenery kept. |
+| 2026-04-23 | 2 | [`46e9677`](https://github.com/kewanglab/webxr-playground/commit/46e9677) | Phase 2 complete. Selection Lab targets: cubes → tri-state spheres (`idle`/`targeted`/`confirmed`). New `StateOrb` + `AffordanceGlyph` components; positions from new `selectionTargetPositions` const. 1.2 Hz pulse, halo-expand choreography, auto-revert. Scenery kept. |
+| 2026-04-24 | 3 | (this commit) | Phase 3 complete. Placement Lab crystals: themed pods → `CrystalPrism` (octahedron-based diamond prism, h=`objectSize`, w=`objectSize*0.5`). New `SurfaceReticle` (controller) + `PinchHalo` (hand) source-conditional affordances; ghost wireframe approximates hatched/dashed feel. Desktop showcase simplified to solid+ghost preview pair. |
