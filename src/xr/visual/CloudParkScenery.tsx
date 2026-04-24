@@ -3,12 +3,6 @@ import { usePlaygroundTheme } from '../theme/PlaygroundThemeContext'
 
 type Vec3 = [number, number, number]
 
-type MaterialCommon = {
-  transparent?: boolean
-  opacity?: number
-  depthWrite?: boolean
-}
-
 export function CloudParkWorld() {
   const preset = usePlaygroundTheme()
   if (preset.id !== 'cloud-park') return null
@@ -132,60 +126,6 @@ export function CloudParkPerch({
       <mesh position={[0, 0.075, 0]} scale={[1.1, 0.34, 0.86]}>
         <cylinderGeometry args={[0.28, 0.34, 0.16, 24]} />
         <meshStandardMaterial color={bodyColor} roughness={0.84} emissive={accentColor} emissiveIntensity={0.02} />
-      </mesh>
-    </group>
-  )
-}
-
-export function CloudParkBeaconObject({
-  objectSize,
-  baseColor,
-  accentColor,
-  restAccent,
-  active = false,
-  transparent = false,
-  opacity = 1,
-  depthWrite = true,
-}: {
-  objectSize: number
-  baseColor: string
-  accentColor: string
-  restAccent: string
-  active?: boolean
-  transparent?: boolean
-  opacity?: number
-  depthWrite?: boolean
-}) {
-  const accent = active ? accentColor : restAccent
-  const common: MaterialCommon = { transparent, opacity, depthWrite }
-
-  return (
-    <group>
-      <mesh position={[0, objectSize * 0.04, 0]} castShadow>
-        <capsuleGeometry args={[objectSize * 0.15, objectSize * 0.32, 6, 12]} />
-        <meshStandardMaterial
-          color={baseColor}
-          roughness={0.82}
-          metalness={0}
-          emissive={accent}
-          emissiveIntensity={active ? 0.07 : 0.02}
-          {...common}
-        />
-      </mesh>
-      <mesh position={[0, objectSize * 0.31, 0]} castShadow scale={[1, 0.78, 1]}>
-        <sphereGeometry args={[objectSize * 0.18, 14, 10]} />
-        <meshStandardMaterial
-          color={accent}
-          roughness={0.58}
-          metalness={0}
-          emissive={accent}
-          emissiveIntensity={active ? 0.14 : 0.08}
-          {...common}
-        />
-      </mesh>
-      <mesh position={[0, objectSize * 0.06, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[objectSize * 0.28, objectSize * 0.016, 6, 24]} />
-        <meshBasicMaterial color={accentColor} transparent opacity={(active ? 0.52 : 0.34) * opacity} depthWrite={false} />
       </mesh>
     </group>
   )
