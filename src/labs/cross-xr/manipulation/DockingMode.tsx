@@ -1,6 +1,7 @@
 import { Text } from '@react-three/drei'
-import { useCallback, useMemo, useState } from 'react'
-import { Euler, Quaternion, Vector3 } from 'three'
+import { useFrame } from '@react-three/fiber'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { Euler, Quaternion, Shape, Vector3 } from 'three'
 import type { ManipulationAcquisition, ManipulationTechnique } from '../ObjectManipulationLab'
 import type { ManipulationResult } from './techniques'
 import { tuningPresets } from '../../../config/labs'
@@ -10,7 +11,6 @@ import {
 } from '../../../xr/visual/kitNative'
 import { KitInstance } from '../../../xr/visual/useKitModel'
 import {
-  CloudParkBeaconObject,
   CloudParkShadowBlob,
   CloudParkSideIsland,
   CloudParkWorkbenchHandle,
@@ -20,8 +20,8 @@ import {
 import { useHandJoints } from './useHandJoints'
 import { useManipulation } from './useManipulation'
 import { ManipulableObject } from './ManipulableObject'
+import { useHapticPulse } from '../../../xr/feedback/haptics/useHapticPulse'
 import { useInitialEyeLevelOffset } from '../../../xr/core/useInitialEyeLevelOffset'
-import { SensorPodObject } from './SensorPodObject'
 
 type DockingModeProps = {
   acquisition: ManipulationAcquisition
@@ -64,91 +64,163 @@ function addYOffset(position: [number, number, number], offsetY: number): [numbe
   return [position[0], position[1] + offsetY, position[2]]
 }
 
-function DockingGhost({
+/**
+ * Key-crystal silhouette per design-handoff v0.2 Section 02 / 04 (manipulation · docking).
+ * Shaft (rectangular prism) + notched pentagonal head + UP-indicator (dot for solid, arrow for ghost).
+ * Characteristic height = `objectSize` (matches code's `tuningPresets.manipulation.objectSize` default).
+ * Orientation convention: +Y is the key's "up" axis; head sits above the shaft along +Y.
+ */
+function KeyCrystal({
   objectSize,
-  primary,
-  secondary,
-  isCloudPark,
+  variant,
+  solidColor,
+  accentColor,
+  ghostTint,
+  active = false,
 }: {
   objectSize: number
-  primary: string
-  secondary: string
-  isCloudPark: boolean
+  variant: 'solid' | 'ghost'
+  solidColor: string
+  accentColor: string
+  ghostTint?: string
+  active?: boolean
 }) {
-  if (isCloudPark) {
+  const shaftW = objectSize * 0.24
+  const shaftD = objectSize * 0.12
+  const shaftH = objectSize * 0.62
+  const headH = objectSize * 0.38
+  const headW = objectSize * 0.46
+  const shaftCenterY = shaftH * 0.5 - objectSize * 0.5 // center the whole key on its local origin
+  const headBaseY = shaftCenterY + shaftH * 0.5
+
+  // Notched-pentagon head profile (half-width 0.5, height 1.0 — scaled via Shape extrusion).
+  const headShape = useMemo(() => {
+    const s = new Shape()
+    s.moveTo(-0.5, 0)
+    s.lineTo(-0.5, 0.55)
+    s.lineTo(0, 1)
+    s.lineTo(0.5, 0.55)
+    s.lineTo(0.5, 0)
+    s.closePath()
+    return s
+  }, [])
+  const headDepth = shaftD * 1.05
+
+  if (variant === 'ghost') {
+    const tint = ghostTint ?? '#A8D4E0'
     return (
-      <CloudParkBeaconObject
-        objectSize={objectSize}
-        baseColor="#FFF3D4"
-        accentColor={primary}
-        restAccent={secondary}
-        transparent
-        opacity={0.34}
-        depthWrite={false}
-      />
+      <group>
+        {/* Shaft wireframe. */}
+        <mesh position={[0, shaftCenterY, 0]}>
+          <boxGeometry args={[shaftW, shaftH, shaftD]} />
+          <meshBasicMaterial
+            color={tint}
+            wireframe
+            transparent
+            opacity={0.95}
+            depthWrite={false}
+          />
+        </mesh>
+        {/* Head wireframe (pentagonal extrude). */}
+        <mesh
+          position={[0, headBaseY, 0]}
+          scale={[headW, headH, headDepth]}
+        >
+          <extrudeGeometry args={[headShape, { depth: 1, bevelEnabled: false }]} />
+          <meshBasicMaterial
+            color={tint}
+            wireframe
+            transparent
+            opacity={0.95}
+            depthWrite={false}
+          />
+        </mesh>
+        {/* Centered UP arrow inside head — shows required orientation. */}
+        <group position={[0, headBaseY + headH * 0.5, headDepth * 0.55]}>
+          {/* Arrow stem. */}
+          <mesh position={[0, -headH * 0.12, 0]}>
+            <boxGeometry args={[headH * 0.08, headH * 0.48, 0.002]} />
+            <meshBasicMaterial color={tint} transparent opacity={0.95} depthWrite={false} />
+          </mesh>
+          {/* Arrow tip (triangle via cone, 3 radial segments). */}
+          <mesh position={[0, headH * 0.18, 0]}>
+            <coneGeometry args={[headH * 0.18, headH * 0.22, 3]} />
+            <meshBasicMaterial color={tint} transparent opacity={0.95} depthWrite={false} />
+          </mesh>
+        </group>
+      </group>
     )
   }
 
+  const emissiveI = active ? 0.4 : 0.18
   return (
     <group>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <capsuleGeometry args={[objectSize * 0.18, objectSize * 0.36, 8, 18]} />
+      {/* Shaft. */}
+      <mesh position={[0, shaftCenterY, 0]}>
+        <boxGeometry args={[shaftW, shaftH, shaftD]} />
         <meshStandardMaterial
-          color={primary}
-          transparent
-          opacity={0.2}
-          depthWrite={false}
+          color={solidColor}
+          emissive={solidColor}
+          emissiveIntensity={emissiveI}
+          roughness={0.32}
+          metalness={0.12}
         />
       </mesh>
-      <mesh position={[0, 0, objectSize * 0.42]}>
-        <sphereGeometry args={[objectSize * 0.2, 18, 16]} />
+      {/* Pentagonal notched head. */}
+      <mesh
+        position={[0, headBaseY, 0]}
+        scale={[headW, headH, headDepth]}
+      >
+        <extrudeGeometry args={[headShape, { depth: 1, bevelEnabled: false }]} />
         <meshStandardMaterial
-          color={secondary}
-          transparent
-          opacity={0.28}
-          depthWrite={false}
+          color={accentColor}
+          emissive={accentColor}
+          emissiveIntensity={emissiveI + 0.08}
+          roughness={0.24}
+          metalness={0.18}
         />
       </mesh>
-      <mesh position={[0, objectSize * 0.28, -objectSize * 0.04]}>
-        <cylinderGeometry args={[objectSize * 0.028, objectSize * 0.028, objectSize * 0.24, 12]} />
-        <meshStandardMaterial
-          color={secondary}
-          transparent
-          opacity={0.22}
-          depthWrite={false}
-        />
+      {/* UP indicator dot — bright cream sphere embedded in head. */}
+      <mesh position={[0, headBaseY + headH * 0.55, headDepth * 0.55]}>
+        <sphereGeometry args={[objectSize * 0.04, 14, 10]} />
+        <meshBasicMaterial color="#FFFAEE" />
       </mesh>
-      <mesh position={[0, objectSize * 0.42, -objectSize * 0.04]}>
-        <sphereGeometry args={[objectSize * 0.09, 14, 12]} />
-        <meshBasicMaterial color={secondary} transparent opacity={0.4} depthWrite={false} />
-      </mesh>
-      <mesh position={[0, -objectSize * 0.24, -objectSize * 0.02]}>
-        <boxGeometry args={[objectSize * 0.3, objectSize * 0.07, objectSize * 0.2]} />
-        <meshBasicMaterial color={secondary} transparent opacity={0.42} depthWrite={false} />
-      </mesh>
-      <mesh position={[0, 0, -objectSize * 0.44]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[objectSize * 0.14, objectSize * 0.028, 8, 24]} />
-        <meshBasicMaterial color={secondary} transparent opacity={0.46} depthWrite={false} />
-      </mesh>
-      {[-1, 1].map((dir) => (
-        <mesh
-          key={`ghost-side-orb-${dir}`}
-          position={[dir * objectSize * 0.26, -objectSize * 0.05, -objectSize * 0.08]}
-        >
-          <sphereGeometry args={[objectSize * 0.1, 14, 10]} />
-          <meshBasicMaterial color={secondary} transparent opacity={0.42} depthWrite={false} />
-        </mesh>
-      ))}
-      {[-1, 1].map((dir) => (
-        <mesh
-          key={`ghost-wing-${dir}`}
-          position={[dir * objectSize * 0.1, 0, objectSize * 0.28]}
-          rotation={[0, 0, dir * 0.42]}
-        >
-          <boxGeometry args={[objectSize * 0.08, objectSize * 0.16, objectSize * 0.03]} />
-          <meshBasicMaterial color={secondary} transparent opacity={0.5} depthWrite={false} />
-        </mesh>
-      ))}
+    </group>
+  )
+}
+
+/**
+ * Dashed proximity ring (flat on XZ plane) that appears when the tracked hand enters grab range.
+ * True dashed rendering requires shader/line2; approximated here with a set of short arc segments.
+ */
+function ProximityRing({
+  visible,
+  radius,
+  tint,
+}: {
+  visible: boolean
+  radius: number
+  tint: string
+}) {
+  if (!visible) return null
+  const segmentCount = 20
+  const segmentSpan = (Math.PI * 2) / segmentCount
+  const dashFraction = 0.55
+  return (
+    <group rotation={[-Math.PI / 2, 0, 0]}>
+      {Array.from({ length: segmentCount }).map((_, i) => {
+        const a0 = i * segmentSpan
+        const a1 = a0 + segmentSpan * dashFraction
+        const midA = (a0 + a1) * 0.5
+        const midX = Math.cos(midA) * radius
+        const midY = Math.sin(midA) * radius
+        return (
+          <mesh key={i} position={[midX, midY, 0]} rotation={[0, 0, midA + Math.PI / 2]}>
+            <planeGeometry args={[radius * 0.11, 0.004]} />
+            <meshBasicMaterial color={tint} transparent opacity={0.8} depthWrite={false} />
+          </mesh>
+        )
+      })}
     </group>
   )
 }
@@ -422,6 +494,8 @@ export function DockingMode({
   const [trialIndex, setTrialIndex] = useState(0)
   const [results, setResults] = useState<TrialResult[]>([])
   const [lastResult, setLastResult] = useState<TrialResult | null>(null)
+  const pulseHaptic = useHapticPulse()
+  const [handProximate, setHandProximate] = useState(false)
 
   const currentTrial = trials[trialIndex] ?? null
   const isComplete = trialIndex >= trials.length
@@ -443,17 +517,29 @@ export function DockingMode({
         result.quaternion,
         currentTrial.targetQuaternion,
       )
+      // Design-handoff v0.2 Section 04: auto-snap on release when within tight tolerance.
+      const withinSnap =
+        positionalOffset <= DEFAULTS.docking.snapToleranceM &&
+        rotationalOffsetDeg <= DEFAULTS.docking.snapToleranceDeg
+      if (withinSnap) {
+        // Force the object's internal state to the exact target pose so the next
+        // frame renders it locked-in. (Animated ease-out-back lerp is Phase 8 polish.)
+        result.position.copy(targetPosition)
+        result.quaternion.copy(currentTrial.targetQuaternion)
+        // 30 ms success haptic burst per spec.
+        pulseHaptic('right', 0.7, 30)
+      }
       const trialResult: TrialResult = {
         trial: currentTrial,
         technique,
-        positionalOffset,
-        rotationalOffsetDeg,
+        positionalOffset: withinSnap ? 0 : positionalOffset,
+        rotationalOffsetDeg: withinSnap ? 0 : rotationalOffsetDeg,
       }
       setResults((prev) => [...prev, trialResult])
       setLastResult(trialResult)
       setTrialIndex((prev) => prev + 1)
     },
-    [currentTrial, targetPosition, technique],
+    [currentTrial, pulseHaptic, targetPosition, technique],
   )
 
   const { register, state, acquireById, releaseActive } = useManipulation({
@@ -463,6 +549,20 @@ export function DockingMode({
     cdGain,
     grabDistance,
     onRelease,
+  })
+
+  // Proximity ring: show a dashed ring on the docking object when the tracked hand
+  // comes within ~2× grabDistance of the object (hint zone).
+  const objectOriginRef = useRef(new Vector3())
+  objectOriginRef.current.copy(objectOrigin)
+  useFrame(() => {
+    if (!joints.isTracking) {
+      if (handProximate) setHandProximate(false)
+      return
+    }
+    const dist = joints.thumbTipPosition.distanceTo(objectOriginRef.current)
+    const proximate = dist < grabDistance * 2
+    if (proximate !== handProximate) setHandProximate(proximate)
   })
 
   if (isComplete) {
@@ -519,50 +619,48 @@ export function DockingMode({
         </Text>
       )}
 
-      {/* Target ghost */}
-      <mesh
+      {/* Target ghost — upright key crystal at dock, with UP arrow visible. */}
+      <group
         position={targetPosition ?? currentTrial.targetPosition}
         quaternion={currentTrial.targetQuaternion}
       >
-        <DockingGhost
+        <KeyCrystal
           objectSize={objectSize}
-          primary={labAccents.manipulation.primary}
-          secondary={labAccents.manipulation.secondary}
-          isCloudPark={isCloudPark}
+          variant="ghost"
+          solidColor={labAccents.manipulation.primary}
+          accentColor={labAccents.manipulation.secondary}
+          ghostTint={xr.affordance.dockActive}
         />
-      </mesh>
+      </group>
 
-      {/* Manipulable object */}
+      {/* Manipulable key crystal + proximity ring hint. */}
       <ManipulableObject
         id="docking-object"
         initialPosition={objectOrigin}
         hitHalfExtents={[
-          objectSize * 0.66,
-          objectSize * 0.5,
-          objectSize * 0.72,
+          objectSize * 0.3,
+          objectSize * 0.55,
+          objectSize * 0.2,
         ]}
         register={register}
         isActive={state.isManipulating && state.targetId === 'docking-object'}
         onPointerDown={acquisition === 'ray' ? () => acquireById('docking-object') : undefined}
         onPointerUp={acquisition === 'ray' ? () => releaseActive() : undefined}
       >
-        {isCloudPark ? (
-          <CloudParkBeaconObject
-            objectSize={objectSize}
-            baseColor={state.isManipulating ? '#FFF7E1' : '#FFF3D4'}
-            accentColor={labAccents.manipulation.primary}
-            restAccent={labAccents.manipulation.secondary}
-            active={state.isManipulating}
-          />
-        ) : (
-          <SensorPodObject
-            objectSize={objectSize}
-            baseColor={state.isManipulating ? '#f1e6d8' : xr.accent.stone}
-            accentColor={labAccents.manipulation.primary}
-            restAccent={labAccents.manipulation.secondary}
-            active={state.isManipulating}
-          />
-        )}
+        <KeyCrystal
+          objectSize={objectSize}
+          variant="solid"
+          solidColor={labAccents.manipulation.primary}
+          accentColor={labAccents.manipulation.secondary}
+          active={state.isManipulating}
+        />
+        {/* Proximity ring: 0.24 m radius dashed ring on the XZ plane through the key's midpoint
+            (spec Section 04). */}
+        <ProximityRing
+          visible={handProximate && !state.isManipulating}
+          radius={0.24}
+          tint={xr.affordance.proximityRing}
+        />
       </ManipulableObject>
 
       <ManipulableObject

@@ -103,8 +103,19 @@ export const tuningPresets = {
     grabDistance: 0.08,
     cdGain: 1.0,
     docking: {
+      /** Trial target offset from origin (how far the user must move the object). */
       translationOffsetM: 0.3,
+      /** Trial target rotation (how much the user must rotate to match). */
       rotationOffsetDeg: 45,
+      /**
+       * On-release snap tolerance per design-handoff v0.2 Section 04.
+       * When the released object is within both the position and rotation
+       * tolerances of the trial target, it auto-aligns to the target and the
+       * trial counts as a snapped success. Tight values produce a skill-based
+       * "lock" feel instead of a forgiving vacuum.
+       */
+      snapToleranceM: 0.04,
+      snapToleranceDeg: 10,
     },
   },
 }

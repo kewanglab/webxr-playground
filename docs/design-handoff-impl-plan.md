@@ -1,6 +1,6 @@
 # Design handoff · implementation plan
 
-**Status:** Phase 3 complete · Phase 4 next
+**Status:** Phase 4 complete · Phase 5 next
 **Working branch:** `claude/3d-handoff-spec` (single branch — spec + impl + living plan all live here)
 **Spec snapshot tag:** `design-handoff-v0.2` → commit [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1)
 **Spec artifact:** [design-handoff/project/XR Themes Design.html](design-handoff/project/XR%20Themes%20Design.html) — open the Handoff tab
@@ -106,29 +106,33 @@ Replaced themed `SensorPodObject` / `CloudParkBeaconObject` with a single `Cryst
 - Ghost wireframe approximates the spec's "hatched 45° + dashed outline" — true dashed-line rendering would need a custom shader or `Line2` geometry. Callout for Phase 8 if it doesn't read as dashed enough on device.
 - Pinch halo height uses `objectSize * 1.5` as a proxy for "fingertip above surface" since we don't track the actual fingertip mesh separately — close-enough for the ghost's anchor-bound render scope.
 
-## Phase 4 · Manipulation Lab (Docking mode only)
+## Phase 4 · Manipulation Lab (Docking mode only) ✅
 
-Zen Garden mode stays untouched — parallel dropdown option.
+Docking mode grabbed-object and target-ghost are now key crystals per spec. Zen Garden mode untouched — `ZenGardenMode.tsx` and related files were not edited. `useManipulation.ts` also untouched — snap logic lives in `DockingMode.tsx`'s `onRelease`.
 
-**Target files:**
-- [src/labs/cross-xr/manipulation/DockingMode.tsx](../src/labs/cross-xr/manipulation/DockingMode.tsx)
-- [src/labs/cross-xr/manipulation/useManipulation.ts](../src/labs/cross-xr/manipulation/useManipulation.ts)
-- [src/config/labs.ts](../src/config/labs.ts) — dock snap tolerances
+**What landed:**
+- New fields in [src/config/labs.ts](../src/config/labs.ts) `docking`:
+  - `snapToleranceM: 0.04` · `snapToleranceDeg: 10` (new — spec Section 04)
+  - `translationOffsetM: 0.3` · `rotationOffsetDeg: 45` (unchanged — these are trial *target offsets*, not tolerances; spec conflated them, keeping the meaningful trial distances)
+- New `KeyCrystal` component in [DockingMode.tsx](../src/labs/cross-xr/manipulation/DockingMode.tsx):
+  - Shaft (box) + notched pentagonal head (extruded `Shape`) + UP indicator (dot for solid, arrow for ghost).
+  - Height = `objectSize` (code default 0.125 m, Leva range unchanged).
+  - Solid: standard material with emissive, accent-tinted head per `labAccents.manipulation.{primary,secondary}`.
+  - Ghost: wireframe outlines + UP arrow (cone + stem), tinted from `xr.affordance.dockActive`.
+- New `ProximityRing` component: 0.24 m radius ring built from 20 short plane segments (dashed approximation). Visible only when the tracked hand is within `grabDistance * 2` of the object AND not actively manipulating.
+- Snap-on-release logic in `onRelease`: when `positionalOffset ≤ snapToleranceM` AND `rotationalOffsetDeg ≤ snapToleranceDeg`, the object pose is forced to the target, result recorded with zero offsets, 30 ms haptic success burst fires on the right controller.
 
-**Spec changes:**
-
-| Aspect | Current code | Target |
-|---|---|---|
-| Grabbable geometry | cube, `objectSize` edge 0.125 m | key-crystal: shaft + notched head + UP indicator, same `objectSize` as height |
-| Dock snap tolerance | **0.30 m + 45°** (forgiving) | **0.04 m + 10°** (tight · skill-based) |
-| Ghost target pose | none | dashed outline of upright key at dock, UP arrow visible |
-| Proximity ring | none | 0.24 m dashed ring, appears when hand enters grab zone |
-| Dock snap motion | instant | 240 ms ease-out-back, 30 ms haptic success burst |
+**Dropped imports in DockingMode.tsx:** `CloudParkBeaconObject`, `SensorPodObject`. Both now orphaned in the codebase after Phase 3 + 4 — cleanup in a follow-up commit.
 
 **Checks:**
-- [ ] Zen Garden mode unaffected (dropdown switches cleanly)
-- [ ] Tight snap tolerance doesn't feel punishing (playtest on headset)
-- [ ] Ghost UP arrow orientation changes with target pose
+- [x] Zen Garden mode unaffected — `ZenGardenMode.tsx` and `useManipulation.ts` not edited.
+- [x] `tsc --noEmit` clean; app loads; no new console errors.
+- [ ] Tight snap tolerance doesn't feel punishing — headset playtest required (Phase 8).
+- [ ] Ghost UP arrow orientation changes with target pose — visible in-headset only (Phase 8).
+
+**Notes / small debts:**
+- Snap motion is instant (no animation). Spec calls for 240 ms ease-out-back lerp; implementing that cleanly requires exposing the `ManipulableObject`'s group ref for animation, which is out of scope for Phase 4. Callout for Phase 8.
+- Proximity ring approximated with 20 short plane segments rather than a true dashed shader line — should read as dashed on device; revisit if not.
 
 ## Phase 5 · Locomotion Lab (concept change)
 
@@ -252,4 +256,5 @@ Add future tags here as milestones land (e.g. `impl-phase-2-selection`, `impl-co
 | 2026-04-23 | 0 | [`e07b1f8`](https://github.com/kewanglab/webxr-playground/commit/e07b1f8) | Phase 0 complete. Cherry-picked `9aacc18` with SelectionLab.tsx skipped (7 conflicts deferred to Phase 2 rewrite). Baseline app verified green. |
 | 2026-04-23 | 1 | [`9b91dbd`](https://github.com/kewanglab/webxr-playground/commit/9b91dbd) | Phase 1 complete. Added `orb` / `affordance` / `glow` fields to `XrTheme` (both presets populated) + top-level `TYPOGRAPHY` / `HUD_DIMS` exports. No existing callers touched. |
 | 2026-04-23 | 2 | [`46e9677`](https://github.com/kewanglab/webxr-playground/commit/46e9677) | Phase 2 complete. Selection Lab targets: cubes → tri-state spheres (`idle`/`targeted`/`confirmed`). New `StateOrb` + `AffordanceGlyph` components; positions from new `selectionTargetPositions` const. 1.2 Hz pulse, halo-expand choreography, auto-revert. Scenery kept. |
-| 2026-04-24 | 3 | (this commit) | Phase 3 complete. Placement Lab crystals: themed pods → `CrystalPrism` (octahedron-based diamond prism, h=`objectSize`, w=`objectSize*0.5`). New `SurfaceReticle` (controller) + `PinchHalo` (hand) source-conditional affordances; ghost wireframe approximates hatched/dashed feel. Desktop showcase simplified to solid+ghost preview pair. |
+| 2026-04-24 | 3 | [`724a0b0`](https://github.com/kewanglab/webxr-playground/commit/724a0b0) | Phase 3 complete. Placement Lab crystals: themed pods → `CrystalPrism` (octahedron-based diamond prism, h=`objectSize`, w=`objectSize*0.5`). New `SurfaceReticle` (controller) + `PinchHalo` (hand) source-conditional affordances; ghost wireframe approximates hatched/dashed feel. Desktop showcase simplified to solid+ghost preview pair. |
+| 2026-04-24 | 4 | (this commit) | Phase 4 complete. Manipulation · Docking grabbed-object + ghost: themed pods → `KeyCrystal` (shaft + notched pentagonal head + UP indicator). New `ProximityRing` (hand-proximity hint). New `snapToleranceM` / `snapToleranceDeg` fields (0.04 m + 10°) with auto-snap on release + 30 ms haptic success burst. Zen Garden mode unaffected. |
