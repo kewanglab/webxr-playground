@@ -1,9 +1,10 @@
+import { Line, Text } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { IfInSessionMode, TeleportTarget, useXRInputSourceState } from '@react-three/xr'
 import { useControls } from 'leva'
 import { stepperNumber } from '../../ui/levaPlugins/stepperNumber'
-import { useRef } from 'react'
-import { Vector3 } from 'three'
+import { useMemo, useRef } from 'react'
+import { AdditiveBlending, DoubleSide, Shape, Vector3 } from 'three'
 import { usePlaygroundStore } from '../../app/store'
 import { getLabTitle, tuningPresets } from '../../config/labs'
 import { LabHeading } from '../LabHeading'
@@ -18,6 +19,167 @@ import {
 } from '../../xr/visual/CloudParkScenery'
 import { scaleColumnAstraToHeight } from '../../xr/visual/kitNative'
 import { KitInstance } from '../../xr/visual/useKitModel'
+
+/**
+ * Sample a quadratic Bézier from `from` to `to`, with control point at the midpoint raised by
+ * `peakY`. Returns `samples + 1` points — useful input for a drei `<Line>` used as a teleport arc.
+ */
+function quadArcPoints(
+  from: [number, number, number],
+  to: [number, number, number],
+  peakY: number,
+  samples = 22,
+): [number, number, number][] {
+  const pts: [number, number, number][] = []
+  const mx = (from[0] + to[0]) * 0.5
+  const my = Math.max(from[1], to[1]) + peakY
+  const mz = (from[2] + to[2]) * 0.5
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples
+    const u = 1 - t
+    const x = u * u * from[0] + 2 * u * t * mx + t * t * to[0]
+    const y = u * u * from[1] + 2 * u * t * my + t * t * to[1]
+    const z = u * u * from[2] + 2 * u * t * mz + t * t * to[2]
+    pts.push([x, y, z])
+  }
+  return pts
+}
+
+/**
+ * 3 stacked flat rings + central disc + floating numeral (or flag when `final`).
+ * Per design-handoff v0.2 Section 02 — locomotion waypoint spec.
+ */
+function NumberedWaypoint({
+  position,
+  step,
+  final = false,
+  stepColor,
+  destinationColor,
+  bloomColor,
+  textColor,
+  textOutline,
+  showBloom,
+}: {
+  position: [number, number, number]
+  step: number
+  final?: boolean
+  stepColor: string
+  destinationColor: string
+  bloomColor: string
+  textColor: string
+  textOutline: string
+  /** WN-only: additive-blended halo beneath the rings. */
+  showBloom?: boolean
+}) {
+  const tint = final ? destinationColor : stepColor
+  const radii = final ? [0.34, 0.22, 0.14] : [0.3, 0.2, 0.13]
+  const alphas = [0.72, 0.5, 0.32]
+  const discRadius = final ? 0.15 : 0.12
+
+  return (
+    <group position={position}>
+      {/* Three stacked flat rings, slight y-stagger so they read as layered. */}
+      {radii.map((r, i) => (
+        <mesh
+          key={i}
+          position={[0, 0.012 + i * 0.004, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <ringGeometry args={[r - 0.006, r + 0.006, 48]} />
+          <meshBasicMaterial color={tint} transparent opacity={alphas[i]} depthWrite={false} />
+        </mesh>
+      ))}
+
+      {/* Central disc — brighter for destination. */}
+      <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[discRadius, 40]} />
+        <meshStandardMaterial
+          color={tint}
+          roughness={0.48}
+          emissive={tint}
+          emissiveIntensity={final ? 0.3 : 0.14}
+          transparent
+          opacity={0.9}
+        />
+      </mesh>
+
+      {/* Additive-bloom halo (destination only, shown under WN theme). */}
+      {final && showBloom && (
+        <mesh position={[0, 0.018, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.36, 0.54, 48]} />
+          <meshBasicMaterial
+            color={bloomColor}
+            transparent
+            opacity={0.42}
+            depthWrite={false}
+            blending={AdditiveBlending}
+          />
+        </mesh>
+      )}
+
+      {/* Numeral (step waypoints) or flag (destination). */}
+      {final ? (
+        <DestinationFlag poleColor={tint} pennantColor={tint} />
+      ) : (
+        <Text
+          position={[0, 0.22, 0]}
+          fontSize={0.18}
+          color={textColor}
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.01}
+          outlineColor={textOutline}
+        >
+          {step}
+        </Text>
+      )}
+    </group>
+  )
+}
+
+/** Pole + triangular pennant rising from the destination disc. */
+function DestinationFlag({
+  poleColor,
+  pennantColor,
+}: {
+  poleColor: string
+  pennantColor: string
+}) {
+  const pennantShape = useMemo(() => {
+    const s = new Shape()
+    s.moveTo(0, 0.09)
+    s.lineTo(0.24, 0)
+    s.lineTo(0, -0.09)
+    s.closePath()
+    return s
+  }, [])
+
+  return (
+    <group>
+      {/* Pole. */}
+      <mesh position={[0, 0.5, 0]}>
+        <cylinderGeometry args={[0.01, 0.012, 1.0, 8]} />
+        <meshStandardMaterial
+          color={poleColor}
+          roughness={0.52}
+          emissive={poleColor}
+          emissiveIntensity={0.12}
+        />
+      </mesh>
+      {/* Pennant — flat triangle attached to the pole. */}
+      <mesh position={[0.012, 0.88, 0]}>
+        <shapeGeometry args={[pennantShape]} />
+        <meshStandardMaterial
+          color={pennantColor}
+          roughness={0.48}
+          emissive={pennantColor}
+          emissiveIntensity={0.22}
+          side={DoubleSide}
+        />
+      </mesh>
+    </group>
+  )
+}
 
 function StartZone({
   fill,
@@ -357,11 +519,21 @@ export function LocomotionLab() {
     }
   })
 
-  const markers: [number, number, number][] = [
-    [0, 0.01, -3.2],
-    [0, 0.01, -6.2],
-    [0, 0.01, -9.2],
+  // Numbered teleport waypoints per spec Section 04 — step 3 is the flagged destination.
+  const waypoints: { position: [number, number, number]; step: number; final?: boolean }[] = [
+    { position: [0, 0, -3.2], step: 1 },
+    { position: [0, 0, -6.2], step: 2 },
+    { position: [0, 0, -9.2], step: 3, final: true },
   ]
+  // Dashed teleport arcs: origin → W1 → W2 → W3. Origin is slightly forward of user start so the
+  // first arc doesn't collide with the StartZone ring.
+  const arcChain: [number, number, number][] = [
+    [0, 0.08, 0.3],
+    ...waypoints.map((w) => [w.position[0], 0.08, w.position[2]] as [number, number, number]),
+  ]
+  const stepColor = labAccents.locomotion.primary
+  const destColor = xr.orb.confirmed.base
+  const bloomColor = xr.orb.confirmed.halo
 
   return (
     <group>
@@ -394,18 +566,42 @@ export function LocomotionLab() {
         </TeleportTarget>
       </IfInSessionMode>
 
-      {!isCloudPark && markers.map((pos, i) => (
-        <mesh key={i} position={pos} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[0.62, 28]} />
-          <meshStandardMaterial
-            color={labAccents.locomotion.primary}
-            transparent
-            opacity={0.32}
-            emissive={labAccents.locomotion.primary}
-            emissiveIntensity={0.12}
-          />
-        </mesh>
+      {/* Numbered waypoints (theme-agnostic). Step 3 is the flagged destination. */}
+      {waypoints.map((w) => (
+        <NumberedWaypoint
+          key={`waypoint-${w.step}`}
+          position={w.position}
+          step={w.step}
+          final={w.final}
+          stepColor={stepColor}
+          destinationColor={destColor}
+          bloomColor={bloomColor}
+          textColor={xr.hud.textPrimary}
+          textOutline={xr.void.clear}
+          showBloom={!isCloudPark}
+        />
       ))}
+
+      {/* Dashed teleport arcs origin → W1 → W2 → W3. */}
+      {arcChain.slice(0, -1).map((from, i) => {
+        const to = arcChain[i + 1]
+        const final = i === arcChain.length - 2
+        const color = final ? destColor : stepColor
+        return (
+          <Line
+            key={`arc-${i}`}
+            points={quadArcPoints(from, to, 0.55, 22)}
+            color={color}
+            lineWidth={2.2}
+            dashed
+            dashSize={0.12}
+            gapSize={0.09}
+            transparent
+            opacity={0.75}
+            depthWrite={false}
+          />
+        )
+      })}
 
       {[-1.6, -3.4, -5.8, -8.3, -10.7].map((z) => (
         <PathChevron

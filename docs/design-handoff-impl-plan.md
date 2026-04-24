@@ -1,6 +1,6 @@
 # Design handoff · implementation plan
 
-**Status:** Phase 4 complete · Phase 5 next
+**Status:** Phase 5 complete · Phase 6 next
 **Working branch:** `claude/3d-handoff-spec` (single branch — spec + impl + living plan all live here)
 **Spec snapshot tag:** `design-handoff-v0.2` → commit [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1)
 **Spec artifact:** [design-handoff/project/XR Themes Design.html](design-handoff/project/XR%20Themes%20Design.html) — open the Handoff tab
@@ -134,30 +134,33 @@ Docking mode grabbed-object and target-ghost are now key crystals per spec. Zen 
 - Snap motion is instant (no animation). Spec calls for 240 ms ease-out-back lerp; implementing that cleanly requires exposing the `ManipulableObject`'s group ref for animation, which is out of scope for Phase 4. Callout for Phase 8.
 - Proximity ring sizing iterated down from the spec's literal 0.24 m (which was a too-literal translation of mock pixel dimensions) to `objectSize * 0.75`. Visual language unified with Phase 2 selection rings — flat, thin, pulsing — instead of the earlier vertical-picket prototype. Flat ring becomes a thin line when viewed edge-on; accepted tradeoff for Phase 2 consistency, re-examinable at Phase 8 if headset testing surfaces an issue.
 
-## Phase 5 · Locomotion Lab (concept change)
+## Phase 5 · Locomotion Lab (concept change) ✅
 
-**Largest conceptual shift.** Current code has 3 static "comfort target" rings. Spec reframes the lab as a multi-step teleport demo.
+Reframed from 3 static comfort rings to a numbered teleport sequence (1 → 2 → 3-as-destination) with dashed arcs. Movement / turn / teleport machinery untouched — waypoints and arcs are pure visualization; the `TeleportTarget` still covers the whole floor plane so users can teleport anywhere.
 
-**Target files:**
-- [src/labs/vr/LocomotionLab.tsx](../src/labs/vr/LocomotionLab.tsx)
+**What landed in [src/labs/vr/LocomotionLab.tsx](../src/labs/vr/LocomotionLab.tsx):**
+- New `NumberedWaypoint` component: 3 stacked flat rings + central disc + a floating drei `<Text>` numeral (steps 1, 2) or a `DestinationFlag` (step 3). Step tint from `labAccents.locomotion.primary`; destination tint from `xr.orb.confirmed.base` (green/teal — matches the Phase 2 confirmed state visual language). WN theme adds an additive-blended bloom halo under the destination (`xr.orb.confirmed.halo`); CP omits the bloom to stay painterly-daytime.
+- New `DestinationFlag` subcomponent: vertical cylinder pole + triangular pennant built from a `Shape` + `shapeGeometry` (DoubleSide so it reads from any angle).
+- New `quadArcPoints` helper: samples a quadratic Bézier from A to B with a configurable peak height (currently 0.55 m). Feeds into drei `<Line>` with `dashed dashSize={0.12} gapSize={0.09}`.
+- Dashed arcs drawn origin → W1 → W2 → W3 (three arcs total). First arc starts at `(0, 0.08, 0.3)` to avoid colliding with the StartZone ring.
+- Removed: the inline `markers` block (the 3 static amber comfort rings).
 
-**Spec changes:**
-
-| Aspect | Current code | Target |
-|---|---|---|
-| Lab concept | 3 static rings at fixed positions | 3 numbered waypoints → flagged destination, linked by dashed teleport arcs |
-| Waypoint visuals | single ring, no number | 3 stacked oval rings + central disc + step numeral (DM Mono bold) |
-| Destination | n/a | flag pole + pennant above disc, green additive bloom (WN only) |
-| Arc visualization | framework default | dashed quadratic curve connecting origin → w1 → w2 → destination |
-| Snap turn | **keep at 45°** (unchanged) | 45° (spec mock showed 50° but we're overriding the override; code default wins) |
-| Comfort vignette | optional | 40 ms fade in/out on snap turn |
-
-**Note:** The "keep 45°" decision (from the design review) overrides the 50° value in the design mockup. Handoff Section 04 lists this under "Explicitly unchanged from code."
+**What stayed:**
+- Thumbstick movement + snap / smooth turn logic (snap-turn already at 45° default per `tuningPresets`; spec's "keep 45°" decision honored — spec mock's 50° was the override, explicitly rolled back during design review).
+- Scenery: `StartZone`, `PathChevron`s, `DestinationPortal` (now theatrical backdrop beyond waypoint 3), `CloudParkLocomotionScenery`, warm-theme walls + spires, terminal column / island at z=-15.8.
+- `TeleportTarget` invisible floor box.
 
 **Checks:**
-- [ ] Teleport to each numbered waypoint individually
-- [ ] Arc lines render without z-fighting
-- [ ] Destination flag is visually distinct from step waypoints
+- [x] `tsc --noEmit` clean; app loads; no new console errors.
+- [x] Snap turn preserved at 45° (per design review override).
+- [ ] Teleport to each numbered waypoint individually — requires headset (Phase 8).
+- [ ] Arc lines render without z-fighting — arcs sit at y=0.08 above the floor plane (y=0), should be safe; verify in-headset (Phase 8).
+- [ ] Destination flag reads distinctly from step waypoints — flag + green tint + optional WN bloom should be enough; verify in-headset.
+
+**Notes / small debts:**
+- Comfort vignette on snap turn (spec: 40 ms fade in/out) not implemented — needs a camera-attached overlay quad with its own animation timeline. Out of scope for Phase 5; noted for Phase 8.
+- Text numerals use drei `<Text>` default font (system fallback); spec calls for DM Mono bold. Loading the font via the `<Text>` `font` prop (with a URL) is a Phase 8 polish item.
+- `DestinationPortal` archway at z=-12.2 remains as scenery behind waypoint 3; in the spec it didn't exist as a separate element. Kept for visual continuity with the existing lab; re-evaluate in Phase 8 if it feels redundant with the flag.
 
 ## Phase 6 · Scenery (arch + stage island)
 
@@ -257,4 +260,5 @@ Add future tags here as milestones land (e.g. `impl-phase-2-selection`, `impl-co
 | 2026-04-23 | 1 | [`9b91dbd`](https://github.com/kewanglab/webxr-playground/commit/9b91dbd) | Phase 1 complete. Added `orb` / `affordance` / `glow` fields to `XrTheme` (both presets populated) + top-level `TYPOGRAPHY` / `HUD_DIMS` exports. No existing callers touched. |
 | 2026-04-23 | 2 | [`46e9677`](https://github.com/kewanglab/webxr-playground/commit/46e9677) | Phase 2 complete. Selection Lab targets: cubes → tri-state spheres (`idle`/`targeted`/`confirmed`). New `StateOrb` + `AffordanceGlyph` components; positions from new `selectionTargetPositions` const. 1.2 Hz pulse, halo-expand choreography, auto-revert. Scenery kept. |
 | 2026-04-24 | 3 | [`724a0b0`](https://github.com/kewanglab/webxr-playground/commit/724a0b0) | Phase 3 complete. Placement Lab crystals: themed pods → `CrystalPrism` (octahedron-based diamond prism, h=`objectSize`, w=`objectSize*0.5`). New `SurfaceReticle` (controller) + `PinchHalo` (hand) source-conditional affordances; ghost wireframe approximates hatched/dashed feel. Desktop showcase simplified to solid+ghost preview pair. |
-| 2026-04-24 | 4 | (this commit) | Phase 4 complete. Manipulation · Docking grabbed-object + ghost: themed pods → `KeyCrystal` (shaft + notched pentagonal head + UP indicator). New `ProximityRing` (hand-proximity hint). New `snapToleranceM` / `snapToleranceDeg` fields (0.04 m + 10°) with auto-snap on release + 30 ms haptic success burst. Zen Garden mode unaffected. |
+| 2026-04-24 | 4 | [`5764c15`](https://github.com/kewanglab/webxr-playground/commit/5764c15) · cleanup [`930d0d8`](https://github.com/kewanglab/webxr-playground/commit/930d0d8) · ring tweaks [`d53ab92`](https://github.com/kewanglab/webxr-playground/commit/d53ab92) [`5eb4ac4`](https://github.com/kewanglab/webxr-playground/commit/5eb4ac4) | Phase 4 complete. Manipulation · Docking grabbed-object + ghost: themed pods → `KeyCrystal` (shaft + notched pentagonal head + UP indicator). New `ProximityRing` (hand-proximity hint). New `snapToleranceM` / `snapToleranceDeg` fields (0.04 m + 10°) with auto-snap on release + 30 ms haptic success burst. Zen Garden mode unaffected. |
+| 2026-04-24 | 5 | (this commit) | Phase 5 complete. Locomotion Lab: 3 static comfort rings → numbered teleport waypoint sequence (1 → 2 → 3-as-flagged-destination) with dashed quadratic arcs origin → W1 → W2 → W3. New `NumberedWaypoint`, `DestinationFlag`, `quadArcPoints` helpers. Snap-turn kept at 45° per design review. |
