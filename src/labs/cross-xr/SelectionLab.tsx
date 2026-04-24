@@ -1,30 +1,37 @@
 import { Text } from '@react-three/drei'
-import { useState } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { useEffect, useRef, useState } from 'react'
 import { useControls } from 'leva'
-import { getLabTitle, tuningPresets } from '../../config/labs'
+import { Group, MeshBasicMaterial, MeshStandardMaterial } from 'three'
+import { getLabTitle, selectionTargetPositions, tuningPresets } from '../../config/labs'
 import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
 import { useHapticPulse } from '../../xr/feedback/haptics/useHapticPulse'
 import { useConfirmTone } from '../../xr/feedback/audio/useConfirmTone'
 import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
 import {
-  XR_KIT_NATIVE,
-  scalePlatformRoundForTargetCube,
-} from '../../xr/visual/kitNative'
-import {
   CloudParkArch,
-  CloudParkPerch,
   CloudParkShadowBlob,
   CloudParkSideIsland,
   CloudParkWindLine,
   FloatingCloudMat,
 } from '../../xr/visual/CloudParkScenery'
-import { useKitModel } from '../../xr/visual/useKitModel'
 import { useInitialEyeLevelOffset } from '../../xr/core/useInitialEyeLevelOffset'
 import { LabHeading } from '../LabHeading'
 
 const SELECTION_FOCUS_Y = 1.26
 
-type SelectionTokenVariant = 'ray' | 'touch' | 'grab'
+type OrbVariant = 'ray' | 'pinch' | 'touch'
+type OrbState = 'idle' | 'targeted' | 'confirmed'
+
+/** Design-handoff v0.2 Section 03 timings (seconds). */
+const PULSE_FREQ_HZ = 1.2
+const CONFIRM_COLLAPSE_S = 0.18
+const CONFIRM_HALO_EXPAND_S = 0.22
+const CONFIRM_SCALE_PULSE_S = 0.22
+const CONFIRM_HOLD_S = 1.4 // halo sits at peak alpha
+const CONFIRM_FADE_S = 0.4 // fade to idle
+const CONFIRM_TOTAL_S =
+  CONFIRM_HALO_EXPAND_S + CONFIRM_HOLD_S + CONFIRM_FADE_S // 2.02s
 
 function SelectionStage({
   stone,
@@ -206,112 +213,290 @@ function SelectionBackdropPiers({
   )
 }
 
-function SelectableTarget({
+/**
+ * Small 3D affordance hint floating next to the orb.
+ *  - ray: forward-pointing arrow chevrons
+ *  - pinch: horizontal caliper chevrons (converge)
+ *  - touch: flat contact ring
+ * Tint from `xr.affordance.*` tokens. Rendered above the orb so it doesn't intercept pointer events.
+ */
+function AffordanceGlyph({
+  variant,
+  radius,
+  tint,
+}: {
+  variant: OrbVariant
+  radius: number
+  tint: string
+}) {
+  const glyphY = radius + 0.07
+  const glyphScale = Math.max(0.04, radius * 0.5)
+
+  if (variant === 'ray') {
+    return (
+      <group position={[0, glyphY, 0]}>
+        {[0, 1, 2].map((i) => (
+          <mesh
+            key={i}
+            position={[0, i * glyphScale * 0.22, 0]}
+            rotation={[0, 0, Math.PI / 4]}
+          >
+            <planeGeometry args={[glyphScale * 0.6, glyphScale * 0.1]} />
+            <meshBasicMaterial color={tint} transparent opacity={0.55 - i * 0.12} depthWrite={false} />
+          </mesh>
+        ))}
+      </group>
+    )
+  }
+
+  if (variant === 'pinch') {
+    return (
+      <group position={[0, glyphY, 0]}>
+        {[-1, 1].map((dir) => (
+          <mesh
+            key={dir}
+            position={[dir * glyphScale * 0.55, 0, 0]}
+            rotation={[0, 0, dir * Math.PI * 0.75]}
+          >
+            <planeGeometry args={[glyphScale * 0.5, glyphScale * 0.1]} />
+            <meshBasicMaterial color={tint} transparent opacity={0.7} depthWrite={false} />
+          </mesh>
+        ))}
+      </group>
+    )
+  }
+
+  // touch
+  return (
+    <mesh position={[0, glyphY, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[glyphScale * 0.45, glyphScale * 0.58, 32]} />
+      <meshBasicMaterial color={tint} transparent opacity={0.65} depthWrite={false} />
+    </mesh>
+  )
+}
+
+/**
+ * Tri-state selection orb per design-handoff v0.2.
+ * - idle → targeted on pointer enter (120ms ease-out fade + 1.2Hz pulse on rings)
+ * - targeted → confirmed on pointer down (180ms ring collapse + 220ms halo/scale pulse)
+ * - confirmed → idle auto-revert ~2s later (400ms halo fade)
+ */
+function StateOrb({
+  variant,
   position,
-  color,
   size,
-  confirmScaleBoost,
-  enableHaptics,
-  enableAudio,
   pointerType,
   label,
-  variant,
+  sublabel,
+  enableHaptics,
+  enableAudio,
 }: {
+  variant: OrbVariant
   position: [number, number, number]
-  color: string
   size: number
-  confirmScaleBoost: number
-  enableHaptics: boolean
-  enableAudio: boolean
   pointerType: 'ray' | 'touch' | 'grab'
   label: string
-  variant: SelectionTokenVariant
+  sublabel: string
+  enableHaptics: boolean
+  enableAudio: boolean
 }) {
-  const preset = usePlaygroundTheme()
-  const { xr, shell } = preset
-  const isCloudPark = preset.id === 'cloud-park'
-  const [hovered, setHovered] = useState(false)
-  const [selected, setSelected] = useState(false)
+  const { xr } = usePlaygroundTheme()
+  const [state, setState] = useState<OrbState>('idle')
+  const groupRef = useRef<Group>(null)
+  const sphereMatRef = useRef<MeshStandardMaterial>(null)
+  const innerRingMatRef = useRef<MeshBasicMaterial>(null)
+  const outerRingMatRef = useRef<MeshBasicMaterial>(null)
+  const haloGroupRef = useRef<Group>(null)
+  const haloMatRef = useRef<MeshBasicMaterial>(null)
+  const stateStartedAt = useRef(0)
   const pulse = useHapticPulse()
   const playTone = useConfirmTone()
 
-  const s = Math.max(0.12, size)
-  const pedestal = useKitModel('platform_round', {
-    color: xr.accent.stone,
-    emissive: xr.accent.mustard,
-    emissiveIntensity: 0.18,
-    roughness: 0.85,
+  const radius = size / 2
+  const innerRingRadius = radius + 0.025
+  const outerRingRadius = radius + 0.045
+  const idleColors = xr.orb.idle
+  const targetedColors = xr.orb.targeted
+  const confirmedColors = xr.orb.confirmed
+
+  // Reset timer whenever state changes.
+  useEffect(() => {
+    stateStartedAt.current = performance.now() / 1000
+  }, [state])
+
+  useFrame(() => {
+    const now = performance.now() / 1000
+    const elapsed = now - stateStartedAt.current
+
+    // Sphere body: base color + emissive by state.
+    const mat = sphereMatRef.current
+    if (mat) {
+      if (state === 'idle') {
+        mat.emissiveIntensity = 0.15
+      } else if (state === 'targeted') {
+        // Emissive pulse 1.6 ↔ 1.9 at 1.2 Hz.
+        const phase = Math.sin(now * PULSE_FREQ_HZ * Math.PI * 2)
+        mat.emissiveIntensity = 1.75 + 0.15 * phase
+      } else if (state === 'confirmed') {
+        // Decay from 0.8 to 0.3 over the confirmed lifetime.
+        const frac = Math.min(elapsed / CONFIRM_TOTAL_S, 1)
+        mat.emissiveIntensity = 0.8 - 0.5 * frac
+      }
+    }
+
+    // Targeted rings: opacity pulse; not rendered when collapsed (state !== targeted).
+    if (state === 'targeted') {
+      const phase = Math.sin(now * PULSE_FREQ_HZ * Math.PI * 2)
+      // Inner ring 0.78 ↔ 0.55; outer 0.50 ↔ 0.30.
+      if (innerRingMatRef.current) innerRingMatRef.current.opacity = 0.665 + 0.115 * phase
+      if (outerRingMatRef.current) outerRingMatRef.current.opacity = 0.4 + 0.1 * phase
+    } else if (state === 'confirmed' && elapsed < CONFIRM_COLLAPSE_S) {
+      // Collapse over 180ms — scale inner ring down to 0 as we leave targeted.
+      const frac = 1 - elapsed / CONFIRM_COLLAPSE_S
+      if (innerRingMatRef.current) innerRingMatRef.current.opacity = 0.78 * frac
+      if (outerRingMatRef.current) outerRingMatRef.current.opacity = 0.5 * frac
+    } else {
+      if (innerRingMatRef.current) innerRingMatRef.current.opacity = 0
+      if (outerRingMatRef.current) outerRingMatRef.current.opacity = 0
+    }
+
+    // Scale pulse on confirmed entry: 1 → 1.08 → 1 over 220ms.
+    if (groupRef.current) {
+      if (state === 'confirmed' && elapsed < CONFIRM_SCALE_PULSE_S) {
+        const phase = elapsed / CONFIRM_SCALE_PULSE_S
+        const s = 1 + 0.08 * Math.sin(phase * Math.PI)
+        groupRef.current.scale.setScalar(s)
+      } else {
+        groupRef.current.scale.setScalar(1)
+      }
+    }
+
+    // Halo: expand to r×2 over 220ms, hold, fade over 400ms at end.
+    if (haloGroupRef.current && haloMatRef.current) {
+      if (state === 'confirmed') {
+        let expand = 0
+        let alpha = 0
+        if (elapsed < CONFIRM_HALO_EXPAND_S) {
+          // Expanding (ease-out).
+          expand = 1 - Math.pow(1 - elapsed / CONFIRM_HALO_EXPAND_S, 3)
+          alpha = expand
+        } else if (elapsed < CONFIRM_HALO_EXPAND_S + CONFIRM_HOLD_S) {
+          expand = 1
+          alpha = 1
+        } else {
+          // Fade to zero.
+          const fadeFrac = Math.min(
+            (elapsed - CONFIRM_HALO_EXPAND_S - CONFIRM_HOLD_S) / CONFIRM_FADE_S,
+            1,
+          )
+          expand = 1
+          alpha = 1 - fadeFrac
+        }
+        haloGroupRef.current.scale.setScalar(Math.max(expand, 0.001))
+        haloMatRef.current.opacity = alpha
+      } else {
+        haloGroupRef.current.scale.setScalar(0.001)
+        haloMatRef.current.opacity = 0
+      }
+    }
+
+    // Auto-revert to idle after total lifetime.
+    if (state === 'confirmed' && elapsed >= CONFIRM_TOTAL_S) {
+      setState('idle')
+    }
   })
-  const pedestalScale = scalePlatformRoundForTargetCube(s)
-  const activeColor = selected
-    ? shell.state.success
-    : hovered
-      ? shell.accent.primaryHover
-      : color
-  const haloColor = selected ? shell.state.success : hovered ? color : xr.accent.amber
+
+  const handlePointerEnter = () => {
+    if (state === 'idle') setState('targeted')
+  }
+  const handlePointerLeave = () => {
+    if (state === 'targeted') setState('idle')
+  }
+  const handlePointerDown = () => {
+    setState('confirmed')
+    if (enableHaptics) pulse('right', 0.6, 30)
+    if (enableAudio) playTone(720, 80)
+  }
+
+  // Pick the current base color for the sphere material (deeply tied to state).
+  let sphereBase = idleColors.base
+  if (state === 'targeted') sphereBase = targetedColors.base
+  else if (state === 'confirmed') sphereBase = confirmedColors.base
+
+  // Halo peak scale is r×2 (spec). The group scale above represents 0..1 progress.
+  const haloPeakRadius = radius * 2
+
+  // Affordance tint by variant.
+  const affordanceTint =
+    variant === 'ray'
+      ? xr.affordance.rayArrow
+      : variant === 'pinch'
+        ? xr.affordance.pinchCalipers
+        : xr.affordance.touchRing
 
   return (
-    <group position={position} scale={hovered ? 1 + confirmScaleBoost : 1}>
-      {isCloudPark ? (
-        <CloudParkPerch
-          position={[0, -s / 2 - 0.035, 0]}
-          scale={s}
-          bodyColor={xr.accent.stone}
-          rimColor={haloColor}
-          accentColor={activeColor}
+    <group ref={groupRef} position={position}>
+      {/* Sphere body — pointer target. */}
+      <mesh
+        pointerEventsType={{ allow: pointerType }}
+        onPointerEnter={handlePointerEnter}
+        onPointerLeave={handlePointerLeave}
+        onPointerDown={handlePointerDown}
+      >
+        <sphereGeometry args={[radius, 40, 28]} />
+        <meshStandardMaterial
+          ref={sphereMatRef}
+          color={sphereBase}
+          emissive={sphereBase}
+          emissiveIntensity={0.15}
+          roughness={0.55}
+          metalness={0}
         />
-      ) : (
-        <primitive
-          object={pedestal}
-          position={[
-            0,
-            -s / 2 - XR_KIT_NATIVE.platformRoundTopY * pedestalScale,
-            0,
-          ]}
-          scale={pedestalScale}
-        />
-      )}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -s / 2 + 0.01, 0]}>
-        <ringGeometry args={[s * 0.48, s * 0.62, 36]} />
+      </mesh>
+
+      {/* Targeted rings — flat, face-up on Y plane through orb centre. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[innerRingRadius - 0.004, innerRingRadius + 0.004, 48]} />
         <meshBasicMaterial
-          color={haloColor}
+          ref={innerRingMatRef}
+          color={targetedColors.ring}
           transparent
-          opacity={selected || hovered ? 0.76 : 0.46}
+          opacity={0}
           depthWrite={false}
         />
       </mesh>
-      <mesh
-        pointerEventsType={{ allow: pointerType }}
-        onPointerEnter={() => setHovered(true)}
-        onPointerLeave={() => setHovered(false)}
-        onPointerDown={() => {
-          setSelected((prev) => !prev)
-          if (enableHaptics) pulse('right', 0.45, 55)
-          if (enableAudio) playTone(700, 70)
-        }}
-      >
-        <boxGeometry args={[s * 1.05, s * 1.16, s * 1.05]} />
-        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-      </mesh>
-      <group position={[0, -s / 2 + 0.13, 0]}>
-        <SelectionToken
-          variant={variant}
-          size={s}
-          activeColor={activeColor}
-          bodyColor={xr.accent.stone}
-          trimColor={xr.accent.mustard}
-          systemColor={xr.accent.cyan}
-          selected={selected}
-          hovered={hovered}
-          isCloudPark={isCloudPark}
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[outerRingRadius - 0.003, outerRingRadius + 0.003, 48]} />
+        <meshBasicMaterial
+          ref={outerRingMatRef}
+          color={targetedColors.ringOuter}
+          transparent
+          opacity={0}
+          depthWrite={false}
         />
+      </mesh>
+
+      {/* Confirmed halo — sphere shell that expands from 0 to 2r. */}
+      <group ref={haloGroupRef} scale={0.001}>
+        <mesh>
+          <sphereGeometry args={[haloPeakRadius, 32, 20]} />
+          <meshBasicMaterial
+            ref={haloMatRef}
+            color={confirmedColors.halo}
+            transparent
+            opacity={0}
+            depthWrite={false}
+            side={2 /* DoubleSide */}
+          />
+        </mesh>
       </group>
+
+      {/* Affordance glyph above the orb. */}
+      <AffordanceGlyph variant={variant} radius={radius} tint={affordanceTint} />
+
+      {/* Labels below the orb. */}
       <Text
-        position={
-          isCloudPark
-            ? [0, -s / 2 - 0.105, 0.2]
-            : [0, -s / 2 - XR_KIT_NATIVE.platformRoundTopY * pedestalScale + 0.06, 0.18]
-        }
+        position={[0, -radius - 0.07, 0]}
         fontSize={0.058}
         color={xr.hud.textPrimary}
         anchorX="center"
@@ -321,295 +506,28 @@ function SelectableTarget({
       >
         {label}
       </Text>
-    </group>
-  )
-}
-
-function SelectionToken({
-  variant,
-  size,
-  activeColor,
-  bodyColor,
-  trimColor,
-  systemColor,
-  selected,
-  hovered,
-  isCloudPark,
-}: {
-  variant: SelectionTokenVariant
-  size: number
-  activeColor: string
-  bodyColor: string
-  trimColor: string
-  systemColor: string
-  selected: boolean
-  hovered: boolean
-  isCloudPark: boolean
-}) {
-  const glow = selected ? systemColor : activeColor
-  const glowIntensity = hovered || selected ? 0.14 : 0.05
-
-  if (isCloudPark) {
-    return (
-      <CloudParkSelectionToken
-        variant={variant}
-        size={size}
-        activeColor={activeColor}
-        bodyColor={bodyColor}
-        trimColor={trimColor}
-        systemColor={systemColor}
-        glow={glow}
-        glowIntensity={glowIntensity}
-      />
-    )
-  }
-
-  if (variant === 'ray') {
-    return (
-      <group position={[0, size * 0.18, 0]} rotation={[-0.18, 0, 0]}>
-        <mesh>
-          <boxGeometry args={[size * 0.52, size * 0.82, size * 0.08]} />
-          <meshStandardMaterial
-            color={bodyColor}
-            roughness={0.62}
-            metalness={0.06}
-            emissive={glow}
-            emissiveIntensity={glowIntensity}
-          />
-        </mesh>
-        <mesh position={[0, 0, size * 0.046]}>
-          <boxGeometry args={[size * 0.4, size * 0.58, size * 0.018]} />
-          <meshStandardMaterial
-            color={activeColor}
-            roughness={0.4}
-            metalness={0.04}
-            emissive={glow}
-            emissiveIntensity={0.12}
-          />
-        </mesh>
-        <mesh position={[0, 0, size * 0.06]}>
-          <ringGeometry args={[size * 0.075, size * 0.12, 24]} />
-          <meshBasicMaterial color={systemColor} transparent opacity={0.72} />
-        </mesh>
-        <mesh position={[0, 0, size * 0.064]}>
-          <circleGeometry args={[size * 0.025, 18]} />
-          <meshBasicMaterial color={trimColor} transparent opacity={0.8} />
-        </mesh>
-      </group>
-    )
-  }
-
-  if (variant === 'touch') {
-    return (
-      <group position={[0, size * 0.08, 0]}>
-        <mesh>
-          <cylinderGeometry args={[size * 0.34, size * 0.38, size * 0.13, 36]} />
-          <meshStandardMaterial
-            color={bodyColor}
-            roughness={0.5}
-            metalness={0.04}
-            emissive={glow}
-            emissiveIntensity={glowIntensity}
-          />
-        </mesh>
-        <mesh position={[0, size * 0.075, 0]}>
-          <cylinderGeometry args={[size * 0.28, size * 0.3, size * 0.035, 36]} />
-          <meshStandardMaterial
-            color={activeColor}
-            roughness={0.32}
-            metalness={0.08}
-            emissive={glow}
-            emissiveIntensity={0.12}
-          />
-        </mesh>
-        {[0.08, 0.15, 0.22].map((r) => (
-          <mesh key={r} position={[0, size * 0.097, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[size * r, size * 0.007, 6, 36, Math.PI * 1.45]} />
-            <meshBasicMaterial color={systemColor} transparent opacity={0.48} />
-          </mesh>
-        ))}
-      </group>
-    )
-  }
-
-  return (
-    <group position={[0, size * 0.18, 0]}>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <capsuleGeometry args={[size * 0.18, size * 0.34, 8, 18]} />
-        <meshStandardMaterial
-          color={bodyColor}
-          roughness={0.4}
-          metalness={0.08}
-          emissive={glow}
-          emissiveIntensity={glowIntensity}
-        />
-      </mesh>
-      {[-1, 1].map((dir) => (
-        <mesh key={dir} position={[dir * size * 0.31, 0, 0]}>
-          <sphereGeometry args={[size * 0.15, 18, 14]} />
-          <meshStandardMaterial
-            color={activeColor}
-            roughness={0.34}
-            metalness={0.08}
-            emissive={glow}
-            emissiveIntensity={0.1}
-          />
-        </mesh>
-      ))}
-      <mesh position={[0, size * 0.16, 0]}>
-        <torusGeometry args={[size * 0.21, size * 0.018, 8, 28]} />
-        <meshStandardMaterial
-          color={trimColor}
-          roughness={0.38}
-          metalness={0.1}
-          emissive={trimColor}
-          emissiveIntensity={0.08}
-        />
-      </mesh>
-    </group>
-  )
-}
-
-function CloudParkSelectionToken({
-  variant,
-  size,
-  activeColor,
-  bodyColor,
-  trimColor,
-  systemColor,
-  glow,
-  glowIntensity,
-}: {
-  variant: SelectionTokenVariant
-  size: number
-  activeColor: string
-  bodyColor: string
-  trimColor: string
-  systemColor: string
-  glow: string
-  glowIntensity: number
-}) {
-  if (variant === 'ray') {
-    return (
-      <group position={[0, size * 0.2, 0]} rotation={[-0.28, 0.12, -0.08]}>
-        <mesh scale={[size * 0.42, size * 0.6, size * 0.08]}>
-          <octahedronGeometry args={[1, 0]} />
-          <meshStandardMaterial
-            color={activeColor}
-            roughness={0.42}
-            metalness={0.02}
-            emissive={glow}
-            emissiveIntensity={glowIntensity + 0.06}
-          />
-        </mesh>
-        <mesh position={[0, -size * 0.42, -size * 0.04]} rotation={[0.18, 0, 0]}>
-          <coneGeometry args={[size * 0.13, size * 0.5, 3]} />
-          <meshStandardMaterial color={trimColor} roughness={0.72} />
-        </mesh>
-        {[-1, 1].map((dir) => (
-          <mesh
-            key={`cloud-kite-tail-${dir}`}
-            position={[dir * size * 0.11, -size * 0.52, -size * 0.01]}
-            rotation={[0.2, 0, dir * 0.28]}
-          >
-            <coneGeometry args={[size * 0.04, size * 0.22, 3]} />
-            <meshStandardMaterial color={dir < 0 ? systemColor : trimColor} roughness={0.7} />
-          </mesh>
-        ))}
-        <CloudParkWindLine
-          position={[-size * 0.32, -size * 0.18, size * 0.08]}
-          rotation={[0, 0, -0.32]}
-          length={size * 1.0}
-          color={systemColor}
-          opacity={0.42}
-        />
-      </group>
-    )
-  }
-
-  if (variant === 'touch') {
-    return (
-      <group position={[0, size * 0.1, 0]}>
-        <FloatingCloudMat
-          position={[0, -size * 0.08, 0]}
-          scale={size * 0.68}
-          cloudColor={bodyColor}
-          shadeColor="#DFF4E6"
-          rimColor={trimColor}
-        />
-        <mesh position={[0, size * 0.12, 0]}>
-          <cylinderGeometry args={[size * 0.34, size * 0.42, size * 0.12, 28]} />
-          <meshStandardMaterial
-            color={activeColor}
-            roughness={0.38}
-            metalness={0.02}
-            emissive={glow}
-            emissiveIntensity={glowIntensity + 0.05}
-          />
-        </mesh>
-        {[0.14, 0.24, 0.34].map((r, i) => (
-          <mesh
-            key={`cloud-touch-ripple-${r}`}
-            position={[0, size * (0.21 + i * 0.012), 0]}
-            rotation={[-Math.PI / 2, 0, 0]}
-          >
-            <torusGeometry args={[size * r, size * 0.006, 6, 28]} />
-            <meshBasicMaterial color={systemColor} transparent opacity={0.42 - i * 0.08} />
-          </mesh>
-        ))}
-      </group>
-    )
-  }
-
-  return (
-    <group position={[0, size * 0.2, 0]} rotation={[0.08, 0, 0]}>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[size * 0.24, size * 0.045, 10, 34]} />
-        <meshStandardMaterial
-          color={bodyColor}
-          roughness={0.58}
-          metalness={0}
-          emissive={glow}
-          emissiveIntensity={glowIntensity + 0.02}
-        />
-      </mesh>
-      {[-1, 1].map((dir) => (
-        <mesh key={`cloud-grab-orb-${dir}`} position={[dir * size * 0.28, size * 0.01, 0]}>
-          <sphereGeometry args={[size * 0.15, 16, 12]} />
-          <meshStandardMaterial
-            color={activeColor}
-            roughness={0.35}
-            emissive={glow}
-            emissiveIntensity={glowIntensity + 0.03}
-          />
-        </mesh>
-      ))}
-      <mesh position={[0, size * 0.22, 0]}>
-        <sphereGeometry args={[size * 0.1, 12, 10]} />
-        <meshStandardMaterial color={trimColor} roughness={0.45} emissive={trimColor} emissiveIntensity={0.12} />
-      </mesh>
-      <mesh position={[0, -size * 0.23, 0]} scale={[1.35, 0.32, 0.9]}>
-        <sphereGeometry args={[size * 0.13, 12, 8]} />
-        <meshStandardMaterial color={bodyColor} roughness={0.78} emissive={glow} emissiveIntensity={0.04} />
-      </mesh>
-      <CloudParkWindLine
-        position={[0, -size * 0.16, size * 0.1]}
-        rotation={[0, 0, 0.08]}
-        length={size * 0.78}
-        color={systemColor}
-        opacity={0.28}
-      />
+      <Text
+        position={[0, -radius - 0.125, 0]}
+        fontSize={0.034}
+        color={xr.hud.textMuted}
+        anchorX="center"
+        anchorY="middle"
+        outlineWidth={0.004}
+        outlineColor={xr.void.clear}
+      >
+        {sublabel}
+      </Text>
     </group>
   )
 }
 
 export function SelectionLab() {
   const preset = usePlaygroundTheme()
-  const { labAccents, xr, shell } = preset
+  const { labAccents, xr } = preset
   const isCloudPark = preset.id === 'cloud-park'
   const defaults = tuningPresets.controller.selection
   const { targetSize, confirmScaleBoost, enableHaptics, enableAudio } = useControls('Selection', {
-    // Plain sliders here — Leva’s custom stepper plugin was unreliable for this folder (size could collapse).
+    // Plain sliders here — Leva's custom stepper plugin was unreliable for this folder (size could collapse).
     targetSize: { value: defaults.targetSize, min: 0.1, max: 1, step: 0.05 },
     confirmScaleBoost: { value: defaults.confirmScaleBoost, min: 0.05, max: 0.35, step: 0.01 },
     enableHaptics: defaults.enableHaptics,
@@ -636,38 +554,35 @@ export function SelectionLab() {
           voidColor={xr.floor.emissive}
           isCloudPark={isCloudPark}
         />
-        <SelectableTarget
-          position={[-0.62, 1.16, -0.74]}
-          color={labAccents.selection.primary}
-          size={size}
-          confirmScaleBoost={boost}
-          enableHaptics={enableHaptics}
-          enableAudio={enableAudio}
-          pointerType="ray"
-          label="Ray (controller)"
+        <StateOrb
           variant="ray"
-        />
-        <SelectableTarget
-          position={[0, 1.22, -0.82]}
-          color={labAccents.selection.secondary}
+          position={selectionTargetPositions.ray}
           size={size}
-          confirmScaleBoost={boost}
+          pointerType="ray"
+          label="RAY"
+          sublabel="far · controller"
           enableHaptics={enableHaptics}
           enableAudio={enableAudio}
-          pointerType="touch"
-          label="Direct touch (hands)"
-          variant="touch"
         />
-        <SelectableTarget
-          position={[0.62, 1.16, -0.74]}
-          color={shell.accent.soft}
+        <StateOrb
+          variant="pinch"
+          position={selectionTargetPositions.pinch}
           size={size}
-          confirmScaleBoost={boost}
-          enableHaptics={enableHaptics}
-          enableAudio={enableAudio}
           pointerType="grab"
-          label="Hand pinch (grab)"
-          variant="grab"
+          label="PINCH"
+          sublabel="near · hand"
+          enableHaptics={enableHaptics}
+          enableAudio={enableAudio}
+        />
+        <StateOrb
+          variant="touch"
+          position={selectionTargetPositions.touch}
+          size={size}
+          pointerType="touch"
+          label="TOUCH"
+          sublabel="near · finger"
+          enableHaptics={enableHaptics}
+          enableAudio={enableAudio}
         />
 
         <SelectionBackdropPiers

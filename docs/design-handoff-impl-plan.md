@@ -1,6 +1,6 @@
 # Design handoff · implementation plan
 
-**Status:** Phase 1 complete · Phase 2 next
+**Status:** Phase 2 complete · Phase 3 next
 **Working branch:** `claude/3d-handoff-spec` (single branch — spec + impl + living plan all live here)
 **Spec snapshot tag:** `design-handoff-v0.2` → commit [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1)
 **Spec artifact:** [design-handoff/project/XR Themes Design.html](design-handoff/project/XR%20Themes%20Design.html) — open the Handoff tab
@@ -55,30 +55,30 @@ Added additively; existing callers untouched. Not wired into runtime visuals yet
 - [x] No visual regression — app loads at `http://localhost:50563/`, all 4 labs render, no new console errors
 - [x] Values copied verbatim from `TOKENS_JSON` in the Handoff tab (no re-typing)
 
-## Phase 2 · Selection Lab
+## Phase 2 · Selection Lab ✅
 
-Biggest visual overhaul. Combines geometry swap + state materials + transitions + repositioning.
+Replaced themed per-variant tokens (kite/cylinder/capsule on pedestals) with spec-aligned tri-state spheres + small affordance glyphs. Scenery (stage, piers) untouched — Phase 6.
 
-**Target files:**
-- [src/labs/cross-xr/SelectionLab.tsx](../src/labs/cross-xr/SelectionLab.tsx)
-- [src/config/labs.ts](../src/config/labs.ts) — target positions
+**What landed:**
+- New `selectionTargetPositions` const in [src/config/labs.ts](../src/config/labs.ts) — ray (0, 1.60, −2.20), pinch (−0.30, 1.35, −0.55), touch (+0.30, 1.35, −0.55).
+- New `StateOrb` component in [src/labs/cross-xr/SelectionLab.tsx](../src/labs/cross-xr/SelectionLab.tsx):
+  - Sphere geometry, diameter = code `targetSize` (0.28 m default, Leva 0.1–1.0 m unchanged).
+  - State machine: `idle` → `targeted` on pointer enter → `confirmed` on pointer down → auto-revert to `idle` after ~2 s.
+  - Materials pull from new `xr.orb.{idle,targeted,confirmed}` tokens (Phase 1).
+  - Targeted state: two concentric rings at visual r+25 mm / r+45 mm, pulsing at 1.2 Hz (sine, amp ±15% opacity). Emissive pulse 1.6 ↔ 1.9.
+  - Confirmed state: ring collapse 180 ms + radial halo expand to r×2 over 220 ms + scale pulse 1 → 1.08 → 1 over 220 ms; halo holds 1.4 s then fades 400 ms.
+  - Haptic + audio confirm hooks preserved.
+- New `AffordanceGlyph` component renders small 3D hints (chevron-stack for ray, caliper arrows for pinch, flat ring for touch), tinted from `xr.affordance.*` tokens.
+- Removed: `SelectableTarget`, `SelectionToken`, `CloudParkSelectionToken` — replaced by the two new components. Scenery (`SelectionStage`, `SelectionBackdropPiers`) kept as-is.
 
-**Spec changes:**
-
-| Aspect | Current code | Target |
-|---|---|---|
-| Geometry | 3 cubes, `targetSize` edge | 3 spheres, same `targetSize` as diameter, Leva range unchanged |
-| Ray position | (−0.45, 1.25, −1.25) | (0, 1.60, −2.20) — eye-level, far back |
-| Pinch + Touch positions | mixed layout | symmetric: (−0.30, 1.35, −0.55) + (+0.30, 1.35, −0.55) |
-| State materials | basic hover highlight | idle / targeted / confirmed per Handoff Section 02 |
-| State transitions | instant | 120 ms ease-out, 1.2 Hz pulse, 180+220+220 ms confirm choreography (Section 03) |
-| Affordance hints | none | ray arrow · pinch calipers · touch ring, color-tinted per theme |
+**Dropped imports:** `CloudParkPerch`, `useKitModel`, `XR_KIT_NATIVE`, `scalePlatformRoundForTargetCube` (pedestals no longer rendered — orbs float at spec positions).
 
 **Checks:**
-- [ ] All Leva tunables still work (size, opacity, haptics, audio)
-- [ ] Hand and controller input both hit targets
-- [ ] Pulse rate matches 1.2 Hz on the headset (time with a stopwatch or FPS count)
-- [ ] CP ring uses alpha only, no shadow blur; WN uses ember glow blur 12
+- [x] Leva tunables still work — `targetSize`, `confirmScaleBoost`, `enableHaptics`, `enableAudio` all present.
+- [x] `pointerEventsType` allow-list preserved per variant (ray / touch / grab).
+- [x] `tsc --noEmit` clean; app loads at `http://localhost:50563/` without new console errors.
+- [ ] Pulse rate matches 1.2 Hz on the headset (deferred to Phase 8 headset test).
+- [ ] CP ring uses alpha only, no shadow blur; WN uses ember glow blur 12 (WN glow is wired via ringGlow token; full visual verification deferred to Phase 8).
 
 ## Phase 3 · Placement Lab
 
@@ -243,4 +243,5 @@ Add future tags here as milestones land (e.g. `impl-phase-2-selection`, `impl-co
 | 2026-04-23 | — | [`4a91f36`](https://github.com/kewanglab/webxr-playground/commit/4a91f36) | Plan authored. |
 | 2026-04-23 | — | [`89b8b4a`](https://github.com/kewanglab/webxr-playground/commit/89b8b4a) | Switched from two-branch to single-branch + tag strategy. Plan Phase 0 wording corrected. |
 | 2026-04-23 | 0 | [`e07b1f8`](https://github.com/kewanglab/webxr-playground/commit/e07b1f8) | Phase 0 complete. Cherry-picked `9aacc18` with SelectionLab.tsx skipped (7 conflicts deferred to Phase 2 rewrite). Baseline app verified green. |
-| 2026-04-23 | 1 | (this commit) | Phase 1 complete. Added `orb` / `affordance` / `glow` fields to `XrTheme` (both presets populated) + top-level `TYPOGRAPHY` / `HUD_DIMS` exports. No existing callers touched. |
+| 2026-04-23 | 1 | [`9b91dbd`](https://github.com/kewanglab/webxr-playground/commit/9b91dbd) | Phase 1 complete. Added `orb` / `affordance` / `glow` fields to `XrTheme` (both presets populated) + top-level `TYPOGRAPHY` / `HUD_DIMS` exports. No existing callers touched. |
+| 2026-04-23 | 2 | (this commit) | Phase 2 complete. Selection Lab targets: cubes → tri-state spheres (`idle`/`targeted`/`confirmed`). New `StateOrb` + `AffordanceGlyph` components; positions from new `selectionTargetPositions` const. 1.2 Hz pulse, halo-expand choreography, auto-revert. Scenery kept. |

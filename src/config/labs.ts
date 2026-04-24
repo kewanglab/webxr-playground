@@ -46,6 +46,20 @@ export function getLabTitle(id: LabId): string {
   return lab?.name ?? id
 }
 
+/**
+ * Selection Lab target positions in world meters — design-handoff v0.2 Section 04.
+ * Ray target sits alone at far eye-level distance (across-the-room feel).
+ * Pinch + Touch paired symmetric at arm's reach, just below eye level.
+ */
+export const selectionTargetPositions: Record<
+  'ray' | 'pinch' | 'touch',
+  [number, number, number]
+> = {
+  ray: [0, 1.6, -2.2],
+  pinch: [-0.3, 1.35, -0.55],
+  touch: [0.3, 1.35, -0.55],
+}
+
 export const tuningPresets = {
   controller: {
     selection: {
