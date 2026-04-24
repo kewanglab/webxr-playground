@@ -2,14 +2,19 @@ import { Grid } from '@react-three/drei'
 import { useControls } from 'leva'
 import { usePlaygroundTheme } from '../theme/PlaygroundThemeContext'
 import { CloudParkWorld } from '../visual/CloudParkScenery'
+import { SharedArch, StagePlatform } from '../visual/SharedScenery'
 import { Skydome } from '../visual/Skydome'
 
 export function VRScene() {
   const preset = usePlaygroundTheme()
   const { xr } = preset
   const isCloudPark = preset.id === 'cloud-park'
-  const { showHeightRef } = useControls('Debug', {
+  const { showHeightRef, showSharedScenery } = useControls('Debug', {
     showHeightRef: false,
+    // Design-handoff v0.2 Section 04: shared arch + stage frame all VR labs.
+    // Some labs (Selection, Locomotion, Manipulation) already have per-lab stage scenery; toggle
+    // this off if the combination feels cluttered on-device.
+    showSharedScenery: true,
   })
 
   return (
@@ -43,6 +48,13 @@ export function VRScene() {
           metalness={0}
         />
       </mesh>
+
+      {showSharedScenery && (
+        <>
+          <SharedArch position={[0, 0, 0]} />
+          <StagePlatform position={[0, 0, 0]} />
+        </>
+      )}
 
       {showHeightRef && (
         <mesh position={[1, 0.85, -1]} raycast={() => null}>
