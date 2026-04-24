@@ -119,7 +119,7 @@ Docking mode grabbed-object and target-ghost are now key crystals per spec. Zen 
   - Height = `objectSize` (code default 0.125 m, Leva range unchanged).
   - Solid: standard material with emissive, accent-tinted head per `labAccents.manipulation.{primary,secondary}`.
   - Ghost: wireframe outlines + UP arrow (cone + stem), tinted from `xr.affordance.dockActive`.
-- New `ProximityRing` component: 0.24 m radius ring built from 20 short plane segments (dashed approximation). Visible only when the tracked hand is within `grabDistance * 2` of the object AND not actively manipulating.
+- New `ProximityRing` component: radius = `grabDistance * 2` (tied to the actual grab threshold, so the visual boundary matches the game mechanic — ≈ 0.16 m at default `grabDistance = 0.08`). Built from 20 short vertical cylinder posts (4 cm tall) so the ring stays visible from any horizontal viewing angle; material opacity pulses at 1.2 Hz (0.45 ↔ 0.85) to read as an invitation, not a static decal. Visible only when the tracked hand is within `grabDistance * 2` of the object AND not actively manipulating.
 - Snap-on-release logic in `onRelease`: when `positionalOffset ≤ snapToleranceM` AND `rotationalOffsetDeg ≤ snapToleranceDeg`, the object pose is forced to the target, result recorded with zero offsets, 30 ms haptic success burst fires on the right controller.
 
 **Dropped imports in DockingMode.tsx:** `CloudParkBeaconObject`, `SensorPodObject`. Both now orphaned in the codebase after Phase 3 + 4 — cleanup in a follow-up commit.
@@ -132,7 +132,8 @@ Docking mode grabbed-object and target-ghost are now key crystals per spec. Zen 
 
 **Notes / small debts:**
 - Snap motion is instant (no animation). Spec calls for 240 ms ease-out-back lerp; implementing that cleanly requires exposing the `ManipulableObject`'s group ref for animation, which is out of scope for Phase 4. Callout for Phase 8.
-- Proximity ring approximated with 20 short plane segments rather than a true dashed shader line — should read as dashed on device; revisit if not.
+- Proximity ring approximated with 20 short vertical cylinder posts rather than a true dashed shader line — reads as dashed pickets from above, visible vertical ticks from any side angle. Revisit if the pattern doesn't feel dashed enough on device.
+- Spec's "0.24 m radius" value for the proximity ring (from design-handoff v0.2 Section 04) was a too-literal translation from the mock's pixel dimensions. Replaced with `grabDistance * 2` so the ring scales with the Leva-tunable grab zone; matches the mock's visual proportion (~1.5× the key's half-height) at default sizes.
 
 ## Phase 5 · Locomotion Lab (concept change)
 
