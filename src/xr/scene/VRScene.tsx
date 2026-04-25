@@ -12,9 +12,9 @@ export function VRScene() {
   const { showHeightRef, showSharedScenery } = useControls('Debug', {
     showHeightRef: false,
     // Design-handoff v0.2 Section 04: shared arch + stage frame all VR labs.
-    // Some labs (Selection, Locomotion, Manipulation) already have per-lab stage scenery; toggle
-    // this off if the combination feels cluttered on-device.
-    showSharedScenery: true,
+    // Default OFF for now — Phase 6 implementation reads as less sophisticated than the
+    // existing per-lab arches and the position needs work. See Phase 8 notes in the impl plan.
+    showSharedScenery: false,
   })
 
   return (

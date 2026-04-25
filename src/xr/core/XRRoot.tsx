@@ -7,7 +7,6 @@ import { VRScene } from '../scene/VRScene'
 import { ARScene } from '../scene/ARScene'
 import { LabContent } from '../../app/LabContent'
 import { usePlaygroundStore } from '../../app/store'
-import { InXRStats } from '../hud/InXRStats'
 import { HUDPanel } from '../hud/HUDPanel'
 import { TagAlongHUD } from '../hud/TagAlongHUD'
 import { preloadXrKitModels } from '../visual/useKitModel'
@@ -45,9 +44,7 @@ export function XRRoot() {
       </Suspense>
       {fpsHudVisible && (
         <TagAlongHUD>
-          <HUDPanel>
-            <InXRStats />
-          </HUDPanel>
+          <HUDPanel />
         </TagAlongHUD>
       )}
     </XR>

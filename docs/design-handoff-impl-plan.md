@@ -1,6 +1,6 @@
 # Design handoff · implementation plan
 
-**Status:** Phase 6 complete · Phase 7 next
+**Status:** Phase 7 complete · Phase 8 next
 **Working branch:** `claude/3d-handoff-spec` (single branch — spec + impl + living plan all live here)
 **Spec snapshot tag:** `design-handoff-v0.2` → commit [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1)
 **Spec artifact:** [design-handoff/project/XR Themes Design.html](design-handoff/project/XR%20Themes%20Design.html) — open the Handoff tab
@@ -183,33 +183,42 @@ Net-new shared scenery per spec Section 04 — framing present across all VR lab
 - [ ] Arch doesn't intersect controllers / lab targets at origin — requires headset (Phase 8).
 - [ ] FPS budget on Quest 3 — new geometry is minimal (~6 meshes across arch + platform) so headroom should be fine; verify (Phase 8).
 
-**Notes / small debts:**
-- **Redundancy with per-lab scenery.** Existing labs already have stage-like elements (Selection's circular carpet + piers at z≈-1.48, Locomotion's StartZone ring at z=+0.6, Manipulation's docking table at z=-0.7). The shared arch + platform now sits at origin alongside them. On-device evaluation needed to decide whether to remove per-lab scenery in favor of the shared stage (Phase 8). In the meantime, the Leva toggle `showSharedScenery` lets us flip between the two modes for comparison.
-- **WN ember glow is faked** with an additive halo torus + emissive material. Spec's "shadow blur 18" implies a real bloom pass; deferred to Phase 8.
-- **CP platform "grad `#FFFAEC → #C9A86C`" from spec** simplified to a single emissive-tinted warm gold (`#F0DC9E`). Vertex-color gradients across the platform would require a shader or baked texture — deferred.
-- **WN platform "grid rings" on top** not yet drawn — shown only via the underglow ring. Phase 8 can add a set of concentric emissive rings if needed.
+**Notes / debts (default toggled OFF; revisit in Phase 8):**
 
-## Phase 7 · HUD refresh
+- **Visual quality below bar.** First-pass `SharedArch` reads as less sophisticated than the existing per-lab arches (Selection's CloudParkArch + piers, Locomotion's DestinationPortal). The half-torus + box-leg primitive is too plain — needs material polish, possibly a CatmullRom-curved profile, base molding, capital details. Default `showSharedScenery = false` until reworked.
+- **Position is off.** Currently both at origin (0, 0, 0); the user stands inside the arch. Spec said "centered at origin" but on device the arch should likely sit further forward (e.g., z ≈ -2 to -2.5) so the user enters the framed scene rather than starting inside it. Same for the platform — needs a position pass.
+- **Redundancy with per-lab scenery.** Existing labs already have stage-like elements (Selection's circular carpet + piers at z≈-1.48, Locomotion's StartZone ring at z=+0.6, Manipulation's docking table at z=-0.7). On-device evaluation needed to decide whether to remove per-lab scenery in favor of the shared stage. The Leva toggle `showSharedScenery` lets us flip between modes for comparison once the shared scenery is good enough.
+- **WN ember glow is faked** with an additive halo torus + emissive material. Spec's "shadow blur 18" implies a real bloom pass.
+- **CP platform "grad `#FFFAEC → #C9A86C`" from spec** simplified to a single emissive-tinted warm gold (`#F0DC9E`). Vertex-color gradients across the platform would require a shader or baked texture.
+- **WN platform "grid rings" on top** not yet drawn — shown only via the underglow ring. Add a set of concentric emissive rings.
 
-**Target files:**
-- [src/xr/hud/HUDPanel.tsx](../src/xr/hud/HUDPanel.tsx)
-- [src/xr/hud/HUDButton.tsx](../src/xr/hud/HUDButton.tsx)
-- [src/xr/hud/InXRStats.tsx](../src/xr/hud/InXRStats.tsx)
-- [src/xr/hud/TagAlongHUD.tsx](../src/xr/hud/TagAlongHUD.tsx)
+## Phase 7 · HUD refresh ✅
 
-**Spec changes:**
+Refactored `HUDPanel` from a single FPS card into a self-contained tap-to-expand widget. Two visual states matching design-handoff v0.2 HUD_DIMS, with theme-correct rounded-rect borders. `InXRStats.tsx` deleted (FPS logic folded into `HUDPanel` as a `useFpsLabel` hook). `TagAlongHUD` and `HUDButton` left untouched.
 
-| Aspect | Target |
-|---|---|
-| Minimized pill | 158 × 38 px, radius 19, FPS + trial counter + expand arrow |
-| Expanded panel | 295+ px wide, radius 13, FPS large, 4-metric strip (Target · Boost · Haptics · Audio), method label footer |
-| CP border | `rgba(255,209,102,.88)`, shadow blur 7 |
-| WN border | `rgba(200,95,88,.84)`, shadow blur 7, ember underglow |
+**What landed in [src/xr/hud/HUDPanel.tsx](../src/xr/hud/HUDPanel.tsx):**
+- Spec px → world meters via `PX = 0.00125 m/px`. Minimized pill: 158×38 px → 0.198 × 0.048 m, radius 19 px → 0.024 m. Expanded panel: 295×168 px → 0.369 × 0.210 m, radius 13 px → 0.016 m. After the TagAlong scale (0.62), viewed sizes are ~12 cm (minimized) and ~23 cm (expanded) wide — pill is unobtrusive, panel is readable but not dominating.
+- Rounded rectangles built via `Shape.quadraticCurveTo` and `<shapeGeometry>`. Border (theme-accent fill) wraps an inset (4 mm) panel-fill shape — a thin emissive ring effect.
+- Tap-to-toggle: `onPointerDown` on the fill mesh, with 25 ms haptic pulse (right) + 540 Hz tone.
+- New internal `useFpsLabel` hook: averages 1/Δt over 30 frames sampled every 350 ms, returns `{ label, color }` with comfort-band color thresholds (≥90 / ≥72 / ≥45 / below).
+- `MinimizedContent`: status dot · FPS numeral · "FPS" sublabel · placeholder "T —" trial counter · expand chevron.
+- `ExpandedContent`: status dot + large FPS · "Trial — / —" + sublabel top-right · collapse chevron · divider line · 4-cell metric strip (TARGET 0.28 · BOOST 0.15 · HAPTICS ON · AUDIO OFF) · method label footer ("Direct touch (hands)") on an accent-tinted slab.
+
+**XRRoot wiring:** removed `InXRStats` import; replaced `<HUDPanel><InXRStats/></HUDPanel>` with `<HUDPanel/>`.
 
 **Checks:**
-- [ ] Both minimized and expanded states render
-- [ ] Tap to expand / collapse works on hand + controller
-- [ ] Text legible against bright AR passthrough
+- [x] `tsc --noEmit` clean; preview loads without errors.
+- [x] Both states render — code paths for `expanded === true/false` both exercised.
+- [ ] Tap-to-expand works on hand + controller — needs headset (Phase 8).
+- [ ] Text legibility against bright AR passthrough — Phase 8 visual check.
+
+**Notes / debts (Phase 8):**
+- **Trial counter and method label are static placeholders.** Wiring them to real state needs:
+  - A trial counter source — `DockingMode` keeps it locally; would need to expose via store/context.
+  - The current method label — derive from `currentLab` + active input (controller / hand) in `playgroundStore`.
+- **Metrics row is hardcoded** (TARGET 0.28 · BOOST 0.15 · HAPTICS ON · AUDIO OFF). Real values come from Leva controls in each lab; needs a store-backed selector hook.
+- **Border emissive only** — no real "shadow blur 7" bloom around the panel. Same Phase 8 polish as the SharedArch glow.
+- **`HUDButton.tsx` is now orphaned** (no consumers). Either delete or repurpose as the in-HUD secondary button later in Phase 8.
 
 ## Phase 8 · Verify against spec
 
@@ -263,4 +272,5 @@ Add future tags here as milestones land (e.g. `impl-phase-2-selection`, `impl-co
 | 2026-04-24 | 3 | [`724a0b0`](https://github.com/kewanglab/webxr-playground/commit/724a0b0) | Phase 3 complete. Placement Lab crystals: themed pods → `CrystalPrism` (octahedron-based diamond prism, h=`objectSize`, w=`objectSize*0.5`). New `SurfaceReticle` (controller) + `PinchHalo` (hand) source-conditional affordances; ghost wireframe approximates hatched/dashed feel. Desktop showcase simplified to solid+ghost preview pair. |
 | 2026-04-24 | 4 | [`5764c15`](https://github.com/kewanglab/webxr-playground/commit/5764c15) · cleanup [`930d0d8`](https://github.com/kewanglab/webxr-playground/commit/930d0d8) · ring tweaks [`d53ab92`](https://github.com/kewanglab/webxr-playground/commit/d53ab92) [`5eb4ac4`](https://github.com/kewanglab/webxr-playground/commit/5eb4ac4) | Phase 4 complete. Manipulation · Docking grabbed-object + ghost: themed pods → `KeyCrystal` (shaft + notched pentagonal head + UP indicator). New `ProximityRing` (hand-proximity hint). New `snapToleranceM` / `snapToleranceDeg` fields (0.04 m + 10°) with auto-snap on release + 30 ms haptic success burst. Zen Garden mode unaffected. |
 | 2026-04-24 | 5 | [`d494d3c`](https://github.com/kewanglab/webxr-playground/commit/d494d3c) | Phase 5 complete. Locomotion Lab: 3 static comfort rings → numbered teleport waypoint sequence (1 → 2 → 3-as-flagged-destination) with dashed quadratic arcs origin → W1 → W2 → W3. New `NumberedWaypoint`, `DestinationFlag`, `quadArcPoints` helpers. Snap-turn kept at 45° per design review. |
-| 2026-04-24 | 6 | (this commit) | Phase 6 complete. New shared VR scenery: `SharedArch` (2.4×1.6 m half-torus + legs) and `StagePlatform` (1.6×0.35 m oval) in `src/xr/visual/SharedScenery.tsx`, themed CP/WN. Wired into `VRScene` at origin behind a `showSharedScenery` Leva toggle. Coexists with per-lab scenery pending Phase 8 on-device evaluation. |
+| 2026-04-24 | 6 | [`8d0a0e1`](https://github.com/kewanglab/webxr-playground/commit/8d0a0e1) | Phase 6 complete. New shared VR scenery: `SharedArch` (2.4×1.6 m half-torus + legs) and `StagePlatform` (1.6×0.35 m oval) in `src/xr/visual/SharedScenery.tsx`, themed CP/WN. Wired into `VRScene` at origin behind a `showSharedScenery` Leva toggle. Default flipped OFF after design review (visual quality + position need Phase 8 rework). |
+| 2026-04-24 | 7 | (this commit) | Phase 7 complete. HUD: single FPS card → tap-to-expand pill/panel widget per spec HUD_DIMS. Rounded-rect borders (theme accent), self-contained `HUDPanel` with `useFpsLabel` hook. `InXRStats.tsx` deleted (folded in). Trial counter / metrics / method label are static placeholders; wiring them to runtime state is a Phase 8 follow-up. |
