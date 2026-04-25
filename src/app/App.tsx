@@ -6,7 +6,6 @@ import { XRRoot } from '../xr/core/XRRoot'
 import { PlaygroundControls } from '../ui/PlaygroundControls'
 import { AppearanceSettingsDock } from '../ui/AppearanceSettingsDock'
 import { DebugPanel } from '../ui/DebugPanel'
-import { ShellLevaControls } from '../ui/ShellLevaControls'
 import { TestLoggerPanel } from '../ui/TestLoggerPanel'
 import { ShellRightRail } from '../ui/ShellRightRail'
 import { getPlaygroundPreset } from '../config/playgroundTheme'
@@ -51,7 +50,6 @@ export function App() {
         <>
           <PlaygroundControls />
           <AppearanceSettingsDock />
-          <ShellLevaControls />
           <ShellRightRail>
             <DebugPanel />
             <TestLoggerPanel />
