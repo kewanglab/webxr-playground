@@ -47,12 +47,14 @@ export function TagAlongHUD({ children }: TagAlongHUDProps) {
     }
     tmpUp.crossVectors(tmpRight, tmpForward).normalize()
 
-    // Offset in view space: negative right = left, negative up = down (bottom-left corner).
+    // Offset in view space: negative right = left, negative up = down. Lower-left of view
+    // but pulled in toward centre and slightly closer to the user than the original placement
+    // so the HUD reads at a comfortable size without crowding the periphery.
     tmpTargetPos
       .copy(tmpCameraPos)
-      .addScaledVector(tmpForward, 0.9)
-      .addScaledVector(tmpRight, -0.4)
-      .addScaledVector(tmpUp, -0.4)
+      .addScaledVector(tmpForward, 0.7)
+      .addScaledVector(tmpRight, -0.22)
+      .addScaledVector(tmpUp, -0.30)
 
     if (!initialized.current) {
       smoothPos.current.copy(tmpTargetPos)
@@ -71,7 +73,7 @@ export function TagAlongHUD({ children }: TagAlongHUDProps) {
   if (!inXR) return null
 
   return (
-    <group ref={groupRef} scale={0.62}>
+    <group ref={groupRef} scale={0.85}>
       {children}
     </group>
   )
