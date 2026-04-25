@@ -2,6 +2,7 @@ import { Text } from '@react-three/drei'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { Group, Shape, Vector3 } from 'three'
+import { usePlaygroundStore } from '../../app/store'
 import { useConfirmTone } from '../feedback/audio/useConfirmTone'
 import { useHapticPulse } from '../feedback/haptics/useHapticPulse'
 import { usePlaygroundTheme } from '../theme/PlaygroundThemeContext'
@@ -231,14 +232,20 @@ function ExpandedContent({
   const W = 295 * PX
   const H = 168 * PX
 
-  // Trial / metric / method values are placeholders for Phase 7 — wiring to runtime app state
-  // (Leva selectors, lab trial state) is a Phase 8 follow-up.
-  const metrics: [string, string][] = [
-    ['TARGET', '0.28'],
-    ['BOOST', '0.15'],
-    ['HAPTICS', 'ON'],
-    ['AUDIO', 'OFF'],
+  // Live values pushed by the active lab's effect (see store.hudReport / each lab).
+  const hudReport = usePlaygroundStore((s) => s.hudReport)
+  // Pad to 4 cells for stable layout when a lab provides fewer.
+  const cells: { label: string; value: string }[] = [
+    ...hudReport.metrics.slice(0, 4),
+    ...Array.from({ length: Math.max(0, 4 - hudReport.metrics.length) }, () => ({
+      label: '',
+      value: '',
+    })),
   ]
+  const trial = hudReport.trial
+  const trialPrimary = trial ? `Trial ${trial.current} / ${trial.total}` : ''
+  const trialSecondary = trial?.subLabel ?? ''
+  const methodLabel = hudReport.methodLabel
 
   return (
     <group>
@@ -276,7 +283,7 @@ function ExpandedContent({
       >
         FPS
       </Text>
-      {/* Trial info top-right. */}
+      {/* Trial info top-right (rendered when the active lab populates hudReport.trial). */}
       <Text
         position={[W / 2 - 0.020, H / 2 - 0.024, 0.001]}
         fontSize={0.013}
@@ -285,7 +292,7 @@ function ExpandedContent({
         anchorY="middle"
         fillOpacity={opacityMult}
       >
-        Trial — / —
+        {trialPrimary}
       </Text>
       <Text
         position={[W / 2 - 0.020, H / 2 - 0.040, 0.001]}
@@ -295,7 +302,7 @@ function ExpandedContent({
         anchorY="middle"
         fillOpacity={opacityMult}
       >
-        translation
+        {trialSecondary}
       </Text>
       {/* Collapse chevron. */}
       <Text
@@ -318,12 +325,12 @@ function ExpandedContent({
           depthWrite={false}
         />
       </mesh>
-      {/* 4-cell metric strip. */}
-      {metrics.map(([k, v], i) => {
-        const cellW = (W - 0.024) / metrics.length
+      {/* 4-cell metric strip — values come from the active lab's hudReport.metrics. */}
+      {cells.map((cell, i) => {
+        const cellW = (W - 0.024) / cells.length
         const cellX = -W / 2 + 0.012 + cellW * (i + 0.5)
         return (
-          <group key={k}>
+          <group key={i}>
             <Text
               position={[cellX, H / 2 - 0.094, 0.001]}
               fontSize={0.0095}
@@ -332,7 +339,7 @@ function ExpandedContent({
               anchorY="middle"
               fillOpacity={opacityMult}
             >
-              {k}
+              {cell.label}
             </Text>
             <Text
               position={[cellX, H / 2 - 0.114, 0.001]}
@@ -345,7 +352,7 @@ function ExpandedContent({
               fillOpacity={opacityMult}
               outlineOpacity={opacityMult}
             >
-              {v}
+              {cell.value}
             </Text>
           </group>
         )
@@ -368,7 +375,7 @@ function ExpandedContent({
         anchorY="middle"
         fillOpacity={opacityMult}
       >
-        Direct touch (hands)
+        {methodLabel}
       </Text>
     </group>
   )

@@ -58,6 +58,26 @@ export type SessionLogEntry = {
   fromHeadset?: boolean
 }
 
+/** A single key/value cell rendered in the in-XR HUD's expanded metrics strip. */
+export type HudMetric = { label: string; value: string }
+/** Optional trial counter displayed in the HUD's expanded panel header (Manipulation · Docking). */
+export type HudTrial = { current: number; total: number; subLabel?: string }
+/** Snapshot of state the active lab wants reflected in the in-XR HUD. */
+export type HudReport = {
+  /** Up to 4 cells fill the expanded panel's metric strip (extras are dropped). */
+  metrics: HudMetric[]
+  /** Method / context label rendered in the panel footer. */
+  methodLabel: string
+  /** When non-null, the panel header shows "Trial N / M" plus optional sub-label. */
+  trial: HudTrial | null
+}
+
+export const defaultHudReport: HudReport = {
+  metrics: [],
+  methodLabel: '—',
+  trial: null,
+}
+
 type PlaygroundState = {
   currentLab: LabId
   setLab: (lab: LabId) => void
@@ -77,6 +97,9 @@ type PlaygroundState = {
   addLogEntry: (entry: SessionLogEntry) => void
   updateLogEntryNote: (id: string, note: string) => void
   clearLogEntries: () => void
+  /** Active lab pushes a snapshot here on changes; in-XR HUD reads from it. */
+  hudReport: HudReport
+  setHudReport: (report: HudReport) => void
 }
 
 export const usePlaygroundStore = create<PlaygroundState>((set) => ({
@@ -124,4 +147,6 @@ export const usePlaygroundStore = create<PlaygroundState>((set) => ({
       logEntries: state.logEntries.map((e) => (e.id === id ? { ...e, note } : e)),
     })),
   clearLogEntries: () => set({ logEntries: [] }),
+  hudReport: defaultHudReport,
+  setHudReport: (report) => set({ hudReport: report }),
 }))

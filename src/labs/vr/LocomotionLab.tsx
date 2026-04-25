@@ -3,9 +3,9 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { IfInSessionMode, TeleportTarget, useXRInputSourceState } from '@react-three/xr'
 import { useControls } from 'leva'
 import { stepperNumber } from '../../ui/levaPlugins/stepperNumber'
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { AdditiveBlending, DoubleSide, Shape, Vector3 } from 'three'
-import { usePlaygroundStore } from '../../app/store'
+import { defaultHudReport, usePlaygroundStore } from '../../app/store'
 import { getLabTitle, tuningPresets } from '../../config/labs'
 import { LabHeading } from '../LabHeading'
 import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
@@ -467,11 +467,30 @@ export function LocomotionLab() {
 
   const turnLatch = useRef(false)
 
+  const setHudReport = usePlaygroundStore((s) => s.setHudReport)
+
   const moveSpeedN = readLevaNumber(moveSpeed, defaults.moveSpeed)
   const moveDeadN = readLevaNumber(moveDeadzone, defaults.moveDeadzone)
   const turnDeadN = readLevaNumber(turnDeadzone, defaults.turnDeadzone)
   const snapDegN = readLevaNumber(snapTurnAngleDeg, defaults.snapTurnAngleDeg)
   const smoothDegN = readLevaNumber(smoothTurnSpeedDeg, defaults.smoothTurnSpeedDeg)
+
+  // Push current Leva tuning into the in-XR HUD's expanded metrics panel.
+  useEffect(() => {
+    const turnValue =
+      turnMode === 'snap' ? `${Math.round(snapDegN)}°` : `${Math.round(smoothDegN)}°/s`
+    setHudReport({
+      metrics: [
+        { label: 'SPEED', value: moveSpeedN.toFixed(1) },
+        { label: 'TURN', value: turnValue },
+        { label: 'MODE', value: turnMode === 'snap' ? 'SNAP' : 'SMOOTH' },
+        { label: 'STICK', value: (stickHand as string).toUpperCase() },
+      ],
+      methodLabel: 'Locomotion · VR',
+      trial: null,
+    })
+    return () => setHudReport(defaultHudReport)
+  }, [moveSpeedN, snapDegN, smoothDegN, turnMode, stickHand, setHudReport])
 
   useFrame((_, delta) => {
     if (!controller?.gamepad) return

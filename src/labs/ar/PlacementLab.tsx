@@ -8,6 +8,7 @@ import {
 import { useControls } from 'leva'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AdditiveBlending, Matrix4, Quaternion, Vector3, type Group } from 'three'
+import { defaultHudReport, usePlaygroundStore } from '../../app/store'
 import { stepperNumber } from '../../ui/levaPlugins/stepperNumber'
 import { getLabTitle, tuningPresets } from '../../config/labs'
 import { LabHeading } from '../LabHeading'
@@ -267,6 +268,22 @@ export function PlacementLab() {
   useEffect(() => {
     resetXRInputDefaults()
   }, [])
+
+  // Push current Leva tuning into the in-XR HUD's expanded metrics panel.
+  const setHudReport = usePlaygroundStore((s) => s.setHudReport)
+  useEffect(() => {
+    setHudReport({
+      metrics: [
+        { label: 'OBJ SIZE', value: objSize.toFixed(2) },
+        { label: 'PREVIEW', value: previewOp.toFixed(2) },
+        { label: 'HAPTICS', value: enableHaptics ? 'ON' : 'OFF' },
+        { label: 'AUDIO', value: enableAudio ? 'ON' : 'OFF' },
+      ],
+      methodLabel: 'Placement · AR',
+      trial: null,
+    })
+    return () => setHudReport(defaultHudReport)
+  }, [objSize, previewOp, enableHaptics, enableAudio, setHudReport])
 
   const activeSource = useMemo<ActivePlacementSource | null>(() => {
     const controller = rightController ?? leftController
