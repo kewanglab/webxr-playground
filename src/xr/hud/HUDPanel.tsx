@@ -1,7 +1,7 @@
 import { Text } from '@react-three/drei'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { Shape } from 'three'
+import { Group, Shape, Vector3 } from 'three'
 import { useConfirmTone } from '../feedback/audio/useConfirmTone'
 import { useHapticPulse } from '../feedback/haptics/useHapticPulse'
 import { usePlaygroundTheme } from '../theme/PlaygroundThemeContext'
@@ -72,6 +72,8 @@ function roundedRectShape(w: number, h: number, r: number): Shape {
   return s
 }
 
+const tmpCameraPos = new Vector3()
+
 export function HUDPanel() {
   const { xr } = usePlaygroundTheme()
   const [expanded, setExpanded] = useState(false)
@@ -79,6 +81,7 @@ export function HUDPanel() {
   const pulse = useHapticPulse()
   const playTone = useConfirmTone()
   const { label: fpsLabel, color: fpsColor } = useFpsLabel()
+  const groupRef = useRef<Group>(null)
 
   // Half-opaque idle, full opacity on hover.
   const opacityMult = hovered ? 1 : 0.5
@@ -111,8 +114,24 @@ export function HUDPanel() {
     [pulse, playTone],
   )
 
+  // Face-the-user when expanded: rotate the panel so its front face (+Z) points at the
+  // camera position. Three.js `lookAt` makes the object's −Z face the target, so after the
+  // call we rotate 180° around Y to flip the front face toward camera. When minimized, the
+  // panel inherits TagAlongHUD's camera-aligned rotation (identity in this group's frame).
+  useFrame(({ camera }) => {
+    const g = groupRef.current
+    if (!g) return
+    if (expanded) {
+      camera.getWorldPosition(tmpCameraPos)
+      g.lookAt(tmpCameraPos)
+      g.rotateY(Math.PI)
+    } else {
+      g.rotation.set(0, 0, 0)
+    }
+  })
+
   return (
-    <group>
+    <group ref={groupRef}>
       {/* Border ring — theme accent (CP amber / WN ember). */}
       <mesh position={[0, 0, -0.009]} renderOrder={-501}>
         <shapeGeometry args={[shape]} />
@@ -169,6 +188,8 @@ function MinimizedContent({
 }) {
   const { xr } = usePlaygroundTheme()
   // Simplified pill: status dot + FPS only. Tap anywhere to expand.
+  // Status dot stays at full opacity even when the rest of the HUD is dimmed — the dot is a
+  // performance signal that needs to remain readable at idle.
   return (
     <group>
       <mesh position={[-0.040, 0, 0.001]} renderOrder={-498}>
@@ -176,7 +197,7 @@ function MinimizedContent({
         <meshBasicMaterial
           color={fpsColor}
           transparent
-          opacity={0.95 * opacityMult}
+          opacity={0.95}
           depthWrite={false}
         />
       </mesh>
@@ -221,13 +242,13 @@ function ExpandedContent({
 
   return (
     <group>
-      {/* Status dot. */}
+      {/* Status dot — full opacity at all times (performance signal stays readable when idle). */}
       <mesh position={[-W / 2 + 0.018, H / 2 - 0.030, 0.001]} renderOrder={-498}>
         <circleGeometry args={[0.006, 16]} />
         <meshBasicMaterial
           color={fpsColor}
           transparent
-          opacity={0.95 * opacityMult}
+          opacity={0.95}
           depthWrite={false}
         />
       </mesh>
