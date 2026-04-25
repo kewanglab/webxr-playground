@@ -54,7 +54,7 @@ export function TagAlongHUD({ children }: TagAlongHUDProps) {
       .copy(tmpCameraPos)
       .addScaledVector(tmpForward, 0.7)
       .addScaledVector(tmpRight, -0.22)
-      .addScaledVector(tmpUp, -0.30)
+      .addScaledVector(tmpUp, -0.45)
 
     if (!initialized.current) {
       smoothPos.current.copy(tmpTargetPos)

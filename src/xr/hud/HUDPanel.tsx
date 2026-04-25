@@ -75,12 +75,17 @@ function roundedRectShape(w: number, h: number, r: number): Shape {
 export function HUDPanel() {
   const { xr } = usePlaygroundTheme()
   const [expanded, setExpanded] = useState(false)
+  const [hovered, setHovered] = useState(false)
   const pulse = useHapticPulse()
   const playTone = useConfirmTone()
   const { label: fpsLabel, color: fpsColor } = useFpsLabel()
 
-  // HUD_DIMS from design-handoff v0.2: minimized 158×38 r=19 (pill), expanded 295×168 r=13.
-  const W = (expanded ? 295 : 158) * PX
+  // Half-opaque idle, full opacity on hover.
+  const opacityMult = hovered ? 1 : 0.5
+
+  // Minimized pill is narrowed since content is reduced to status dot + FPS only.
+  // Expanded panel keeps the spec's 295×168 px / r=13 dimensions.
+  const W = (expanded ? 295 : 90) * PX
   const H = (expanded ? 168 : 38) * PX
   const R = (expanded ? 13 : 19) * PX
   const innerInset = 0.004
@@ -114,29 +119,40 @@ export function HUDPanel() {
         <meshBasicMaterial
           color={xr.hud.panelBorder}
           transparent
-          opacity={0.86}
+          opacity={0.86 * opacityMult}
           depthWrite={false}
         />
       </mesh>
-      {/* Fill — clickable surface, theme panel color. */}
+      {/* Fill — clickable surface, theme panel color. Pointer enter / leave drive the hover
+          state for the whole HUD. */}
       <mesh
         position={[0, 0, -0.008]}
         renderOrder={-500}
+        onPointerEnter={() => setHovered(true)}
+        onPointerLeave={() => setHovered(false)}
         onPointerDown={onTap}
       >
         <shapeGeometry args={[innerShape]} />
         <meshBasicMaterial
           color={xr.hud.panelFill}
           transparent
-          opacity={xr.hud.panelOpacity}
+          opacity={xr.hud.panelOpacity * opacityMult}
           depthWrite={false}
         />
       </mesh>
       {/* State-conditional content. */}
       {expanded ? (
-        <ExpandedContent fpsLabel={fpsLabel} fpsColor={fpsColor} />
+        <ExpandedContent
+          fpsLabel={fpsLabel}
+          fpsColor={fpsColor}
+          opacityMult={opacityMult}
+        />
       ) : (
-        <MinimizedContent fpsLabel={fpsLabel} fpsColor={fpsColor} />
+        <MinimizedContent
+          fpsLabel={fpsLabel}
+          fpsColor={fpsColor}
+          opacityMult={opacityMult}
+        />
       )}
     </group>
   )
@@ -145,55 +161,37 @@ export function HUDPanel() {
 function MinimizedContent({
   fpsLabel,
   fpsColor,
+  opacityMult,
 }: {
   fpsLabel: string
   fpsColor: string
+  opacityMult: number
 }) {
   const { xr } = usePlaygroundTheme()
-  // Pill layout: status dot · FPS · "FPS" label · trial counter · expand chevron.
+  // Simplified pill: status dot + FPS only. Tap anywhere to expand.
   return (
     <group>
-      <mesh position={[-0.082, 0, 0.001]} renderOrder={-498}>
+      <mesh position={[-0.040, 0, 0.001]} renderOrder={-498}>
         <circleGeometry args={[0.005, 16]} />
-        <meshBasicMaterial color={fpsColor} transparent opacity={0.95} depthWrite={false} />
+        <meshBasicMaterial
+          color={fpsColor}
+          transparent
+          opacity={0.95 * opacityMult}
+          depthWrite={false}
+        />
       </mesh>
       <Text
-        position={[-0.062, 0, 0.001]}
-        fontSize={0.018}
+        position={[-0.020, 0, 0.001]}
+        fontSize={0.020}
         color={xr.hud.textMetric}
         anchorX="left"
         anchorY="middle"
         outlineWidth={0.003}
         outlineColor={xr.hud.panelFill}
+        fillOpacity={opacityMult}
+        outlineOpacity={opacityMult}
       >
         {fpsLabel}
-      </Text>
-      <Text
-        position={[-0.022, 0.001, 0.001]}
-        fontSize={0.010}
-        color={xr.hud.textMuted}
-        anchorX="left"
-        anchorY="middle"
-      >
-        FPS
-      </Text>
-      <Text
-        position={[0.030, 0, 0.001]}
-        fontSize={0.011}
-        color={xr.hud.textMuted}
-        anchorX="left"
-        anchorY="middle"
-      >
-        T —
-      </Text>
-      <Text
-        position={[0.085, 0, 0.001]}
-        fontSize={0.013}
-        color={xr.hud.panelBorder}
-        anchorX="center"
-        anchorY="middle"
-      >
-        ⌃
       </Text>
     </group>
   )
@@ -202,9 +200,11 @@ function MinimizedContent({
 function ExpandedContent({
   fpsLabel,
   fpsColor,
+  opacityMult,
 }: {
   fpsLabel: string
   fpsColor: string
+  opacityMult: number
 }) {
   const { xr } = usePlaygroundTheme()
   const W = 295 * PX
@@ -224,7 +224,12 @@ function ExpandedContent({
       {/* Status dot. */}
       <mesh position={[-W / 2 + 0.018, H / 2 - 0.030, 0.001]} renderOrder={-498}>
         <circleGeometry args={[0.006, 16]} />
-        <meshBasicMaterial color={fpsColor} transparent opacity={0.95} depthWrite={false} />
+        <meshBasicMaterial
+          color={fpsColor}
+          transparent
+          opacity={0.95 * opacityMult}
+          depthWrite={false}
+        />
       </mesh>
       {/* FPS large numeral. */}
       <Text
@@ -235,6 +240,8 @@ function ExpandedContent({
         anchorY="middle"
         outlineWidth={0.004}
         outlineColor={xr.hud.panelFill}
+        fillOpacity={opacityMult}
+        outlineOpacity={opacityMult}
       >
         {fpsLabel}
       </Text>
@@ -244,6 +251,7 @@ function ExpandedContent({
         color={xr.hud.textMuted}
         anchorX="left"
         anchorY="middle"
+        fillOpacity={opacityMult}
       >
         FPS
       </Text>
@@ -254,6 +262,7 @@ function ExpandedContent({
         color={xr.hud.textPrimary}
         anchorX="right"
         anchorY="middle"
+        fillOpacity={opacityMult}
       >
         Trial — / —
       </Text>
@@ -263,6 +272,7 @@ function ExpandedContent({
         color={xr.hud.textMuted}
         anchorX="right"
         anchorY="middle"
+        fillOpacity={opacityMult}
       >
         translation
       </Text>
@@ -273,6 +283,7 @@ function ExpandedContent({
         color={xr.hud.panelBorder}
         anchorX="right"
         anchorY="middle"
+        fillOpacity={opacityMult}
       >
         ⌄
       </Text>
@@ -282,7 +293,7 @@ function ExpandedContent({
         <meshBasicMaterial
           color={xr.hud.panelBorder}
           transparent
-          opacity={0.36}
+          opacity={0.36 * opacityMult}
           depthWrite={false}
         />
       </mesh>
@@ -298,6 +309,7 @@ function ExpandedContent({
               color={xr.hud.textMuted}
               anchorX="center"
               anchorY="middle"
+              fillOpacity={opacityMult}
             >
               {k}
             </Text>
@@ -309,6 +321,8 @@ function ExpandedContent({
               anchorY="middle"
               outlineWidth={0.002}
               outlineColor={xr.hud.panelFill}
+              fillOpacity={opacityMult}
+              outlineOpacity={opacityMult}
             >
               {v}
             </Text>
@@ -321,7 +335,7 @@ function ExpandedContent({
         <meshBasicMaterial
           color={xr.hud.panelBorder}
           transparent
-          opacity={0.20}
+          opacity={0.20 * opacityMult}
           depthWrite={false}
         />
       </mesh>
@@ -331,6 +345,7 @@ function ExpandedContent({
         color={xr.hud.panelBorder}
         anchorX="center"
         anchorY="middle"
+        fillOpacity={opacityMult}
       >
         Direct touch (hands)
       </Text>
