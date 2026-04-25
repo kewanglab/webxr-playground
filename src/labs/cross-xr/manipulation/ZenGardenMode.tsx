@@ -17,7 +17,7 @@ import { useHandJoints } from './useHandJoints'
 import { useManipulation } from './useManipulation'
 import { ManipulableObject } from './ManipulableObject'
 import { CherryPetals } from './CherryPetals'
-import { usePlaygroundStore } from '../../../app/store'
+import { defaultHudReport, usePlaygroundStore } from '../../../app/store'
 import { xrStore } from '../../../xr/core/xrStore'
 import { usePlaygroundTheme } from '../../../xr/theme/PlaygroundThemeContext'
 import {
@@ -390,7 +390,23 @@ export function ZenGardenMode({
   const joints = useHandJoints('right')
   const addLogEntry = usePlaygroundStore((s) => s.addLogEntry)
   const currentLab = usePlaygroundStore((s) => s.currentLab)
+  const setHudReport = usePlaygroundStore((s) => s.setHudReport)
   const sandTexture = useSandTexture()
+
+  // Push current Leva tuning into the in-XR HUD's expanded metrics panel.
+  useEffect(() => {
+    setHudReport({
+      metrics: [
+        { label: 'OBJ SIZE', value: objectSize.toFixed(2) },
+        { label: 'GRAB DIST', value: grabDistance.toFixed(2) },
+        { label: 'CD GAIN', value: cdGain.toFixed(1) },
+        { label: 'TECHNIQUE', value: technique === 'integrated' ? 'INT' : 'SEP' },
+      ],
+      methodLabel: `Manipulation · Zen Garden · ${acquisition}`,
+      trial: null,
+    })
+    return () => setHudReport(defaultHudReport)
+  }, [objectSize, grabDistance, cdGain, technique, acquisition, setHudReport])
 
   const onRelease = useCallback(
     (id: string) => {

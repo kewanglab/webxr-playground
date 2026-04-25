@@ -1,9 +1,10 @@
 import { Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Euler, Quaternion, Shape, Vector3 } from 'three'
 import type { ManipulationAcquisition, ManipulationTechnique } from '../ObjectManipulationLab'
 import type { ManipulationResult } from './techniques'
+import { defaultHudReport, usePlaygroundStore } from '../../../app/store'
 import { tuningPresets } from '../../../config/labs'
 import { usePlaygroundTheme } from '../../../xr/theme/PlaygroundThemeContext'
 import {
@@ -568,6 +569,37 @@ export function DockingMode({
     const proximate = dist < grabDistance * 2
     if (proximate !== handProximate) setHandProximate(proximate)
   })
+
+  // Push current Leva tuning + trial progress into the in-XR HUD's expanded metrics panel.
+  const setHudReport = usePlaygroundStore((s) => s.setHudReport)
+  const trialType = currentTrial?.type ?? null
+  const trialsTotal = trials.length
+  useEffect(() => {
+    setHudReport({
+      metrics: [
+        { label: 'OBJ SIZE', value: objectSize.toFixed(2) },
+        { label: 'GRAB DIST', value: grabDistance.toFixed(2) },
+        { label: 'CD GAIN', value: cdGain.toFixed(1) },
+        { label: 'TECHNIQUE', value: technique === 'integrated' ? 'INT' : 'SEP' },
+      ],
+      methodLabel: `Manipulation · Docking · ${acquisition}`,
+      trial:
+        trialType !== null
+          ? { current: trialIndex + 1, total: trialsTotal, subLabel: trialType }
+          : null,
+    })
+    return () => setHudReport(defaultHudReport)
+  }, [
+    objectSize,
+    grabDistance,
+    cdGain,
+    technique,
+    acquisition,
+    trialIndex,
+    trialsTotal,
+    trialType,
+    setHudReport,
+  ])
 
   if (isComplete) {
     const avgPos =
