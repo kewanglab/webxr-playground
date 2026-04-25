@@ -114,17 +114,17 @@ export function HUDPanel() {
     [pulse, playTone],
   )
 
-  // Face-the-user when expanded: rotate the panel so its front face (+Z) points at the
-  // camera position. Three.js `lookAt` makes the object's −Z face the target, so after the
-  // call we rotate 180° around Y to flip the front face toward camera. When minimized, the
-  // panel inherits TagAlongHUD's camera-aligned rotation (identity in this group's frame).
+  // Face-the-user when expanded: Three.js `Object3D.lookAt(target)` for a non-camera mesh
+  // orients the object's local +Z axis toward the target — exactly what we want, since plane /
+  // shape geometries have their front face on the +Z side. No additional flip is needed.
+  // When minimized, reset to identity so the panel inherits TagAlongHUD's camera-aligned
+  // rotation.
   useFrame(({ camera }) => {
     const g = groupRef.current
     if (!g) return
     if (expanded) {
       camera.getWorldPosition(tmpCameraPos)
       g.lookAt(tmpCameraPos)
-      g.rotateY(Math.PI)
     } else {
       g.rotation.set(0, 0, 0)
     }
