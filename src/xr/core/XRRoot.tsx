@@ -1,3 +1,4 @@
+import { Suspense, useEffect } from 'react'
 import { XR, XROrigin } from '@react-three/xr'
 import { xrStore } from './xrStore'
 import { useXRMode } from './hooks'
@@ -6,9 +7,10 @@ import { VRScene } from '../scene/VRScene'
 import { ARScene } from '../scene/ARScene'
 import { LabContent } from '../../app/LabContent'
 import { usePlaygroundStore } from '../../app/store'
-import { InXRLogger } from '../hud/InXRLogger'
-import { InXRStats } from '../hud/InXRStats'
+import { HUDPanel } from '../hud/HUDPanel'
 import { TagAlongHUD } from '../hud/TagAlongHUD'
+import { preloadXrKitModels } from '../visual/useKitModel'
+import { DesktopPreviewCamera } from './DesktopPreviewCamera'
 
 function XRScene() {
   const mode = useXRMode()
@@ -18,6 +20,7 @@ function XRScene() {
 
   return (
     <>
+      <DesktopPreviewCamera />
       <XROrigin position={originPosition} rotation={[0, originRotationY, 0]} />
       <SharedScene />
       {!isAR && <VRScene />}
@@ -28,13 +31,22 @@ function XRScene() {
 }
 
 export function XRRoot() {
+  const fpsHudVisible = usePlaygroundStore((s) => s.fpsHudVisible)
+
+  useEffect(() => {
+    preloadXrKitModels()
+  }, [])
+
   return (
     <XR store={xrStore}>
-      <XRScene />
-      <TagAlongHUD>
-        <InXRStats />
-        <InXRLogger />
-      </TagAlongHUD>
+      <Suspense fallback={null}>
+        <XRScene />
+      </Suspense>
+      {fpsHudVisible && (
+        <TagAlongHUD>
+          <HUDPanel />
+        </TagAlongHUD>
+      )}
     </XR>
   )
 }

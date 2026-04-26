@@ -11,6 +11,8 @@ const tmpForward = new Vector3()
 const tmpRight = new Vector3()
 const tmpUp = new Vector3()
 const tmpTargetPos = new Vector3()
+const tmpCameraPos = new Vector3()
+const tmpCameraQuat = new Quaternion()
 const worldUp = new Vector3(0, 1, 0)
 
 /**
@@ -34,6 +36,8 @@ export function TagAlongHUD({ children }: TagAlongHUDProps) {
     const g = groupRef.current
     if (!g || !inXR) return
 
+    camera.getWorldPosition(tmpCameraPos)
+    camera.getWorldQuaternion(tmpCameraQuat)
     camera.getWorldDirection(tmpForward)
     tmpRight.crossVectors(tmpForward, worldUp)
     if (tmpRight.lengthSq() < 1e-8) {
@@ -43,22 +47,24 @@ export function TagAlongHUD({ children }: TagAlongHUDProps) {
     }
     tmpUp.crossVectors(tmpRight, tmpForward).normalize()
 
-    // Offset in view space: negative right = left, negative up = down (bottom-left corner).
+    // Offset in view space: negative right = left, negative up = down. Lower-left of view
+    // but pulled in toward centre and slightly closer to the user than the original placement
+    // so the HUD reads at a comfortable size without crowding the periphery.
     tmpTargetPos
-      .copy(camera.position)
-      .addScaledVector(tmpForward, 0.9)
-      .addScaledVector(tmpRight, -0.4)
-      .addScaledVector(tmpUp, -0.4)
+      .copy(tmpCameraPos)
+      .addScaledVector(tmpForward, 0.7)
+      .addScaledVector(tmpRight, -0.22)
+      .addScaledVector(tmpUp, -0.45)
 
     if (!initialized.current) {
       smoothPos.current.copy(tmpTargetPos)
-      smoothQuat.current.copy(camera.quaternion)
+      smoothQuat.current.copy(tmpCameraQuat)
       initialized.current = true
     }
 
     const k = 1 - Math.pow(0.88, delta * 60)
     smoothPos.current.lerp(tmpTargetPos, k)
-    smoothQuat.current.slerp(camera.quaternion, k)
+    smoothQuat.current.slerp(tmpCameraQuat, k)
 
     g.position.copy(smoothPos.current)
     g.quaternion.copy(smoothQuat.current)
@@ -67,7 +73,7 @@ export function TagAlongHUD({ children }: TagAlongHUDProps) {
   if (!inXR) return null
 
   return (
-    <group ref={groupRef} scale={0.62}>
+    <group ref={groupRef} scale={0.85}>
       {children}
     </group>
   )

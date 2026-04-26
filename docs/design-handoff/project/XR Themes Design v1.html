@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>XR Playground · Theme Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080B0D;color:#E8E4DF;font-family:'DM Sans',ui-sans-serif,sans-serif;min-height:100vh}
+button{font-family:inherit;border:none;cursor:pointer;outline:none}
+button:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+input[type=range]{cursor:pointer;height:4px;border-radius:2px}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel">
+const {useState,useRef,useEffect,useCallback}=React;
+
+// ── Palette ──────────────────────────────────────────────────────────────
+const CP={skyTop:'#6DCAE3',skyMid:'#A8DFF0',skyHorizon:'#FFE9B8',ground:'#91DBAE',groundHaze:'#C7F0DE',
+  archStone:'#FFF5DA',archRim:'#FFD166',islandBody:'#FFF2DA',cloudBody:'#FFFDF0',
+  hudFill:'rgba(31,79,88,.9)',hudBorder:'rgba(255,209,102,.92)',hudText:'#FFF8E2',
+  hudMetric:'#A8E3EC',hudMuted:'#C9DCD9',hudAccent:'#FFD166',
+  fpsBg:'#1F4F58',fpsText:'#A8E3EC',arStroke:'rgba(47,175,198,.75)',
+  shellBg:'#EAF8F1',shellElevated:'#FFF8E8',shellSubtle:'#DDF3E8',
+  shellBorder:'#76BBB6',shellBorderSubtle:'#B6DDD2',
+  shellText:'#24484B',shellMuted:'#5D7F7E',shellInverse:'#FFF9EC',
+  accentPrimary:'#D65F55',accentHover:'#B94B45',accentSoft:'rgba(214,95,85,.15)',
+  accentBorder:'#D65F55',dot:'#FFD166'};
+const WN={skyTop:'#0C1016',skyMid:'#19202A',skyHorizon:'#4A2E28',ground:'#141210',groundHaze:'#221D1A',
+  archStone:'#62504A',archRim:'rgba(200,95,88,.75)',
+  hudFill:'rgba(81,68,62,.9)',hudBorder:'rgba(200,95,88,.88)',hudText:'#FFF5EA',
+  hudMetric:'#B4C7CC',hudMuted:'#C8B8B0',hudAccent:'#C85F58',
+  fpsBg:'#51443E',fpsText:'#B4C7CC',arStroke:'rgba(130,154,162,.72)',
+  shellBg:'#F0E3D4',shellElevated:'#FBF7EF',shellSubtle:'#E8D7CA',
+  shellBorder:'#B99B89',shellBorderSubtle:'#D3BCAC',
+  shellText:'#3A2820',shellMuted:'#6B5A50',shellInverse:'#FFF7EF',
+  accentPrimary:'#B9564E',accentHover:'#97463F',accentSoft:'rgba(185,86,78,.14)',
+  accentBorder:'#B9564E',dot:'#C85F58'};
+
+// ── Canvas utils ──────────────────────────────────────────────────────────
+function rrect(ctx,x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
+function cloud(ctx,cx,cy,s,color,a=1){
+  ctx.save();ctx.globalAlpha=a;ctx.fillStyle=color;
+  [[0,0,1],[.82,-.28,.76],[-.72,.1,.66],[1.58,.08,.55],[-.35,-.52,.6],[1.05,-.48,.48],[-.95,.35,.42]].forEach(([dx,dy,sr])=>{
+    ctx.beginPath();ctx.arc(cx+dx*s*44,cy+dy*s*44,s*44*sr,0,Math.PI*2);ctx.fill();});
+  ctx.restore();}
+function hudPanel(ctx,x,y,w,h,p){
+  ctx.save();
+  rrect(ctx,x,y,w,h,12);ctx.fillStyle=p.fill;ctx.fill();
+  ctx.shadowColor=p.accent;ctx.shadowBlur=10;
+  rrect(ctx,x,y,w,h,12);ctx.strokeStyle=p.border;ctx.lineWidth=1.5;ctx.stroke();
+  ctx.shadowBlur=0;
+  ctx.font='bold 22px DM Mono,ui-monospace,monospace';ctx.fillStyle=p.metric;ctx.textAlign='left';
+  ctx.fillText('60',x+16,y+40);
+  ctx.font='10px DM Sans,ui-sans-serif,sans-serif';ctx.fillStyle=p.muted;ctx.fillText('FPS',x+16,y+54);
+  ctx.font='bold 12px DM Sans,ui-sans-serif,sans-serif';ctx.fillStyle=p.text;ctx.textAlign='right';
+  ctx.fillText('Trial 1 / 18',x+w-14,y+40);
+  ctx.strokeStyle=p.accent+'55';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(x+12,y+64);ctx.lineTo(x+w-12,y+64);ctx.stroke();
+  [['Target','0.28'],['Boost','0.15'],['Audio','OFF']].forEach(([l,v],i)=>{
+    const mx=x+14+i*(w-28)/3;
+    ctx.font='9px DM Sans,sans-serif';ctx.fillStyle=p.muted;ctx.textAlign='left';ctx.fillText(l,mx,y+80);
+    ctx.font='bold 13px DM Sans,sans-serif';ctx.fillStyle=p.text;ctx.fillText(v,mx,y+96);});
+  ctx.fillStyle=p.accent+'25';rrect(ctx,x+10,y+h-40,w-20,28,7);ctx.fill();
+  ctx.font='11px DM Sans,sans-serif';ctx.fillStyle=p.accent;ctx.textAlign='center';
+  ctx.fillText('Direct touch (hands)',x+w/2,y+h-21);
+  ctx.restore();}
+
+// ── Cloud Park VR ─────────────────────────────────────────────────────────
+function drawCPVR(canvas){
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,vx=W/2,vy=H*.535;
+  // Sky gradient
+  const sg=ctx.createLinearGradient(0,0,0,vy+25);
+  sg.addColorStop(0,'#5DC4DF');sg.addColorStop(.55,'#96D8EE');sg.addColorStop(.88,'#CCE8F5');sg.addColorStop(1,'#FFE8B5');
+  ctx.fillStyle=sg;ctx.fillRect(0,0,W,vy+35);
+  // Sun glow
+  const sx=W*.26,sy=H*.17,sunG=ctx.createRadialGradient(sx,sy,0,sx,sy,210);
+  sunG.addColorStop(0,'rgba(255,253,242,.99)');sunG.addColorStop(.1,'rgba(255,248,215,.94)');
+  sunG.addColorStop(.32,'rgba(255,228,155,.42)');sunG.addColorStop(.7,'rgba(255,220,130,.12)');sunG.addColorStop(1,'rgba(255,220,130,0)');
+  ctx.fillStyle=sunG;ctx.beginPath();ctx.arc(sx,sy,210,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(255,254,250,.97)';ctx.beginPath();ctx.arc(sx,sy,19,0,Math.PI*2);ctx.fill();
+  // Horizon haze
+  const haze=ctx.createLinearGradient(0,vy-55,0,vy+30);
+  haze.addColorStop(0,'rgba(255,240,198,0)');haze.addColorStop(.5,'rgba(255,236,188,.22)');haze.addColorStop(1,'rgba(195,240,218,.42)');
+  ctx.fillStyle=haze;ctx.fillRect(0,vy-55,W,85);
+  // Clouds
+  cloud(ctx,W*.08,H*.1,1.38,CP.cloudBody,.9);cloud(ctx,W*.74,H*.08,1.08,CP.cloudBody,.84);
+  cloud(ctx,W*.53,H*.21,.7,'#FFFDF8',.72);cloud(ctx,W*.88,H*.27,.56,'#FFF9F0',.62);
+  cloud(ctx,W*.16,H*.31,.5,'#FFF9F0',.56);
+  // Soft second sun bloom
+  const sg2=ctx.createRadialGradient(sx,sy,60,sx,sy,350);
+  sg2.addColorStop(0,'rgba(255,240,180,.1)');sg2.addColorStop(1,'rgba(255,240,180,0)');
+  ctx.fillStyle=sg2;ctx.fillRect(0,0,W,vy);
+  // Floor
+  const fg=ctx.createLinearGradient(0,vy,0,H);
+  fg.addColorStop(0,'#C5EED8');fg.addColorStop(.3,'#9EDDB5');fg.addColorStop(1,'#78C895');
+  ctx.fillStyle=fg;ctx.fillRect(0,vy-6,W,H-vy+6);
+  // Floor grid perspective
+  ctx.lineWidth=.7;ctx.strokeStyle='rgba(182,228,205,.48)';
+  for(let i=-11;i<=11;i++){ctx.beginPath();ctx.moveTo(vx,vy);ctx.lineTo(vx+i*W*.1,H);ctx.stroke();}
+  for(let t=.07;t<1;t+=.14){const y=vy+(H-vy)*t;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  // Islands
+  [[W*.5,H*.88,145,32,1],[W*.24,H*.78,90,20,.9],[W*.76,H*.8,80,18,.88],[W*.38,H*.94,115,25,.92],[W*.68,H*.95,100,22,.86]].forEach(([cx,cy,rx,ry,a])=>{
+    ctx.save();ctx.globalAlpha=a;
+    // Island shadow
+    ctx.fillStyle='rgba(100,190,150,.22)';ctx.beginPath();ctx.ellipse(cx,cy+10,rx*.9,ry*.55,0,0,Math.PI*2);ctx.fill();
+    // Island body
+    const ig=ctx.createRadialGradient(cx-rx*.2,cy-ry*.2,0,cx,cy,rx);
+    ig.addColorStop(0,'#FFFAEC');ig.addColorStop(.6,CP.islandBody);ig.addColorStop(1,'#EAD7AA');
+    ctx.fillStyle=ig;ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.fill();
+    // Island rim
+    ctx.strokeStyle='rgba(200,225,210,.5)';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();
+    ctx.restore();});
+  // Arch
+  ctx.lineWidth=24;ctx.strokeStyle=CP.archStone;ctx.lineCap='round';
+  ctx.beginPath();ctx.arc(vx,vy+32,258,Math.PI,0);ctx.stroke();
+  // Arch yellow glow inner rim
+  ctx.save();ctx.shadowColor='rgba(255,209,102,.6)';ctx.shadowBlur=14;
+  ctx.lineWidth=5;ctx.strokeStyle='rgba(255,209,102,.9)';
+  ctx.beginPath();ctx.arc(vx,vy+32,246,Math.PI,0);ctx.stroke();
+  ctx.restore();
+  // Columns
+  [vx-258,vx+258].forEach(x=>{
+    const cg=ctx.createLinearGradient(x-14,0,x+14,0);
+    cg.addColorStop(0,'#E5EAD5');cg.addColorStop(.45,'#FFF8E2');cg.addColorStop(1,'#D5C295');
+    ctx.fillStyle=cg;ctx.fillRect(x-14,vy+8,28,90);
+    ctx.fillStyle='#EDEADB';ctx.beginPath();ctx.ellipse(x,vy+8,18,5.5,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#D8C8A0';ctx.beginPath();ctx.ellipse(x,vy+98,18,5.5,0,0,Math.PI*2);ctx.fill();});
+  // Center experiment figure (little meeple-ish character)
+  ctx.fillStyle='#5BB882';ctx.beginPath();ctx.ellipse(vx+22,vy-12,11,21,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#4BA870';ctx.beginPath();ctx.arc(vx+24,vy-32,9.5,0,Math.PI*2);ctx.fill();
+  // Target button on center island
+  ctx.fillStyle='rgba(255,209,102,.7)';ctx.beginPath();ctx.ellipse(vx,vy+65,38,10,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(255,245,210,.9)';ctx.beginPath();ctx.ellipse(vx,vy+57,20,6,0,0,Math.PI*2);ctx.fill();
+  // Right floating object card
+  ctx.fillStyle='rgba(255,255,255,.18)';rrect(ctx,W*.82,vy-90,100,80,8);ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.25)';ctx.lineWidth=1;rrect(ctx,W*.82,vy-90,100,80,8);ctx.stroke();
+  // HUD Panel
+  hudPanel(ctx,W*.67,H*.055,305,175,{fill:CP.hudFill,border:CP.hudBorder,text:CP.hudText,metric:CP.hudMetric,muted:CP.hudMuted,accent:CP.hudAccent});
+  // Lab text
+  ctx.font='bold 26px DM Sans,sans-serif';ctx.fillStyle='rgba(36,72,75,.68)';ctx.textAlign='center';
+  ctx.fillText('Selection Lab',vx,H*.27);
+  ctx.font='14px DM Sans,sans-serif';ctx.fillStyle='rgba(36,72,75,.48)';
+  ctx.fillText('Target 0.28 · Confirm boost 0.15 · Haptics on · Audio off',vx,H*.315);
+  ctx.font='14px DM Sans,sans-serif';ctx.fillStyle='rgba(36,72,75,.4)';ctx.textAlign='right';
+  ctx.fillText('Trial 1/18 — translation',W-24,30);
+  ctx.fillStyle=CP.fpsBg;rrect(ctx,18,H-52,90,30,5);ctx.fill();
+  ctx.font='12px DM Mono,monospace';ctx.fillStyle=CP.fpsText;ctx.textAlign='left';ctx.fillText('FPS 60',30,H-32);}
+
+// ── Warm Night VR ─────────────────────────────────────────────────────────
+function drawWNVR(canvas){
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,vx=W/2,vy=H*.52;
+  // Sky
+  const sg=ctx.createLinearGradient(0,0,0,vy+18);
+  sg.addColorStop(0,'#0A0E14');sg.addColorStop(.42,'#161E2A');sg.addColorStop(.78,'#251A16');sg.addColorStop(1,'#482C26');
+  ctx.fillStyle=sg;ctx.fillRect(0,0,W,vy+22);
+  // Horizon warm radial glow
+  const hg=ctx.createRadialGradient(vx,vy,0,vx,vy,W*.58);
+  hg.addColorStop(0,'rgba(155,80,62,.4)');hg.addColorStop(.42,'rgba(130,56,44,.18)');hg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=hg;ctx.fillRect(0,vy-130,W,260);
+  // Stars
+  ctx.fillStyle='rgba(255,248,225,.5)';
+  [[W*.13,H*.07],[W*.41,H*.04],[W*.66,H*.11],[W*.8,H*.05],[W*.24,H*.14],[W*.9,H*.17],[W*.55,H*.09],[W*.33,H*.19],[W*.72,H*.22]].forEach(([sx,sy])=>{
+    ctx.beginPath();ctx.arc(sx,sy,1.1,0,Math.PI*2);ctx.fill();});
+  // Floor
+  const fg=ctx.createLinearGradient(0,vy,0,H);
+  fg.addColorStop(0,'#272018');fg.addColorStop(1,'#111009');
+  ctx.fillStyle=fg;ctx.fillRect(0,vy-8,W,H-vy+8);
+  // Grid — radial lines
+  for(let i=-15;i<=15;i++){
+    const maj=i%4===0;
+    ctx.strokeStyle=maj?'rgba(215,174,168,.22)':'rgba(105,95,90,.25)';
+    ctx.lineWidth=maj?1.2:.6;
+    ctx.beginPath();ctx.moveTo(vx,vy);ctx.lineTo(vx+i*W*.088,H);ctx.stroke();}
+  // Grid — horizontal
+  for(let t=.05;t<1;t+=.1){
+    const y=vy+(H-vy)*t;
+    ctx.strokeStyle=t<.12?'rgba(215,174,168,.18)':'rgba(95,85,80,.2)';
+    ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  // City silhouettes
+  ctx.fillStyle='#161210';
+  [[0,68,W*.18,vy-68],[W*.04,44,W*.1,vy-44],[W*.82,60,W*.18,vy-60],[W*.88,42,W*.1,vy-42]].forEach(([x,bh,w,y])=>ctx.fillRect(x,y,w,bh));
+  // Arch
+  ctx.lineWidth=28;ctx.strokeStyle=WN.archStone;ctx.lineCap='round';
+  ctx.beginPath();ctx.arc(vx,vy+38,252,Math.PI,0);ctx.stroke();
+  ctx.save();ctx.shadowColor='rgba(200,95,88,.55)';ctx.shadowBlur=20;
+  ctx.lineWidth=4;ctx.strokeStyle='rgba(200,95,88,.8)';
+  ctx.beginPath();ctx.arc(vx,vy+38,252,Math.PI,0);ctx.stroke();
+  ctx.restore();
+  // Columns
+  [vx-252,vx+252].forEach(x=>{
+    const cg=ctx.createLinearGradient(x-16,0,x+16,0);
+    cg.addColorStop(0,'#3D3530');cg.addColorStop(.5,'#52473E');cg.addColorStop(1,'#2D2924');
+    ctx.fillStyle=cg;ctx.fillRect(x-16,vy+10,32,95);
+    ctx.fillStyle='#514540';ctx.beginPath();ctx.ellipse(x,vy+10,20,5.5,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#302824';ctx.beginPath();ctx.ellipse(x,vy+105,20,5.5,0,0,Math.PI*2);ctx.fill();});
+  // ASTRANOVA side panels
+  [[48,vy-136,112,202,0],[W-160,vy-136,112,202,1]].forEach(([px,py,pw,ph,side])=>{
+    const pg=ctx.createLinearGradient(px,0,px+pw,0);
+    pg.addColorStop(0,side?'#2C2420':'#3A3028');pg.addColorStop(1,side?'#3A3028':'#2C2420');
+    ctx.fillStyle=pg;rrect(ctx,px,py,pw,ph,4);ctx.fill();
+    ctx.strokeStyle='rgba(180,145,130,.28)';ctx.lineWidth=1;rrect(ctx,px,py,pw,ph,4);ctx.stroke();
+    const tcx=px+pw/2,tcy=py+ph*.4;
+    ctx.save();ctx.shadowColor='rgba(200,95,88,.5)';ctx.shadowBlur=12;
+    ctx.strokeStyle='rgba(200,95,88,.75)';ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(tcx,tcy,28,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;
+    ctx.strokeStyle='rgba(200,95,88,.3)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(tcx,tcy,40,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+    ctx.font='bold 8.5px DM Mono,monospace';ctx.fillStyle='rgba(220,200,188,.55)';ctx.textAlign='center';
+    ctx.fillText('ASTRANOVA',px+pw/2,py+18);
+    ctx.font='8px DM Mono,monospace';ctx.fillStyle='rgba(200,95,88,.72)';
+    ctx.fillText('UNLOCK',px+pw/2,py+ph*.72);});
+  // Experiment sphere/molecule
+  const ox=vx+22,oy=vy-20;
+  ctx.save();ctx.shadowColor='rgba(200,95,88,.35)';ctx.shadowBlur=18;
+  ctx.fillStyle='#E2D4C4';ctx.beginPath();ctx.arc(ox,oy,17,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  ctx.fillStyle='rgba(200,95,88,.88)';ctx.beginPath();ctx.arc(ox-9,oy+13,9,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle='rgba(200,185,172,.35)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(vx+65,vy-6);ctx.stroke();
+  // Red arch path stripe (like in screenshot)
+  ctx.save();ctx.globalAlpha=.55;ctx.lineWidth=6;ctx.strokeStyle='rgba(190,85,78,.8)';ctx.lineCap='round';
+  ctx.beginPath();ctx.arc(vx,vy+38,180,Math.PI,0);ctx.stroke();ctx.restore();
+  // HUD
+  hudPanel(ctx,W*.65,H*.048,318,182,{fill:WN.hudFill,border:WN.hudBorder,text:WN.hudText,metric:WN.hudMetric,muted:WN.hudMuted,accent:WN.hudAccent});
+  ctx.font='bold 27px DM Sans,sans-serif';ctx.fillStyle='rgba(255,245,234,.92)';ctx.textAlign='center';
+  ctx.fillText('Manipulation Lab',vx,H*.27);
+  ctx.font='14px DM Sans,sans-serif';ctx.fillStyle='rgba(205,188,175,.72)';
+  ctx.fillText('Docking · Proximity pinch · Integrated (6DOF)',vx,H*.315);
+  ctx.font='14px DM Sans,sans-serif';ctx.fillStyle='rgba(205,188,175,.52)';ctx.textAlign='right';
+  ctx.fillText('Trial 1/18 — translation',W-24,30);
+  ctx.fillStyle=WN.fpsBg;rrect(ctx,18,H-52,100,30,5);ctx.fill();
+  ctx.font='12px DM Mono,monospace';ctx.fillStyle=WN.fpsText;ctx.textAlign='left';ctx.fillText('FPS 121',30,H-32);}
+
+// ── Cloud Park AR ─────────────────────────────────────────────────────────
+function drawCPAR(canvas){
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+  // Room background
+  const rg=ctx.createLinearGradient(0,0,0,H);
+  rg.addColorStop(0,'#D6D2CC');rg.addColorStop(.58,'#CAC6C0');rg.addColorStop(.6,'#BDB8B1');rg.addColorStop(1,'#B2ADA7');
+  ctx.fillStyle=rg;ctx.fillRect(0,0,W,H);
+  // Ceiling tiles
+  ctx.strokeStyle='rgba(180,176,170,.45)';ctx.lineWidth=.8;
+  for(let x=0;x<W;x+=90){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H*.58);ctx.stroke();}
+  for(let y=0;y<H*.58;y+=68){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  // Ceiling light panel glow
+  const lg=ctx.createRadialGradient(W*.5,H*.12,15,W*.5,H*.12,230);
+  lg.addColorStop(0,'rgba(255,252,246,.72)');lg.addColorStop(1,'rgba(255,252,246,0)');
+  ctx.fillStyle=lg;ctx.fillRect(0,0,W,H*.6);
+  // Wall/floor join line
+  ctx.strokeStyle='rgba(148,144,138,.4)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,H*.58);ctx.lineTo(W,H*.58);ctx.stroke();
+  // Virtual island floating (center of room)
+  ctx.save();ctx.globalAlpha=.9;
+  // Shadow on ceiling
+  ctx.fillStyle='rgba(100,180,140,.12)';ctx.beginPath();ctx.ellipse(W*.5,H*.22,200,55,0,0,Math.PI*2);ctx.fill();
+  // Island body
+  const ig=ctx.createRadialGradient(W*.46,H*.3,10,W*.5,H*.35,180);
+  ig.addColorStop(0,'rgba(255,249,232,.95)');ig.addColorStop(.6,'rgba(195,238,210,.88)');ig.addColorStop(1,'rgba(185,232,205,.65)');
+  ctx.fillStyle=ig;ctx.beginPath();ctx.ellipse(W*.5,H*.4,198,50,0,0,Math.PI*2);ctx.fill();
+  // AR scan ring
+  ctx.save();ctx.shadowColor='rgba(47,175,198,.5)';ctx.shadowBlur=14;
+  ctx.strokeStyle='rgba(47,175,198,.78)';ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.ellipse(W*.5,H*.4,205,54,0,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;
+  ctx.strokeStyle='rgba(47,175,198,.3)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.ellipse(W*.5,H*.4,218,59,0,0,Math.PI*2);ctx.stroke();
+  ctx.restore();
+  // Floating mini trees
+  [[W*.36,H*.28],[W*.5,H*.23],[W*.64,H*.3]].forEach(([tx,ty])=>{
+    ctx.fillStyle='rgba(88,185,138,.88)';ctx.beginPath();ctx.arc(tx,ty,11,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(68,158,112,.75)';ctx.beginPath();ctx.arc(tx-4,ty+5,7.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(100,160,125,.6)';ctx.fillRect(tx-3,ty+10,6,20);});
+  ctx.restore();
+  // Floor placement ring
+  ctx.strokeStyle='rgba(47,175,198,.5)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.ellipse(W*.5,H*.84,130,32,0,0,Math.PI*2);ctx.stroke();
+  ctx.strokeStyle='rgba(47,175,198,.2)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.ellipse(W*.5,H*.84,165,42,0,0,Math.PI*2);ctx.stroke();
+  // HUD panel
+  ctx.save();ctx.globalAlpha=.85;
+  hudPanel(ctx,W*.6,H*.62,268,160,{fill:CP.hudFill,border:CP.hudBorder,text:CP.hudText,metric:CP.hudMetric,muted:CP.hudMuted,accent:CP.hudAccent});
+  ctx.restore();
+  ctx.font='13px DM Sans,sans-serif';ctx.fillStyle='rgba(47,175,198,.88)';ctx.textAlign='center';
+  ctx.fillText('Surface marker preview',W*.5,H*.93);
+  ctx.fillStyle=CP.fpsBg;rrect(ctx,18,H-52,104,30,5);ctx.fill();
+  ctx.font='12px DM Mono,monospace';ctx.fillStyle=CP.fpsText;ctx.textAlign='left';ctx.fillText('FPS 118',30,H-32);}
+
+// ── Warm Night AR ─────────────────────────────────────────────────────────
+function drawWNAR(canvas){
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+  const rg=ctx.createLinearGradient(0,0,0,H);
+  rg.addColorStop(0,'#D6D2CC');rg.addColorStop(.58,'#CAC6C0');rg.addColorStop(.6,'#BDB8B1');rg.addColorStop(1,'#B2ADA7');
+  ctx.fillStyle=rg;ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(180,176,170,.45)';ctx.lineWidth=.8;
+  for(let x=0;x<W;x+=90){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H*.58);ctx.stroke();}
+  for(let y=0;y<H*.58;y+=68){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  const lg=ctx.createRadialGradient(W*.5,H*.12,15,W*.5,H*.12,230);
+  lg.addColorStop(0,'rgba(255,252,246,.72)');lg.addColorStop(1,'rgba(255,252,246,0)');
+  ctx.fillStyle=lg;ctx.fillRect(0,0,W,H*.6);
+  ctx.strokeStyle='rgba(148,144,138,.4)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,H*.58);ctx.lineTo(W,H*.58);ctx.stroke();
+  // Virtual dark platform
+  ctx.save();ctx.globalAlpha=.82;
+  ctx.fillStyle='rgba(60,50,46,.92)';ctx.beginPath();ctx.ellipse(W*.5,H*.42,168,42,0,0,Math.PI*2);ctx.fill();
+  // Amber glow halo
+  const ag=ctx.createRadialGradient(W*.5,H*.42,40,W*.5,H*.42,220);
+  ag.addColorStop(0,'rgba(200,95,88,.14)');ag.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=ag;ctx.beginPath();ctx.arc(W*.5,H*.42,220,0,Math.PI*2);ctx.fill();
+  ctx.save();ctx.shadowColor='rgba(200,95,88,.55)';ctx.shadowBlur=18;
+  ctx.strokeStyle='rgba(200,95,88,.72)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.ellipse(W*.5,H*.42,172,45,0,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;ctx.restore();
+  // Object on platform
+  ctx.fillStyle='#DDD0C0';ctx.beginPath();ctx.arc(W*.5,H*.32,18,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(200,95,88,.88)';ctx.beginPath();ctx.arc(W*.46,H*.39,9,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+  // AR ring floor
+  ctx.strokeStyle='rgba(130,154,162,.6)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.ellipse(W*.5,H*.85,118,30,0,0,Math.PI*2);ctx.stroke();
+  ctx.strokeStyle='rgba(130,154,162,.24)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.ellipse(W*.5,H*.85,148,38,0,0,Math.PI*2);ctx.stroke();
+  ctx.save();ctx.globalAlpha=.85;
+  hudPanel(ctx,W*.6,H*.62,268,160,{fill:WN.hudFill,border:WN.hudBorder,text:WN.hudText,metric:WN.hudMetric,muted:WN.hudMuted,accent:WN.hudAccent});
+  ctx.restore();
+  ctx.font='13px DM Sans,sans-serif';ctx.fillStyle='rgba(130,154,162,.85)';ctx.textAlign='center';
+  ctx.fillText('Surface marker preview',W*.5,H*.93);
+  ctx.fillStyle=WN.fpsBg;rrect(ctx,18,H-52,104,30,5);ctx.fill();
+  ctx.font='12px DM Mono,monospace';ctx.fillStyle=WN.fpsText;ctx.textAlign='left';ctx.fillText('FPS 118',30,H-32);}
+
+// ── SceneCanvas ───────────────────────────────────────────────────────────
+function SceneCanvas({drawFn}){
+  const ref=useRef();
+  useEffect(()=>{if(ref.current){drawFn(ref.current);}},[]);
+  return <canvas ref={ref} width={1200} height={675} style={{width:'100%',height:'auto',display:'block'}}/>;}
+
+// ── Scene Objects ─────────────────────────────────────────────────────────
+function SceneObjects({t,isCp}){
+  const bg=isCp?'#EAF8F1':'#161210';
+  const objs=[
+    {label:'Arch',el:(
+      <div style={{position:'relative',width:132,height:82}}>
+        <div style={{position:'absolute',bottom:0,left:'50%',transform:'translateX(-50%)',width:120,height:66,
+          border:`13px solid ${isCp?'#FFF5DA':'#62504A'}`,borderBottom:'none',
+          borderTopLeftRadius:62,borderTopRightRadius:62,
+          boxShadow:`inset 0 -3px 0 ${isCp?'#FFD166':'rgba(200,95,88,.8)'},${!isCp?'0 0 18px rgba(200,95,88,.4)':'none'}`}}/>
+      </div>)},
+    {label:'Platform',el:(
+      <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:0}}>
+        <div style={{width:90,height:8,borderRadius:'50%',background:isCp?'rgba(182,228,208,.35)':'rgba(200,95,88,.18)',filter:'blur(5px)',marginBottom:-4}}/>
+        <div style={{width:118,height:22,borderRadius:'50%',background:isCp?CP.islandBody:'#3A3028',
+          border:`2px solid ${isCp?'rgba(150,210,180,.5)':'rgba(200,95,88,.5)'}`,
+          boxShadow:!isCp?'0 0 12px rgba(200,95,88,.25)':'none'}}/>
+      </div>)},
+    {label:'Column',el:(
+      <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
+        <div style={{width:30,height:5,borderRadius:2,background:isCp?'#EEE8D0':'#524740',marginBottom:-1}}/>
+        <div style={{width:26,height:72,background:isCp?'linear-gradient(to right,#E5EAD5cc,#FFF8E2,#D5C295bb)':'linear-gradient(to right,#3D3530cc,#524740,#2D2920bb)',borderRadius:'2px 2px 0 0'}}/>
+        <div style={{width:34,height:7,borderRadius:'0 0 4px 4px',background:isCp?'#EEE8D0':'#524740'}}/>
+      </div>)},
+    {label:isCp?'Cloud':'Glow Sphere',el:isCp?(
+      <div style={{position:'relative',width:148,height:78,filter:'drop-shadow(0 6px 10px rgba(225,210,160,.5))'}}>
+        {[[72,44,36],[98,34,29],[48,46,24],[112,46,22],[34,40,18],[85,25,20]].map(([x,y,r],i)=>(
+          <div key={i} style={{position:'absolute',left:x-r,top:y-r,width:r*2,height:r*2,borderRadius:'50%',background:'#FFFDF0'}}/>))}
+      </div>):(
+      <div style={{position:'relative',width:88,height:88,display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <div style={{width:52,height:52,borderRadius:'50%',background:'radial-gradient(circle at 35% 35%,#EAD8C4,#B8A898)',boxShadow:'0 0 22px rgba(200,95,88,.55),0 0 44px rgba(200,95,88,.22)'}}/>
+        <div style={{position:'absolute',top:'60%',left:'28%',width:20,height:20,borderRadius:'50%',background:'#C85F58',boxShadow:'0 0 12px rgba(200,95,88,.9)'}}/>
+      </div>)},
+    {label:'HUD Panel',el:(
+      <div style={{width:136,height:92,borderRadius:8,background:isCp?'rgba(31,79,88,.9)':'rgba(81,68,62,.9)',
+        border:`1.5px solid ${isCp?'rgba(255,209,102,.92)':'rgba(200,95,88,.88)'}`,
+        padding:'8px 10px',display:'flex',flexDirection:'column',gap:3,
+        boxShadow:!isCp?'0 0 16px rgba(200,95,88,.3)':'none'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
+          <span style={{fontSize:18,fontWeight:'bold',color:isCp?'#A8E3EC':'#B4C7CC',fontFamily:'DM Mono,monospace',lineHeight:1}}>60</span>
+          <span style={{fontSize:8.5,color:isCp?CP.hudMuted:WN.hudMuted}}>Trial 1/18</span>
+        </div>
+        <div style={{height:1,background:isCp?'rgba(255,209,102,.3)':'rgba(200,95,88,.3)',margin:'1px 0'}}/>
+        <div style={{display:'flex',gap:2}}>
+          {[['Tgt','0.28'],['Bst','0.15'],['Hap','ON']].map(([l,v],i)=>(
+            <div key={i} style={{flex:1}}>
+              <div style={{fontSize:7.5,color:isCp?CP.hudMuted:WN.hudMuted,textTransform:'uppercase'}}>{l}</div>
+              <div style={{fontSize:10,fontWeight:'bold',color:isCp?CP.hudText:WN.hudText}}>{v}</div>
+            </div>))}
+        </div>
+        <div style={{marginTop:'auto',background:isCp?'rgba(255,209,102,.18)':'rgba(200,95,88,.18)',borderRadius:4,padding:'2px 4px',textAlign:'center',fontSize:8,color:isCp?CP.hudAccent:WN.hudAccent,fontWeight:500}}>Direct touch</div>
+      </div>)}
+  ];
+  return (
+    <div style={{background:bg,borderRadius:'0 0 10px 10px',padding:'28px 20px',display:'flex',flexWrap:'wrap',gap:20,justifyContent:'center'}}>
+      {objs.map(({label,el})=>(
+        <div key={label} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
+          <div style={{width:165,height:115,display:'flex',alignItems:'center',justifyContent:'center'}}>{el}</div>
+          <div style={{fontSize:11,fontWeight:500,color:isCp?'rgba(36,72,75,.5)':'rgba(200,185,175,.45)',letterSpacing:'.05em',textTransform:'uppercase'}}>{label}</div>
+        </div>))}</div>);}
+
+// ── HUD in context ─────────────────────────────────────────────────────────
+function HUDInContext({isCp}){
+  const skyBg=isCp?'linear-gradient(160deg,#5DC4DF 0%,#96D8EE 40%,#FFE8B5 100%)':'linear-gradient(160deg,#0A0E14 0%,#161E2A 55%,#482C26 100%)';
+  return (
+    <div style={{background:skyBg,padding:36,display:'flex',alignItems:'center',justifyContent:'center',minHeight:320,position:'relative',overflow:'hidden',borderRadius:'0 0 10px 10px'}}>
+      {isCp&&<>
+        <div style={{position:'absolute',top:'8%',left:'6%',width:90,height:50,borderRadius:'50%',background:'rgba(255,253,240,.86)',filter:'blur(3px)'}}/>
+        <div style={{position:'absolute',top:'5%',right:'10%',width:65,height:38,borderRadius:'50%',background:'rgba(255,249,228,.82)',filter:'blur(2px)'}}/>
+        <div style={{position:'absolute',bottom:0,left:0,right:0,height:'44%',background:'linear-gradient(to bottom,#C5EED8,#78C895)',borderRadius:'0 0 10px 10px'}}/>
+        <div style={{position:'absolute',bottom:'42%',left:'50%',transform:'translateX(-50%)',width:320,height:60,borderTop:'22px solid #FFF5DA',borderLeft:'22px solid transparent',borderRight:'22px solid transparent',borderRadius:8,opacity:.7}}/>
+      </>}
+      {!isCp&&<>
+        <div style={{position:'absolute',bottom:0,left:0,right:0,height:'42%',background:'rgba(20,15,12,.8)',borderRadius:'0 0 10px 10px'}}/>
+        {[...Array(8)].map((_,i)=><div key={i} style={{position:'absolute',width:1.5,height:1.5,borderRadius:'50%',background:'rgba(255,248,220,.55)',top:`${[8,5,12,4,15,20,7,18][i]}%`,left:`${[14,42,67,81,25,90,55,34][i]}%`}}/>)}
+      </>}
+      <div style={{position:'relative',zIndex:2,width:295,borderRadius:14,background:isCp?'rgba(31,79,88,.92)':'rgba(81,68,62,.92)',
+        border:`1.5px solid ${isCp?'rgba(255,209,102,.94)':'rgba(200,95,88,.9)'}`,
+        padding:'18px 20px',display:'flex',flexDirection:'column',gap:11,
+        boxShadow:`0 12px 40px rgba(0,0,0,.35)${!isCp?',0 0 28px rgba(200,95,88,.22)':''}`,backdropFilter:'blur(14px)'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end'}}>
+          <div><div style={{fontSize:34,fontWeight:'bold',color:isCp?'#A8E3EC':'#B4C7CC',fontFamily:'DM Mono,monospace',lineHeight:1}}>60</div>
+            <div style={{fontSize:10,color:isCp?CP.hudMuted:WN.hudMuted,marginTop:2}}>FPS</div></div>
+          <div style={{textAlign:'right'}}><div style={{fontSize:12,fontWeight:600,color:isCp?CP.hudText:WN.hudText}}>Trial 1 / 18</div>
+            <div style={{fontSize:10,color:isCp?CP.hudMuted:WN.hudMuted}}>translation</div></div>
+        </div>
+        <div style={{height:1,background:isCp?'rgba(255,209,102,.3)':'rgba(200,95,88,.3)'}}/>
+        <div style={{display:'flex',gap:0}}>
+          {[['Target','0.28'],['Boost','0.15'],['Haptics','ON'],['Audio','OFF']].map(([l,v],i)=>(
+            <div key={i} style={{flex:1}}>
+              <div style={{fontSize:9,color:isCp?CP.hudMuted:WN.hudMuted,textTransform:'uppercase',letterSpacing:'.04em'}}>{l}</div>
+              <div style={{fontSize:14,fontWeight:'bold',color:isCp?CP.hudText:WN.hudText,marginTop:3}}>{v}</div>
+            </div>))}
+        </div>
+        <div style={{background:isCp?'rgba(255,209,102,.18)':'rgba(200,95,88,.18)',borderRadius:7,padding:'7px 12px',textAlign:'center',fontSize:12,color:isCp?CP.hudAccent:WN.hudAccent,fontWeight:500,letterSpacing:'.01em'}}>
+          Direct touch (hands)
+        </div>
+      </div>
+    </div>);}
+
+// ── Desktop UI ─────────────────────────────────────────────────────────────
+const LABS=[
+  {id:'selection',name:'Selection Lab',vr:true,ar:true,desc:'Target 0.28 · Confirm boost 0.15 · Haptics on · Audio off'},
+  {id:'placement',name:'Placement Lab',vr:false,ar:true,desc:'Place objects on detected surfaces using hit test.'},
+  {id:'locomotion',name:'Locomotion Lab',vr:true,ar:false,desc:'Right stick · Move 50.0 · snap (50°)'},
+  {id:'manipulation',name:'Manipulation Lab',vr:true,ar:false,desc:'Docking · Proximity pinch · Integrated (6DOF)'},
+];
+function DesktopUI({isCp}){
+  const t=isCp?CP:WN;
+  const [activeLab,setActiveLab]=useState('selection');
+  const [hoverLab,setHoverLab]=useState(null);
+  const [hoverVR,setHoverVR]=useState(false);
+  const [hoverAR,setHoverAR]=useState(false);
+  const [railOpen,setRailOpen]=useState(true);
+  const [objSize,setObjSize]=useState(35);
+  const [prevOpacity,setPrevOpacity]=useState(70);
+  const [haptics,setHaptics]=useState(true);
+  const [audio,setAudio]=useState(false);
+  const [showLightRef,setShowLightRef]=useState(false);
+  const [themeOpen,setThemeOpen]=useState(false);
+  const lab=LABS.find(l=>l.id===activeLab);
+  const vrDis=!lab.vr,arDis=!lab.ar;
+  const c={
+    page:{display:'flex',gap:14,alignItems:'flex-start',padding:'20px',fontFamily:'DM Sans,ui-sans-serif,sans-serif'},
+    panel:{background:t.shellElevated,border:`1px solid ${t.shellBorder}`,borderRadius:12,padding:18,display:'flex',flexDirection:'column',gap:12,flex:'0 0 370px',boxShadow:'0 4px 24px rgba(0,0,0,.1)'},
+    h1:{fontSize:17,fontWeight:600,color:t.shellText,letterSpacing:'-.02em'},sub:{fontSize:12,color:t.shellMuted,marginTop:3},
+    grid:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8},
+    chip:(id)=>({padding:'9px 10px',border:`1.5px solid ${id===activeLab?t.accentBorder:t.shellBorder}`,borderRadius:9,
+      background:id===activeLab?t.accentSoft:(hoverLab===id?t.shellSubtle:t.shellBg),
+      color:t.shellText,fontSize:12.5,fontWeight:id===activeLab?600:400,cursor:'pointer',
+      transition:'all .12s',textAlign:'center',minHeight:40}),
+    info:{background:t.shellSubtle,border:`1px solid ${t.shellBorderSubtle}`,borderRadius:9,padding:12},
+    tag:{display:'inline-flex',alignItems:'center',padding:'2px 7px',borderRadius:99,fontSize:10.5,fontWeight:600,
+      border:`1px solid ${t.shellBorder}`,background:t.shellBg,color:t.shellText,marginRight:4},
+    desc:{fontSize:12,color:t.shellMuted,marginTop:7},
+    row:{display:'flex',gap:8,marginTop:4},
+    btnVR:{flex:1,minHeight:42,borderRadius:9,fontSize:13.5,fontWeight:600,
+      border:`2px solid ${vrDis?t.shellBorderSubtle:t.accentBorder}`,
+      background:hoverVR&&!vrDis?t.shellSubtle:t.shellBg,
+      color:vrDis?t.shellMuted:t.accentPrimary,opacity:vrDis?.45:1,transition:'all .12s',cursor:vrDis?'not-allowed':'pointer'},
+    btnAR:{flex:1,minHeight:42,borderRadius:9,fontSize:13.5,fontWeight:600,
+      border:`2px solid ${arDis?t.shellBorderSubtle:t.accentBorder}`,
+      background:arDis?t.shellBg:(hoverAR?t.accentHover:t.accentPrimary),
+      color:arDis?t.shellMuted:'#fff',opacity:arDis?.45:1,transition:'all .12s',cursor:arDis?'not-allowed':'pointer'},
+    rail:{flex:'0 0 305px',background:t.shellElevated,border:`1px solid ${t.shellBorder}`,borderRadius:12,overflow:'hidden',boxShadow:'0 4px 24px rgba(0,0,0,.1)'},
+    rHead:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',
+      background:t.shellSubtle,borderBottom:`1px solid ${t.shellBorderSubtle}`,cursor:'pointer'},
+    rBody:{padding:'12px 14px',display:'flex',flexDirection:'column',gap:12},
+    sec:{fontSize:10,fontWeight:600,color:t.shellMuted,letterSpacing:'.07em',textTransform:'uppercase',marginBottom:5},
+    rrow:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8},
+    rlabel:{fontSize:12.5,color:t.shellText,flex:1},
+    tog:(on)=>({width:34,height:20,borderRadius:10,background:on?t.accentPrimary:t.shellBorderSubtle,position:'relative',cursor:'pointer',transition:'background .18s',flexShrink:0,border:'none'}),
+    togK:(on)=>({position:'absolute',top:2,left:on?16:2,width:16,height:16,borderRadius:8,background:'#fff',transition:'left .18s',boxShadow:'0 1px 4px rgba(0,0,0,.22)'}),
+    numRow:{display:'flex',alignItems:'center',gap:5},
+    numBtn:{width:26,height:26,borderRadius:5,border:`1px solid ${t.shellBorder}`,background:t.shellBg,color:t.shellText,fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'},
+    numVal:{width:36,height:26,borderRadius:5,border:`1px solid ${t.shellBorder}`,background:t.shellBg,color:t.shellText,fontSize:12,display:'flex',alignItems:'center',justifyContent:'center'},
+    fab:{width:44,height:44,borderRadius:999,border:`1px solid ${t.shellBorder}`,background:t.shellElevated,
+      color:t.shellText,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',
+      boxShadow:'0 2px 12px rgba(0,0,0,.1)',alignSelf:'flex-end',marginTop:'auto'},
+  };
+  const Toggle=({on,onToggle})=><button style={c.tog(on)} onClick={onToggle}><div style={c.togK(on)}/></button>;
+  const NumStepper=({val,onChange,min=0,max=100,step=5})=>(
+    <div style={c.numRow}>
+      <button style={c.numBtn} onClick={()=>onChange(Math.max(min,val-step))}>−</button>
+      <div style={c.numVal}>{val}</div>
+      <button style={c.numBtn} onClick={()=>onChange(Math.min(max,val+step))}>+</button>
+    </div>);
+  return (
+    <div style={c.page}>
+      <div style={c.panel}>
+        <div><div style={c.h1}>WebXR Playground</div><div style={c.sub}>Pick a lab, then enter VR or AR.</div></div>
+        <div style={c.grid}>
+          {LABS.map(l=>(
+            <button key={l.id} style={c.chip(l.id)}
+              onMouseEnter={()=>setHoverLab(l.id)} onMouseLeave={()=>setHoverLab(null)}
+              onClick={()=>setActiveLab(l.id)}>{l.name}</button>))}
+        </div>
+        <div style={c.info}>
+          <div>{lab.vr&&<span style={c.tag}>VR</span>}{lab.ar&&<span style={c.tag}>AR</span>}</div>
+          <div style={c.desc}>{lab.desc}</div>
+        </div>
+        <div style={c.row}>
+          <button style={c.btnVR} disabled={vrDis}
+            onMouseEnter={()=>setHoverVR(true)} onMouseLeave={()=>setHoverVR(false)}>Enter VR</button>
+          <button style={c.btnAR} disabled={arDis}
+            onMouseEnter={()=>setHoverAR(true)} onMouseLeave={()=>setHoverAR(false)}>Enter AR</button>
+        </div>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:10,flex:'0 0 305px'}}>
+        <div style={c.rail}>
+          <div style={c.rHead} onClick={()=>setRailOpen(v=>!v)}>
+            <span style={{fontSize:11,fontWeight:600,color:t.shellMuted,letterSpacing:'.06em',textTransform:'uppercase'}}>Settings</span>
+            <span style={{color:t.shellMuted,fontSize:13}}>{railOpen?'▾':'▸'}</span>
+          </div>
+          {railOpen&&<div style={c.rBody}>
+            <div>
+              <div style={c.sec}>Debug</div>
+              <div style={c.rrow}><span style={c.rlabel}>showLightRef</span><Toggle on={showLightRef} onToggle={()=>setShowLightRef(v=>!v)}/></div>
+            </div>
+            <div>
+              <div style={c.sec}>Placement</div>
+              <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                <div>
+                  <div style={{...c.rrow,marginBottom:4}}><span style={c.rlabel}>objectSize</span><NumStepper val={objSize} onChange={setObjSize}/></div>
+                  <input type="range" min={0} max={100} value={objSize} onChange={e=>setObjSize(+e.target.value)} style={{width:'100%',accentColor:t.accentPrimary}}/>
+                </div>
+                <div>
+                  <div style={{...c.rrow,marginBottom:4}}><span style={c.rlabel}>previewOpacity</span><NumStepper val={prevOpacity} onChange={setPrevOpacity}/></div>
+                  <input type="range" min={0} max={100} value={prevOpacity} onChange={e=>setPrevOpacity(+e.target.value)} style={{width:'100%',accentColor:t.accentPrimary}}/>
+                </div>
+              </div>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              <div style={c.rrow}><span style={c.rlabel}>enableHaptics</span><Toggle on={haptics} onToggle={()=>setHaptics(v=>!v)}/></div>
+              <div style={c.rrow}><span style={c.rlabel}>enableAudio</span><Toggle on={audio} onToggle={()=>setAudio(v=>!v)}/></div>
+            </div>
+            <div style={{borderTop:`1px solid ${t.shellBorderSubtle}`,paddingTop:10}}>
+              <div style={{...c.rrow,cursor:'pointer',color:t.shellMuted,fontSize:12}}>▸ Session log</div>
+            </div>
+          </div>}
+        </div>
+        {/* Appearance FAB */}
+        <div style={{position:'relative',alignSelf:'flex-end'}}>
+          {themeOpen&&<div style={{position:'absolute',bottom:52,right:0,width:280,background:t.shellElevated,border:`1px solid ${t.shellBorderSubtle}`,borderRadius:12,padding:16,boxShadow:'0 8px 32px rgba(0,0,0,.12)',display:'flex',flexDirection:'column',gap:12,zIndex:10}}>
+            <div style={{fontSize:14,fontWeight:600,color:t.shellText}}>Appearance</div>
+            <div style={{display:'flex',flexDirection:'column',gap:4}}>
+              <div style={{fontSize:12,fontWeight:600,color:t.shellText}}>Theme</div>
+              <select style={{height:40,border:`1px solid ${t.shellBorder}`,borderRadius:8,background:t.shellBg,color:t.shellText,fontSize:13,padding:'0 8px',fontFamily:'inherit'}}>
+                <option>Warm Night</option><option>Cloud Park</option>
+              </select>
+            </div>
+            <label style={{display:'flex',alignItems:'flex-start',gap:8,cursor:'pointer'}}>
+              <input type="checkbox" defaultChecked style={{width:18,height:18,marginTop:1,accentColor:t.accentPrimary}}/>
+              <div><div style={{fontSize:12.5,fontWeight:600,color:t.shellText}}>AR alignment ring</div>
+                <div style={{fontSize:11,color:t.shellMuted,marginTop:2}}>Thin floor ring in passthrough AR.</div></div>
+            </label>
+            <button style={{height:38,borderRadius:8,border:`1px solid ${t.shellBorder}`,background:t.shellBg,color:t.shellText,fontSize:13,fontWeight:600,cursor:'pointer'}} onClick={()=>setThemeOpen(false)}>Done</button>
+          </div>}
+          <button style={c.fab} onClick={()=>setThemeOpen(v=>!v)} title="Appearance settings">
+            <svg width={20} height={20} viewBox="0 0 24 24" fill="none"><path d="M12 3a9 9 0 1 0 9 9c0-.55-.45-1-1-1h-3a2 2 0 0 1-2-2V7a1 1 0 0 0-1-1Z" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"/><circle cx="7.5" cy="10.5" r="1.25" fill="currentColor"/><circle cx="10.5" cy="7.5" r="1.25" fill="currentColor"/><circle cx="15" cy="7.5" r="1.25" fill="currentColor"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>);}
+
+// ── App shell ─────────────────────────────────────────────────────────────
+const SECTIONS=[{id:'vr',label:'VR World'},{id:'objects',label:'Scene Objects'},{id:'hud',label:'HUD Panel'},{id:'ar',label:'AR Mode'},{id:'desktop',label:'Desktop UI'}];
+
+function ThemeCard({label,active,accent,children}){
+  return (
+    <div style={{borderRadius:10,border:`1.5px solid ${active?accent:'rgba(255,255,255,.07)'}`,overflow:'hidden',transition:'border-color .25s',boxShadow:active?`0 0 0 1px ${accent}22,0 8px 32px rgba(0,0,0,.3)`:'0 4px 16px rgba(0,0,0,.2)'}}>
+      <div style={{padding:'9px 14px',background:'rgba(255,255,255,.035)',borderBottom:'1px solid rgba(255,255,255,.05)',display:'flex',alignItems:'center',gap:8}}>
+        <div style={{width:7,height:7,borderRadius:'50%',background:accent}}/>
+        <span style={{fontSize:12.5,fontWeight:600,color:'#CCC'}}>{label}</span>
+      </div>
+      {children}
+    </div>);}
+
+function App(){
+  const [theme,setTheme]=useState(()=>localStorage.getItem('xrd-theme')||'cloud-park');
+  const [section,setSection]=useState(()=>localStorage.getItem('xrd-section')||'vr');
+  useEffect(()=>{localStorage.setItem('xrd-theme',theme);},[theme]);
+  useEffect(()=>{localStorage.setItem('xrd-section',section);},[section]);
+  const isCp=theme==='cloud-park';
+  const navBg=isCp?'#162A2E':'#120E0A';
+  const navAccent=isCp?'#FFD166':'#C85F58';
+  const cpMeta='Cloud Park · Painterly · pastel · Half+Half inspired';
+  const wnMeta='Warm Night · Deep indigo-to-black · Fifth Element inspired';
+
+  return (
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column'}}>
+      <div style={{background:navBg,borderBottom:'1px solid rgba(255,255,255,.07)',padding:'0 20px',display:'flex',alignItems:'center',gap:20,height:52,position:'sticky',top:0,zIndex:100,flexShrink:0}}>
+        <div style={{fontSize:13,fontWeight:600,color:'rgba(255,255,255,.4)',whiteSpace:'nowrap'}}>XR Playground · Themes</div>
+        <div style={{display:'flex',gap:1,background:'rgba(255,255,255,.07)',borderRadius:8,padding:3,flexShrink:0}}>
+          {[['cloud-park','☁ Cloud Park','#2B5F68'],['warm-night','🌆 Warm Night','#5C2A1A']].map(([id,label,activeBg])=>(
+            <button key={id} onClick={()=>setTheme(id)} style={{padding:'4px 13px',borderRadius:6,border:'none',cursor:'pointer',fontSize:12.5,fontWeight:theme===id?600:400,background:theme===id?activeBg:'transparent',color:theme===id?navAccent:'rgba(255,255,255,.4)',transition:'all .18s',fontFamily:'DM Sans,sans-serif'}}>{label}</button>))}
+        </div>
+        <div style={{fontSize:11.5,color:'rgba(255,255,255,.28)',flexShrink:0}}>{isCp?cpMeta:wnMeta}</div>
+        <div style={{display:'flex',gap:2,marginLeft:'auto'}}>
+          {SECTIONS.map(s=>(
+            <button key={s.id} onClick={()=>setSection(s.id)} style={{padding:'4px 12px',borderRadius:6,border:'none',cursor:'pointer',fontSize:12.5,background:section===s.id?`${navAccent}20`:'transparent',color:section===s.id?navAccent:'rgba(255,255,255,.36)',fontWeight:section===s.id?600:400,transition:'all .18s',fontFamily:'DM Sans,sans-serif'}}>{s.label}</button>))}
+        </div>
+      </div>
+
+      <div style={{flex:1,background:'#080B0D',overflowY:'auto'}}>
+        <div style={{padding:'20px',display:'flex',flexDirection:'column',gap:16,maxWidth:2000,margin:'0 auto'}}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+            {section==='vr'&&<>
+              <ThemeCard label="Cloud Park — Manipulation Lab, VR" active={isCp} accent="#FFD166"><SceneCanvas drawFn={drawCPVR}/></ThemeCard>
+              <ThemeCard label="Warm Night — Selection Lab, VR" active={!isCp} accent="#C85F58"><SceneCanvas drawFn={drawWNVR}/></ThemeCard>
+            </>}
+            {section==='objects'&&<>
+              <ThemeCard label="Cloud Park — Scene objects" active={isCp} accent="#FFD166"><SceneObjects t={CP} isCp={true}/></ThemeCard>
+              <ThemeCard label="Warm Night — Scene objects" active={!isCp} accent="#C85F58"><SceneObjects t={WN} isCp={false}/></ThemeCard>
+            </>}
+            {section==='hud'&&<>
+              <ThemeCard label="Cloud Park — HUD in world context" active={isCp} accent="#FFD166"><HUDInContext isCp={true}/></ThemeCard>
+              <ThemeCard label="Warm Night — HUD in world context" active={!isCp} accent="#C85F58"><HUDInContext isCp={false}/></ThemeCard>
+            </>}
+            {section==='ar'&&<>
+              <ThemeCard label="Cloud Park — AR passthrough" active={isCp} accent="#FFD166"><SceneCanvas drawFn={drawCPAR}/></ThemeCard>
+              <ThemeCard label="Warm Night — AR passthrough" active={!isCp} accent="#C85F58"><SceneCanvas drawFn={drawWNAR}/></ThemeCard>
+            </>}
+            {section==='desktop'&&<>
+              <ThemeCard label="Cloud Park — 2D Desktop UI" active={isCp} accent="#FFD166">
+                <div style={{background:'#d5eee5'}}><DesktopUI isCp={true}/></div>
+              </ThemeCard>
+              <ThemeCard label="Warm Night — 2D Desktop UI" active={!isCp} accent="#C85F58">
+                <div style={{background:'#e8ddd4'}}><DesktopUI isCp={false}/></div>
+              </ThemeCard>
+            </>}
+          </div>
+        </div>
+      </div>
+    </div>);}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

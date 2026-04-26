@@ -94,4 +94,79 @@ The WebXR API uses **generic action names**, not gesture names. The same event f
 
 ---
 
+## Visual capture screenshots can look stale
+
+### Symptom: a camera fix appears not to change the screenshot
+
+During camera-angle iteration, the capture command overwrites the same PNG path, but the review surface may still show the previous image or make it unclear which attempt is being discussed. This is especially confusing for overhead captures, where small camera-roll differences are judged by ground-grid alignment.
+
+**Cause:** repeated screenshots share the same filename, so browser/app image caching and human review context can blur together. The code may have changed, the PNG may have been regenerated, and the displayed image may still be an older artifact.
+
+**Fix:** when reviewing an important camera adjustment, copy the generated PNG to a unique, intent-named filename before sharing it:
+
+```bash
+cp docs/mockups/captures/scenes/cloud-park/selection-overhead.png \
+  docs/mockups/captures/scenes/cloud-park/selection-overhead-mat-center-orthographic.png
+```
+
+Prefer names that state the spatial claim being tested:
+
+- `selection-overhead-mat-center-orthographic.png`
+- `selection-overhead-hero-axis-wide-fit.png`
+- `locomotion-overhead-full-path.png`
+
+For true overhead review, also check the image itself: ground-grid lines intended to be horizontal or vertical should be parallel to the image edges. If they are not, the capture is not a trustworthy plan view.
+
+### Related project files
+
+- `docs/visual-capture.md` — capture workflow and naming guidance
+- `tests/visual/capture.spec.ts` — generated screenshot set
+- `src/xr/core/DesktopPreviewCamera.tsx` — authored review camera presets
+
+---
+
+## Beauty captures can regress into QA captures
+
+### Symptom: Cloud Park looks technically correct but emotionally flat
+
+The scene has the right theme colors and objects, but the screenshot still reads like a grid floor with testing props. This usually means the reference grid, labels, or flat floor plane became the subject before atmosphere and staged objects did.
+
+**Cause:** XR QA helpers are useful for measurement, but they can overpower a beauty frame. In Cloud Park, a visible grid should be a quiet spatial reference, not the visual identity.
+
+**Fix:** when tuning Cloud Park captures, check the scenic stack first: foreground/midground/horizon, cloud mats, soft landmarks, wind lines, readable props, and uncropped objects. Only then check the grid. If the grid is the first thing you notice, lower its contrast, fade distance, or thickness for the Cloud Park preset.
+
+### Related project files
+
+- `src/xr/scene/VRScene.tsx` — Cloud Park grid and floor treatment
+- `src/xr/visual/CloudParkScenery.tsx` — shared scenic atmosphere and lab-set primitives
+- `docs/visual-capture.md` — beauty review checklist
+
+---
+
+## Cloud Park can regress into recolored lab props
+
+### Symptom: the palette is right, but the world still feels fake or under-designed
+
+Cloud Park may have cream, coral, ocean-blue, and mint colors, but individual objects still read as sci-fi pods, hard platforms, route discs, or generic debug shapes. In XR this breaks presence quickly because the user reads object silhouettes before they read token intent.
+
+**Cause:** color was changed without changing the shape story. Background sphere clouds, perfect sun discs, imported platform pedestals, box wings, metal materials, and technical rings can all pull the scene back toward "test lab" even when the palette matches.
+
+**Fix:** audit Cloud Park objects by silhouette:
+
+- distant atmosphere should use soft cards and haze, not foreground-like spheres
+- selection targets should sit on cloud perches and read as kite, landing pad, and handhold charm
+- placement and docking objects should use the beacon seed silhouette, with matching ghost targets
+- locomotion cues should read as wind ribbons, route puffs, and stepping clouds
+- zen garden should use an organic cloud basin rather than a hard rectangular tray
+
+Keep hitboxes and interaction math unchanged; this is a prop-language pass, not a mechanics rewrite.
+
+### Related project files
+
+- `docs/style-templates/cloud-park.md` — object grammar and lab-set language
+- `src/xr/visual/CloudParkScenery.tsx` — shared Cloud Park prop primitives
+- `src/labs/cross-xr/SelectionLab.tsx`, `src/labs/ar/PlacementLab.tsx`, `src/labs/vr/LocomotionLab.tsx`, `src/labs/cross-xr/manipulation/` — lab-specific story application
+
+---
+
 <!-- Add new ## Section titles below for other domains (e.g. Quest browser, adb reverse). -->
