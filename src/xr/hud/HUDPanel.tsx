@@ -102,7 +102,7 @@ export function HUDPanel() {
         H - innerInset * 2,
         Math.max(0.001, R - innerInset),
       ),
-    [W, H, R],
+    [W, H, R, innerInset],
   )
 
   const onTap = useCallback(
@@ -132,8 +132,14 @@ export function HUDPanel() {
   })
 
   return (
-    <group ref={groupRef}>
-      {/* Border ring — theme accent (CP amber / WN ember). */}
+    <group
+      ref={groupRef}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+      onPointerDown={onTap}
+    >
+      {/* Border ring — theme accent (CP amber / WN ember). The whole pill is tappable: pointer
+          events on this mesh and the fill mesh bubble to the wrapping group's handlers. */}
       <mesh position={[0, 0, -0.009]} renderOrder={-501}>
         <shapeGeometry args={[shape]} />
         <meshBasicMaterial
@@ -143,15 +149,7 @@ export function HUDPanel() {
           depthWrite={false}
         />
       </mesh>
-      {/* Fill — clickable surface, theme panel color. Pointer enter / leave drive the hover
-          state for the whole HUD. */}
-      <mesh
-        position={[0, 0, -0.008]}
-        renderOrder={-500}
-        onPointerEnter={() => setHovered(true)}
-        onPointerLeave={() => setHovered(false)}
-        onPointerDown={onTap}
-      >
+      <mesh position={[0, 0, -0.008]} renderOrder={-500}>
         <shapeGeometry args={[innerShape]} />
         <meshBasicMaterial
           color={xr.hud.panelFill}

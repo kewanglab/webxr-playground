@@ -3,9 +3,10 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { IfInSessionMode, TeleportTarget, useXRInputSourceState } from '@react-three/xr'
 import { useControls } from 'leva'
 import { stepperNumber } from '../../ui/levaPlugins/stepperNumber'
-import { useEffect, useMemo, useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { AdditiveBlending, DoubleSide, Shape, Vector3 } from 'three'
-import { defaultHudReport, usePlaygroundStore } from '../../app/store'
+import { useHudReport } from '../../app/useHudReport'
+import { usePlaygroundStore } from '../../app/store'
 import { getLabTitle, tuningPresets } from '../../config/labs'
 import { LabHeading } from '../LabHeading'
 import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
@@ -19,6 +20,11 @@ import {
 } from '../../xr/visual/CloudParkScenery'
 import { scaleColumnAstraToHeight } from '../../xr/visual/kitNative'
 import { KitInstance } from '../../xr/visual/useKitModel'
+
+// Scratch vectors reused inside useFrame to avoid per-frame allocations.
+const SCRATCH_FORWARD = new Vector3()
+const FORWARD = new Vector3(0, 0, -1)
+const UP = new Vector3(0, 1, 0)
 
 /**
  * Sample a quadratic Bézier from `from` to `to`, with control point at the midpoint raised by
@@ -467,30 +473,29 @@ export function LocomotionLab() {
 
   const turnLatch = useRef(false)
 
-  const setHudReport = usePlaygroundStore((s) => s.setHudReport)
-
   const moveSpeedN = readLevaNumber(moveSpeed, defaults.moveSpeed)
   const moveDeadN = readLevaNumber(moveDeadzone, defaults.moveDeadzone)
   const turnDeadN = readLevaNumber(turnDeadzone, defaults.turnDeadzone)
   const snapDegN = readLevaNumber(snapTurnAngleDeg, defaults.snapTurnAngleDeg)
   const smoothDegN = readLevaNumber(smoothTurnSpeedDeg, defaults.smoothTurnSpeedDeg)
 
-  // Push current Leva tuning into the in-XR HUD's expanded metrics panel.
-  useEffect(() => {
-    const turnValue =
-      turnMode === 'snap' ? `${Math.round(snapDegN)}°` : `${Math.round(smoothDegN)}°/s`
-    setHudReport({
+  useHudReport(
+    {
       metrics: [
         { label: 'SPEED', value: moveSpeedN.toFixed(1) },
-        { label: 'TURN', value: turnValue },
+        {
+          label: 'TURN',
+          value:
+            turnMode === 'snap' ? `${Math.round(snapDegN)}°` : `${Math.round(smoothDegN)}°/s`,
+        },
         { label: 'MODE', value: turnMode === 'snap' ? 'SNAP' : 'SMOOTH' },
         { label: 'STICK', value: (stickHand as string).toUpperCase() },
       ],
       methodLabel: 'Locomotion · VR',
       trial: null,
-    })
-    return () => setHudReport(defaultHudReport)
-  }, [moveSpeedN, snapDegN, smoothDegN, turnMode, stickHand, setHudReport])
+    },
+    [moveSpeedN, snapDegN, smoothDegN, turnMode, stickHand],
+  )
 
   useFrame((_, delta) => {
     if (!controller?.gamepad) return
@@ -500,13 +505,13 @@ export function LocomotionLab() {
     const xAxis = thumbstick.xAxis ?? 0
     const yAxis = thumbstick.yAxis ?? 0
 
-    const yawForward = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
+    const yawForward = SCRATCH_FORWARD.copy(FORWARD).applyQuaternion(camera.quaternion)
     yawForward.y = 0
     yawForward.normalize()
 
     // Head-relative movement with explicit origin-rotation compensation.
     // This keeps movement direction aligned after synthetic controller turning.
-    yawForward.applyAxisAngle(new Vector3(0, 1, 0), originRotationY)
+    yawForward.applyAxisAngle(UP, originRotationY)
 
     // Smooth move (thumbstick forward/back). Forward stick is usually negative y.
     if (Math.abs(yAxis) > moveDeadN) {
@@ -539,17 +544,32 @@ export function LocomotionLab() {
   })
 
   // Numbered teleport waypoints per spec Section 04 — step 3 is the flagged destination.
-  const waypoints: { position: [number, number, number]; step: number; final?: boolean }[] = [
-    { position: [0, 0, -3.2], step: 1 },
-    { position: [0, 0, -6.2], step: 2 },
-    { position: [0, 0, -9.2], step: 3, final: true },
-  ]
+  const waypoints = useMemo<
+    { position: [number, number, number]; step: number; final?: boolean }[]
+  >(
+    () => [
+      { position: [0, 0, -3.2], step: 1 },
+      { position: [0, 0, -6.2], step: 2 },
+      { position: [0, 0, -9.2], step: 3, final: true },
+    ],
+    [],
+  )
   // Dashed teleport arcs: origin → W1 → W2 → W3. Origin is slightly forward of user start so the
   // first arc doesn't collide with the StartZone ring.
-  const arcChain: [number, number, number][] = [
-    [0, 0.08, 0.3],
-    ...waypoints.map((w) => [w.position[0], 0.08, w.position[2]] as [number, number, number]),
-  ]
+  const arcSegments = useMemo(() => {
+    const chain: [number, number, number][] = [
+      [0, 0.08, 0.3],
+      ...waypoints.map(
+        (w) => [w.position[0], 0.08, w.position[2]] as [number, number, number],
+      ),
+    ]
+    return chain.slice(0, -1).map((from, i) => ({
+      from,
+      to: chain[i + 1],
+      points: quadArcPoints(from, chain[i + 1], 0.55, 22),
+      final: i === chain.length - 2,
+    }))
+  }, [waypoints])
   const stepColor = labAccents.locomotion.primary
   const destColor = xr.orb.confirmed.base
   const bloomColor = xr.orb.confirmed.halo
@@ -602,25 +622,20 @@ export function LocomotionLab() {
       ))}
 
       {/* Dashed teleport arcs origin → W1 → W2 → W3. */}
-      {arcChain.slice(0, -1).map((from, i) => {
-        const to = arcChain[i + 1]
-        const final = i === arcChain.length - 2
-        const color = final ? destColor : stepColor
-        return (
-          <Line
-            key={`arc-${i}`}
-            points={quadArcPoints(from, to, 0.55, 22)}
-            color={color}
-            lineWidth={2.2}
-            dashed
-            dashSize={0.12}
-            gapSize={0.09}
-            transparent
-            opacity={0.75}
-            depthWrite={false}
-          />
-        )
-      })}
+      {arcSegments.map((seg, i) => (
+        <Line
+          key={`arc-${i}`}
+          points={seg.points}
+          color={seg.final ? destColor : stepColor}
+          lineWidth={2.2}
+          dashed
+          dashSize={0.12}
+          gapSize={0.09}
+          transparent
+          opacity={0.75}
+          depthWrite={false}
+        />
+      ))}
 
       {[-1.6, -3.4, -5.8, -8.3, -10.7].map((z) => (
         <PathChevron
