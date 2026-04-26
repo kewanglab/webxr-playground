@@ -2,7 +2,11 @@ import { useControls } from 'leva'
 import { useEffect } from 'react'
 import { getLabTitle, tuningPresets } from '../../config/labs'
 import { LabHeading } from '../LabHeading'
-import { xrStore } from '../../xr/core/xrStore'
+import {
+  defaultXRHandConfig,
+  resetXRInputDefaults,
+  xrStore,
+} from '../../xr/core/xrStore'
 import { DockingMode } from './manipulation/DockingMode'
 import { ZenGardenMode } from './manipulation/ZenGardenMode'
 
@@ -52,12 +56,13 @@ export function ObjectManipulationLab() {
 
   useEffect(() => {
     xrStore.setHand({
+      ...defaultXRHandConfig,
       rayPointer: acquisition === 'ray',
       grabPointer: false,
       teleportPointer: false,
     })
     return () => {
-      xrStore.setHand({ rayPointer: true, grabPointer: true, teleportPointer: true })
+      resetXRInputDefaults()
     }
   }, [acquisition])
 

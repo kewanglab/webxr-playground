@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber'
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import {
   AdditiveBlending,
   BufferAttribute,
@@ -9,6 +9,7 @@ import {
   ShaderMaterial,
   Vector3,
 } from 'three'
+import { usePlaygroundTheme } from '../../../xr/theme/PlaygroundThemeContext'
 
 const PETAL_COUNT = 60
 const FALL_AREA = { x: 0.8, y: 0.6, z: 0.6 }
@@ -27,18 +28,21 @@ const vertexShader = `
 `
 
 const fragmentShader = `
+  uniform vec3 petalColor;
   varying float vAlpha;
   void main() {
     vec2 uv = gl_PointCoord - vec2(0.5);
     float d = length(uv);
     if (d > 0.5) discard;
     float soft = smoothstep(0.5, 0.2, d);
-    gl_FragColor = vec4(1.0, 0.75, 0.8, soft * vAlpha);
+    gl_FragColor = vec4(petalColor, soft * vAlpha);
   }
 `
 
 export function CherryPetals() {
   const pointsRef = useRef<Points>(null)
+  const preset = usePlaygroundTheme()
+  const petalHex = preset.shell.accent.soft
 
   const { geometry, positions, velocities, phases } = useMemo(() => {
     const geo = new BufferGeometry()
@@ -70,17 +74,31 @@ export function CherryPetals() {
     return { geometry: geo, positions: pos, velocities: vel, phases: ph }
   }, [])
 
-  const material = useMemo(
-    () =>
-      new ShaderMaterial({
-        vertexShader,
-        fragmentShader,
-        transparent: true,
-        depthWrite: false,
-        blending: AdditiveBlending,
-      }),
-    [],
-  )
+  useEffect(() => {
+    return () => {
+      geometry.dispose()
+    }
+  }, [geometry])
+
+  const material = useMemo(() => {
+    const c = new Color(petalHex)
+    return new ShaderMaterial({
+      uniforms: {
+        petalColor: { value: new Vector3(c.r, c.g, c.b) },
+      },
+      vertexShader,
+      fragmentShader,
+      transparent: true,
+      depthWrite: false,
+      blending: AdditiveBlending,
+    })
+  }, [petalHex])
+
+  useEffect(() => {
+    return () => {
+      material.dispose()
+    }
+  }, [material])
 
   useFrame((_, delta) => {
     const posAttr = geometry.attributes.position as BufferAttribute
@@ -104,5 +122,5 @@ export function CherryPetals() {
     posAttr.needsUpdate = true
   })
 
-  return <primitive ref={pointsRef} object={new Points(geometry, material)} />
+  return <points ref={pointsRef} geometry={geometry} material={material} />
 }

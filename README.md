@@ -9,6 +9,7 @@ This **README** is the repository entry point: how to orient, run, and extend th
 | [docs/overview.md](docs/overview.md) | Stable reference: goals, stack, architecture, directories, conventions, device testing. |
 | [docs/roadmap.md](docs/roadmap.md) | Phased deliverables and editable near-term focus. |
 | [docs/pitfalls.md](docs/pitfalls.md) | Bugs and footguns we have already hit. |
+| [docs/visual-capture.md](docs/visual-capture.md) | Playwright screenshot workflow for shell and 3D scene review angles. |
 | [docs/project-plan.md](docs/project-plan.md) | Short index of the above (for old bookmarks). |
 
 ---
@@ -93,3 +94,4 @@ When creating a new lab, ask:
 - **Architecture and conventions:** [docs/overview.md](docs/overview.md)
 - **What to build next:** [docs/roadmap.md](docs/roadmap.md)
 - **Avoid repeat mistakes:** [docs/pitfalls.md](docs/pitfalls.md)
+- **Capture visual reviews:** [docs/visual-capture.md](docs/visual-capture.md)

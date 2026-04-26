@@ -36,10 +36,28 @@ export const labs: LabDefinition[] = [
   },
 ]
 
+export function isValidLabId(id: string): id is LabId {
+  return labs.some((lab) => lab.id === id)
+}
+
 /** Stable scene title for each lab (use with `LabHeading`). */
 export function getLabTitle(id: LabId): string {
   const lab = labs.find((l) => l.id === id)
   return lab?.name ?? id
+}
+
+/**
+ * Selection Lab target positions in world meters — design-handoff v0.2 Section 04.
+ * Ray target sits alone at far eye-level distance (across-the-room feel).
+ * Pinch + Touch paired symmetric at arm's reach, just below eye level.
+ */
+export const selectionTargetPositions: Record<
+  'ray' | 'pinch' | 'touch',
+  [number, number, number]
+> = {
+  ray: [0, 1.6, -2.2],
+  pinch: [-0.3, 1.35, -0.55],
+  touch: [0.3, 1.35, -0.55],
 }
 
 export const tuningPresets = {
@@ -85,8 +103,19 @@ export const tuningPresets = {
     grabDistance: 0.08,
     cdGain: 1.0,
     docking: {
+      /** Trial target offset from origin (how far the user must move the object). */
       translationOffsetM: 0.3,
+      /** Trial target rotation (how much the user must rotate to match). */
       rotationOffsetDeg: 45,
+      /**
+       * On-release snap tolerance per design-handoff v0.2 Section 04.
+       * When the released object is within both the position and rotation
+       * tolerances of the trial target, it auto-aligns to the target and the
+       * trial counts as a snapped success. Tight values produce a skill-based
+       * "lock" feel instead of a forgiving vacuum.
+       */
+      snapToleranceM: 0.04,
+      snapToleranceDeg: 10,
     },
   },
 }

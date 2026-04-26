@@ -5,8 +5,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "capture:screenshots": "playwright test tests/visual/capture.spec.ts --project=chromium",
+    "test:visual": "playwright test",
     "preview": "vite preview",
-    "quest": "adb reverse tcp:5173 tcp:5173 && echo 'Quest ready at localhost:5173'"
+    "quest": "adb reverse tcp:5173 tcp:5173 && echo 'Quest ready at localhost:5173'",
+    "build:xr-kit": "node scripts/build-xr-kit-glb.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -19,6 +22,8 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.3.0",
+    "@playwright/test": "^1.59.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",

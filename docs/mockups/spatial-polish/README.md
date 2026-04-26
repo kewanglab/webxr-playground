@@ -2,7 +2,7 @@
 
 Annotated concept frames for [Spatial polish plan](../../spatial-polish-plan.md). Use these for review before implementation; they are **not** literal screenshots of the app.
 
-**Direction update:** The plan now targets a ***Her*-inspired** shell (warm, soft configuration UI) and ***Fifth Element* / *Loki*-inflected** XR staging. These PNGs were generated **before** that palette split; treat them as layout references and **regenerate** once `playgroundTheme` presets exist.
+**Direction update:** The plan now targets one restrained warm identity across shell and XR: coral red, dusty salmon, muted blue, cream, off-white, and walnut. These PNGs predate that locked palette; treat them as layout references and regenerate before using them as color guidance.
 
 | File | What it illustrates |
 |------|---------------------|

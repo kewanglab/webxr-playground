@@ -20,7 +20,7 @@ type StepperSettings = {
 const StepperBar = styled('div', {
   display: 'flex',
   flexDirection: 'column',
-  gap: '6px',
+  gap: '$space$md',
   width: '100%',
   minWidth: 0,
 })
@@ -28,20 +28,21 @@ const StepperBar = styled('div', {
 const StepperRow = styled('div', {
   display: 'flex',
   alignItems: 'center',
-  gap: '6px',
+  gap: '$space$md',
   width: '100%',
   minWidth: 0,
 })
 
 const StepBtn = styled('button', {
   flex: '0 0 auto',
-  minWidth: '36px',
-  height: '32px',
-  borderRadius: '4px',
+  minWidth: '$sizes$rowHeight',
+  width: '$sizes$rowHeight',
+  height: '$sizes$rowHeight',
+  borderRadius: '$radii$sm',
   border: '1px solid $elevation2',
   background: '$elevation1',
   color: '$folderTextColor',
-  fontSize: '18px',
+  fontSize: '20px',
   lineHeight: 1,
   cursor: 'pointer',
   fontWeight: 600,
@@ -55,23 +56,25 @@ const StepBtn = styled('button', {
 
 const Range = styled('input', {
   width: '100%',
-  minHeight: '28px',
+  minHeight: '$sizes$rowHeight',
+  paddingBlock: '$space$sm',
+  boxSizing: 'border-box',
   cursor: 'pointer',
 })
 
 /** Plain number field — do not use Leva's `Components.Number` here; it expects full internal `settings` as props. */
 const NumberField = styled('input', {
   flex: '1 1 auto',
-  minWidth: '56px',
-  height: '32px',
+  minWidth: '$sizes$numberInputMinWidth',
+  height: '$sizes$rowHeight',
   boxSizing: 'border-box',
-  borderRadius: '4px',
+  borderRadius: '$radii$sm',
   border: '1px solid $elevation2',
   background: '$elevation2',
   color: '$folderTextColor',
-  fontSize: '13px',
+  fontSize: '$fontSizes$root',
   fontFamily: '$mono',
-  padding: '0 8px',
+  padding: '0 $space$md',
   textAlign: 'center' as const,
 })
 

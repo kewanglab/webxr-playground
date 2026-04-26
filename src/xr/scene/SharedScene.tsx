@@ -1,8 +1,21 @@
+import { usePlaygroundTheme } from '../theme/PlaygroundThemeContext'
+
 export function SharedScene() {
+  const { xr } = usePlaygroundTheme()
+
   return (
     <>
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[5, 8, 5]} intensity={1} castShadow />
+      <hemisphereLight
+        color={xr.light.hemi.sky}
+        groundColor={xr.light.hemi.ground}
+        intensity={xr.light.hemi.intensity}
+      />
+      <directionalLight
+        position={xr.light.key.position}
+        intensity={xr.light.key.intensity}
+        color={xr.light.key.color}
+        castShadow
+      />
     </>
   )
 }

@@ -6,7 +6,7 @@ This document captures the agreed direction for elevating visual polish across t
 
 **Execution readiness:** This plan is **ready to implement** when you treat [shell-2d.md](./style-templates/shell-2d.md) and [xr-3d.md](./style-templates/xr-3d.md) as the numeric/component source of truth and follow the [Execution guide](#execution-guide) below (file manifest, state wiring, acceptance checks).
 
-**Related:** [Overview](./overview.md), [Pitfalls](./pitfalls.md) (Leva, drei `Text`), lab registry in [`src/config/labs.ts`](../src/config/labs.ts). **Visual specs:** [Shell 2D](./style-templates/shell-2d.md), [XR 3D](./style-templates/xr-3d.md), [style templates index](./style-templates/README.md).
+**Related:** [Overview](./overview.md), [Pitfalls](./pitfalls.md) (Leva, drei `Text`), lab registry in [`src/config/labs.ts`](../src/config/labs.ts). **Visual specs:** [Shell 2D](./style-templates/shell-2d.md), [XR 3D](./style-templates/xr-3d.md), [style templates index](./style-templates/README.md). **Deeper XR set-dressing track (phased):** [xr-scene-enhancement-plan.md](./xr-scene-enhancement-plan.md).
 
 ---
 
@@ -36,11 +36,11 @@ Everything visual should flow from **one typed theme module** so shell and XR st
 3. **Apply XR tokens** by reading the same preset object in R3F (e.g. `useMemo(() => new Color(xr.floor), [preset])`) in [`SharedScene`](../src/xr/scene/SharedScene.tsx), [`VRScene`](../src/xr/scene/VRScene.tsx), HUD, and shared visual helpers—**no** `getComputedStyle` in the render loop.
 
 4. **User-facing configuration (from day one):**
-   - **Presets:** at minimum `default` (Her shell + Fifth/Loki XR) and optionally `highContrast` or a cooler shell variant for accessibility testing—all defined as data in the theme module.
+   - **Presets:** currently `default` (warm restrained shell + XR identity); add future day or accessibility variants deliberately as full theme presets.
    - **Persistence:** `localStorage` key e.g. `xr-playground-theme` + optional **URL query** `?theme=` for sharing a look with collaborators.
    - **Minimal UI:** a compact **“Theme”** control in the playground shell (preset `<select>` or two chips) so headset testers can switch without editing code.
 
-5. **Documentation:** preset **IDs** are defined in code; suggested pairs with [shell-2d.md](./style-templates/shell-2d.md): `default` = Her-like shell + default XR palette; optional **`shellCool`** = cooler shell variant; optional **`highContrast`** = composite preset (shell + XR tweaks) for accessibility experiments. Keep [Pitfalls](./pitfalls.md) in mind when piping numbers into Leva-driven geometry.
+5. **Documentation:** preset **IDs** are defined in code; current default is the warm-night shell + XR palette. Future variants (for example a day preset or `highContrast`) should be added intentionally rather than carried as dormant options. Keep [Pitfalls](./pitfalls.md) in mind when piping numbers into Leva-driven geometry.
 
 ```mermaid
 flowchart TD
@@ -85,9 +85,9 @@ flowchart TD
 
 ## 3) In-headset HUD
 
-**Current:** Bare `Text` for FPS and logger in [`TagAlongHUD`](../src/xr/hud/TagAlongHUD.tsx).
+**Current:** Minimal FPS-only card in [`TagAlongHUD`](../src/xr/hud/TagAlongHUD.tsx).
 
-**Proposed:** One shared **rounded translucent panel** behind stats + log (single shared material). **Loki/TVA** cue: subtle **circular** outer frame or corner “seal” weight; **instrument** text in **mono** from tokens. Colors from **`xr.hud`**. Validate that FPS text updates do not hitch; throttle if needed.
+**Proposed:** Keep the HUD intentionally small: walnut glass panel, cream FPS text, and a status bar that maps 90+ / 72–89 / 45–71 / <45 FPS to smooth / not-so-smooth / choppy / not-workable. Validate that FPS text updates do not hitch; throttle if needed.
 
 ---
 
@@ -101,6 +101,8 @@ flowchart TD
 | **Manipulation** | Shared object silhouette + target gizmo palette | Grab highlight lerp, avoid busy continuous shaders |
 
 **Implementation:** Small `src/xr/visual/` (or similar) that imports **`xr`** tokens from the theme preset (not hardcoded hex), plus shared materials and reused geometries.
+
+**Detailed phased rollout** (staging → environment → materials → optional glTF/textures/shaders, with performance gates): [xr-scene-enhancement-plan.md](./xr-scene-enhancement-plan.md).
 
 ---
 
@@ -142,14 +144,14 @@ Naming is flexible (`applyShellTheme` vs `applyPlaygroundTheme`) as long as ther
 | [`src/ui/PlaygroundControls.tsx`](../src/ui/PlaygroundControls.tsx) | Layout + session/experiments groups; styles via CSS variables; theme preset `<select>` or chips; lab **mode** badge + description from [`labs`](../src/config/labs.ts) + `currentLab` |
 | [`src/ui/TestLoggerPanel.tsx`](../src/ui/TestLoggerPanel.tsx) | Same shell variables / typography as playground chrome |
 | [`src/xr/scene/SharedScene.tsx`](../src/xr/scene/SharedScene.tsx), [`VRScene.tsx`](../src/xr/scene/VRScene.tsx), [`ARScene.tsx`](../src/xr/scene/ARScene.tsx) | Consume `xr` from theme context; fog, skydome, grid, floor, optional AR ring |
-| [`src/xr/hud/InXRStats.tsx`](../src/xr/hud/InXRStats.tsx), [`InXRLogger.tsx`](../src/xr/hud/InXRLogger.tsx), [`TagAlongHUD`](../src/xr/hud/TagAlongHUD.tsx) subtree | HUD panel mesh + colors from `xr.hud`; throttle stats label updates if Quest hitches |
+| [`src/xr/hud/InXRStats.tsx`](../src/xr/hud/InXRStats.tsx), [`TagAlongHUD`](../src/xr/hud/TagAlongHUD.tsx) subtree | Minimal FPS panel mesh + colors from `xr.hud`; throttle stats label updates if Quest hitches |
 | Lab files under [`src/labs/`](../src/labs/) | Staging passes; use `xr.accent.*` / per-lab map keyed by [`LabId`](../src/config/labs.ts) |
 
 Optional later: [`src/xr/visual/`](../src/xr/visual/) shared materials/helpers to avoid duplicated `useMemo` patterns.
 
 ### Theme persistence (constants)
 
-- **`localStorage` key:** `xr-playground-theme` — value = preset id string (e.g. `default`, `shellCool`).
+- **`localStorage` key:** `xr-playground-theme` — value = preset id string (currently `default`; future presets may be added deliberately).
 - **URL query:** `?theme=<presetId>` — applied once on load; optional: updating the picker pushes `history.replaceState` so links are shareable (nice-to-have).
 - **Invalid id:** fall back to `defaultPlaygroundPresetId`.
 
@@ -187,7 +189,7 @@ Optional later: [`src/xr/visual/`](../src/xr/visual/) shared materials/helpers t
 
 1. **Phase A** — `playgroundTheme.ts`, `applyShellTheme`, `PlaygroundThemeContext`, store + `localStorage` + `?theme=`  
 2. **Phase B** — `PlaygroundControls` + `TestLoggerPanel` (*Her*-like) using `--pg-shell-*`  
-3. **Phase C** — `SharedScene` / `VRScene` (*Fifth Element* mood) from context `xr`  
+3. **Phase C** — `SharedScene` / `VRScene` warm restrained night mood from context `xr`  
 4. **Phase D** — TagAlong HUD panel + instrument styling (`xr.hud`)  
 5. **Phase E** — `ARScene` optional overlay; lab staging (**Selection** + **Locomotion** first, then **Placement** + **Manipulation**) via `Record<LabId, …>` + [xr-3d per-lab table](./style-templates/xr-3d.md)  
 
@@ -225,7 +227,7 @@ Use this list when implementing; status is manual (not synced to Cursor plans). 
 - [ ] **B** `TestLoggerPanel.tsx` — shell CSS variables / spacing grid  
 - [ ] **C** `SharedScene.tsx` / `VRScene.tsx` — `xr` lights, fog, skydome, grid, floor  
 - [ ] **E** `ARScene.tsx` — optional overlay + toggle (`xr.ar.stroke` / `xr.ar.opacity`)  
-- [ ] **D** `TagAlongHUD` / `InXRStats` / `InXRLogger` — panel chrome, throttle stats if needed  
+- [ ] **D** `TagAlongHUD` / `InXRStats` — minimal themed FPS panel, throttle stats if needed  
 - [ ] **E** Lab staging: Selection, Locomotion, Placement, Manipulation — `Record<LabId, …>` accents per [xr-3d.md](./style-templates/xr-3d.md)  
 - [ ] **E** Optional `src/xr/visual/` helpers (shared materials, no scattered hex)  
 - [ ] Quest validation + preset switch smoke test; PR / commit mentions any perf notes  
