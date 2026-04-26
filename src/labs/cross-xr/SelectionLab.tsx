@@ -2,8 +2,8 @@ import { Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 import { useControls } from 'leva'
-import { Group, MeshBasicMaterial, MeshStandardMaterial } from 'three'
-import { defaultHudReport, usePlaygroundStore } from '../../app/store'
+import { DoubleSide, Group, MeshBasicMaterial, MeshStandardMaterial } from 'three'
+import { useHudReport } from '../../app/useHudReport'
 import { getLabTitle, selectionTargetPositions, tuningPresets } from '../../config/labs'
 import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
 import { useHapticPulse } from '../../xr/feedback/haptics/useHapticPulse'
@@ -487,7 +487,7 @@ function StateOrb({
             transparent
             opacity={0}
             depthWrite={false}
-            side={2 /* DoubleSide */}
+            side={DoubleSide}
           />
         </mesh>
       </group>
@@ -542,10 +542,8 @@ export function SelectionLab() {
     eyeOffsetFromHead: -0.24,
   })
 
-  // Push current Leva tuning into the in-XR HUD's expanded metrics panel.
-  const setHudReport = usePlaygroundStore((s) => s.setHudReport)
-  useEffect(() => {
-    setHudReport({
+  useHudReport(
+    {
       metrics: [
         { label: 'TARGET', value: size.toFixed(2) },
         { label: 'BOOST', value: boost.toFixed(2) },
@@ -554,9 +552,9 @@ export function SelectionLab() {
       ],
       methodLabel: 'Selection · cross-XR',
       trial: null,
-    })
-    return () => setHudReport(defaultHudReport)
-  }, [size, boost, enableHaptics, enableAudio, setHudReport])
+    },
+    [size, boost, enableHaptics, enableAudio],
+  )
 
   return (
     <group>
