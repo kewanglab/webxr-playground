@@ -8,7 +8,6 @@ import { AppearanceSettingsDock } from '../ui/AppearanceSettingsDock'
 import { DebugPanel } from '../ui/DebugPanel'
 import { TestLoggerPanel } from '../ui/TestLoggerPanel'
 import { ShellRightRail } from '../ui/ShellRightRail'
-import { getPlaygroundPreset } from '../config/playgroundTheme'
 import { applyShellTheme } from './applyShellTheme'
 import { PlaygroundThemeProvider } from '../xr/theme/PlaygroundThemeContext'
 import { usePlaygroundStore } from './store'
@@ -40,7 +39,7 @@ export function App() {
   const captureMode = readCaptureMode()
 
   useLayoutEffect(() => {
-    applyShellTheme(getPlaygroundPreset(themePresetId).shell)
+    applyShellTheme(themePresetId)
   }, [themePresetId])
 
   return (
