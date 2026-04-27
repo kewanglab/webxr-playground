@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" data-pg-theme="warm-night">
+<head>
+<meta charset="UTF-8">
+<title>Shell Bar</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--pg-xr-void-clear); padding: 0; font-family: var(--pg-font-sans); color: var(--pg-shell-text-primary); }
+  .canvas { height: 70px; background: var(--pg-xr-void-clear); display: flex; align-items: center; justify-content: center; color: #6B5A50; font-size: 10px; letter-spacing:0.08em; text-transform: uppercase; }
+  .lab-line { background: #2A2522; padding: 14px 24px; color: #DED2C3; border-top: 1px solid #3A3330; border-bottom: 1px solid #3A3330; text-align: center; font-size: 13px; }
+  .lab-line .name { font-weight: 600; }
+  .lab-line .desc { color: #B99B89; font-size: 11px; margin-top: 2px; }
+  .shell { background: #1F1B19; padding: 14px 24px; display: flex; align-items: center; gap: 24px; }
+  .group { display: flex; align-items: center; gap: 10px; }
+  .group-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #B99B89; margin-right: 4px; }
+  button { font-family: inherit; font-size: 13px; font-weight: 500; border-radius: 10px; padding: 10px 16px; cursor: pointer; }
+  .pri { background: transparent; color: #DEA199; border: 1px solid #B9564E; }
+  .chip-active { background: rgba(222,161,153,0.18); color: #FBF7EF; border: 1px solid #DEA199; font-weight: 600; }
+  .chip-ghost { background: transparent; color: #DED2C3; border: 1px solid #62504A; }
+</style>
+</head>
+<body>
+  <div class="canvas">Canvas · 3D scene above</div>
+  <div class="lab-line">
+    <div class="name">Selection Lab · cross-xr</div>
+    <div class="desc">Compare selection via ray, direct touch, and hand pinch</div>
+  </div>
+  <div class="shell">
+    <div class="group">
+      <span class="group-label">Session</span>
+      <button class="pri">Enter VR</button>
+      <button class="pri">Enter AR</button>
+    </div>
+    <div style="width:1px;height:24px;background:#3A3330"></div>
+    <div class="group">
+      <span class="group-label">Experiments</span>
+      <button class="chip-active">Selection Lab</button>
+      <button class="chip-ghost">Placement Lab</button>
+      <button class="chip-ghost">Locomotion Lab</button>
+      <button class="chip-ghost">Manipulation Lab</button>
+    </div>
+  </div>
+</body>
+</html>

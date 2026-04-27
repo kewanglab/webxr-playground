@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" data-pg-theme="warm-night">
+<head>
+<meta charset="UTF-8">
+<title>Radii · Shadow</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--pg-shell-bg-canvas); padding: 18px; font-family: var(--pg-font-sans); color: var(--pg-shell-text-primary); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; align-items: end; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .box { width: 80px; height: 56px; background: var(--pg-shell-bg-elevated); border: 1px solid var(--pg-shell-border-subtle); }
+  .label { font-size: 10.5px; font-weight: 600; }
+  .val { font-family: var(--pg-font-mono); font-size: 10px; color: var(--pg-shell-text-muted); }
+  .h3 { font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pg-shell-text-muted); margin: 0 0 8px; }
+</style>
+</head>
+<body>
+  <div class="h3">Corner radii</div>
+  <div class="grid">
+    <div class="cell"><div class="box" style="border-radius:6px"></div><span class="label">radius.sm</span><span class="val">6 px · inputs</span></div>
+    <div class="cell"><div class="box" style="border-radius:10px"></div><span class="label">radius.md</span><span class="val">10 px · buttons</span></div>
+    <div class="cell"><div class="box" style="border-radius:14px"></div><span class="label">radius.lg</span><span class="val">14 px · panels</span></div>
+    <div class="cell"><div class="box" style="border-radius:999px"></div><span class="label">pill</span><span class="val">999 · badges</span></div>
+  </div>
+  <div class="h3" style="margin-top:18px">Elevation</div>
+  <div class="grid">
+    <div class="cell"><div class="box" style="border-radius:14px; box-shadow: 0 1px 0 rgba(58,40,32,0.08);"></div><span class="label">shadow.soft</span><span class="val">0 1 0 / .08</span></div>
+    <div class="cell"><div class="box" style="border-radius:14px; box-shadow: 0 6px 28px rgba(0,0,0,.5); background:#51443E; border-color:#C85F58"></div><span class="label">HUD float</span><span class="val">0 6 28 / .5</span></div>
+    <div class="cell"><div class="box" style="border-radius:14px; background:rgba(58,40,32,0.35); border-color:transparent"></div><span class="label">overlay scrim</span><span class="val">walnut .35</span></div>
+    <div class="cell"><div class="box" style="border-radius:14px; border:none; background:transparent"></div><span class="label">no shadow</span><span class="val">inputs · chips</span></div>
+  </div>
+</body>
+</html>

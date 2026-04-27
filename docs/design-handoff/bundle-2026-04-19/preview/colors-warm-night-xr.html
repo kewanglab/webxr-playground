@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" data-pg-theme="warm-night">
+<head>
+<meta charset="UTF-8">
+<title>Color · Warm Night XR</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--pg-xr-void-clear); padding: 16px 18px; font-family: var(--pg-font-sans); color: var(--pg-xr-hud-text-primary); }
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .sw { display: flex; flex-direction: column; gap: 4px; }
+  .chip { height: 56px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
+  .name { font-size: 10.5px; font-weight: 600; line-height: 1.2; }
+  .hex { font-family: var(--pg-font-mono); font-size: 10px; color: var(--pg-xr-hud-text-muted); }
+  h3 { font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pg-xr-hud-text-muted); margin: 0 0 8px; }
+  .row { margin-bottom: 12px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <h3>Environment</h3>
+    <div class="grid">
+      <div class="sw"><div class="chip" style="background:linear-gradient(180deg,#28313A 0%,#866560 60%,#231F1D 100%)"></div><span class="name">skydome</span><span class="hex">top→bottom</span></div>
+      <div class="sw"><div class="chip" style="background:#282321"></div><span class="name">fog</span><span class="hex">#282321</span></div>
+      <div class="sw"><div class="chip" style="background:#403A36"></div><span class="name">floor.albedo</span><span class="hex">#403A36</span></div>
+      <div class="sw"><div class="chip" style="background:#706862"></div><span class="name">grid.cell</span><span class="hex">#706862</span></div>
+      <div class="sw"><div class="chip" style="background:#D7AEA8"></div><span class="name">grid.section</span><span class="hex">#D7AEA8</span></div>
+      <div class="sw"><div class="chip" style="background:#1C1B1D"></div><span class="name">void.clear</span><span class="hex">#1C1B1D</span></div>
+    </div>
+  </div>
+  <div class="row">
+    <h3>Accents · 6 identity colors</h3>
+    <div class="grid">
+      <div class="sw"><div class="chip" style="background:#C85F58"></div><span class="name">orange · coral red</span><span class="hex">#C85F58</span></div>
+      <div class="sw"><div class="chip" style="background:#DDB2AB"></div><span class="name">amber · dusty salmon</span><span class="hex">#DDB2AB</span></div>
+      <div class="sw"><div class="chip" style="background:#829AA2"></div><span class="name">cyan · muted blue</span><span class="hex">#829AA2</span></div>
+      <div class="sw"><div class="chip" style="background:#9A7A68"></div><span class="name">mustard · walnut</span><span class="hex">#9A7A68</span></div>
+      <div class="sw"><div class="chip" style="background:#DED2C3"></div><span class="name">stone · cream-taupe</span><span class="hex">#DED2C3</span></div>
+      <div class="sw"><div class="chip" style="background:#62504A"></div><span class="name">seal · walnut weight</span><span class="hex">#62504A</span></div>
+    </div>
+  </div>
+</body>
+</html>

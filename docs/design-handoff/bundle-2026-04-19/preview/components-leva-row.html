@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" data-pg-theme="warm-night">
+<head>
+<meta charset="UTF-8">
+<title>Leva Control Row</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: #1C1B1D; padding: 18px; font-family: var(--pg-font-sans); color: #FFF5EA; }
+  .leva-panel {
+    width: 460px;
+    background: #FBF7EF; border: 1px solid #D3BCAC; border-radius: 14px;
+    box-shadow: 0 1px 0 rgba(58,40,32,.08); overflow: hidden;
+    color: #3A2820;
+  }
+  .title-bar { padding: 12px 16px; border-bottom: 1px solid #D3BCAC; display: flex; align-items: center; gap: 8px; }
+  .title-bar .title { font-size: 13px; font-weight: 600; }
+  .title-bar .badge { margin-left: auto; font-size: 10px; padding: 2px 8px; border-radius: 999px; background: #E8D7CA; color: #6B5A50; }
+  .row { display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid #E8D7CA; gap: 12px; }
+  .row:last-child { border-bottom: none; }
+  .label { font-size: 12px; color: #6B5A50; width: 130px; flex-shrink: 0; }
+  .control { flex: 1; display: flex; align-items: center; gap: 6px; }
+  .stepper { display: flex; align-items: center; gap: 4px; }
+  .step-btn { width: 24px; height: 24px; border-radius: 6px; background: #E8D7CA; border: 1px solid #D3BCAC; color: #3A2820; font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .num-input { width: 52px; height: 24px; border-radius: 6px; background: #FFFFFF; border: 1px solid #D3BCAC; padding: 0 6px; font-family: "DM Mono", monospace; font-size: 12px; color: #3A2820; }
+  .slider-track { flex: 1; height: 8px; background: #E8D7CA; border-radius: 4px; position: relative; margin-left: 8px; }
+  .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; background: #B9564E; border-radius: 4px; }
+  .slider-thumb {
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+    width: 20px; height: 20px; border-radius: 999px;
+    background: #FBF7EF; border: 2px solid #B9564E;
+    box-shadow: 0 1px 3px rgba(58,40,32,0.18), 0 0 0 4px rgba(185,86,78,0.08);
+    cursor: grab;
+  }
+  .slider-thumb::after {
+    content: ""; position: absolute; inset: 5px;
+    border-radius: 999px; background: #B9564E;
+  }
+</style>
+</head>
+<body>
+  <div class="leva-panel">
+    <div class="title-bar">
+      <span class="title">Selection Lab</span>
+      <span class="badge">CROSS-XR</span>
+    </div>
+    <div class="row">
+      <span class="label">target size</span>
+      <div class="control">
+        <div class="stepper">
+          <div class="step-btn">−</div>
+          <input class="num-input" value="0.32" />
+          <div class="step-btn">+</div>
+        </div>
+        <div class="slider-track">
+          <div class="slider-fill" style="width:38%"></div>
+          <div class="slider-thumb" style="left:38%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <span class="label">confirm boost</span>
+      <div class="control">
+        <div class="stepper">
+          <div class="step-btn">−</div>
+          <input class="num-input" value="0.18" />
+          <div class="step-btn">+</div>
+        </div>
+        <div class="slider-track">
+          <div class="slider-fill" style="width:55%"></div>
+          <div class="slider-thumb" style="left:55%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <span class="label">enable haptics</span>
+      <div class="control">
+        <div style="width:36px;height:20px;border-radius:999px;background:#B9564E;position:relative;">
+          <div style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:999px;background:#FFF7EF"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

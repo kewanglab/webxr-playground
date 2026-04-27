@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" data-pg-theme="warm-night">
+<head>
+<meta charset="UTF-8">
+<title>Iconography</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--pg-shell-bg-elevated); padding: 18px; font-family: var(--pg-font-sans); color: var(--pg-shell-text-primary); }
+  .row { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .glyph { font-family: "DM Sans", system-ui, sans-serif; font-size: 26px; color: #3A2820; line-height: 1; }
+  .name { font-family: "DM Mono", monospace; font-size: 10px; color: #6B5A50; }
+  .h3 { font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #6B5A50; margin: 0 0 8px; }
+  .note { font-size: 11px; color: #6B5A50; max-width: 640px; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <div class="h3">Allowed glyphs · typed inline, not iconified</div>
+  <div class="row">
+    <div class="item"><span class="glyph">⌄</span><span class="name">U+2304 chevron</span></div>
+    <div class="item"><span class="glyph">·</span><span class="name">U+00B7 mid-dot</span></div>
+    <div class="item"><span class="glyph">→</span><span class="name">U+2192 arrow</span></div>
+    <div class="item"><span class="glyph">°</span><span class="name">U+00B0 degree</span></div>
+    <div class="item"><span class="glyph">′</span><span class="name">U+2032 prime</span></div>
+    <div class="item"><span class="glyph">✓</span><span class="name">U+2713 check</span></div>
+  </div>
+  <div class="note">
+    No icon font, no SVG sprite, no Lucide/Heroicons in the codebase. Mode is communicated by typographic badges (VR · AR · CROSS-XR), state by color and shape. No emoji anywhere in product UI.
+  </div>
+</body>
+</html>

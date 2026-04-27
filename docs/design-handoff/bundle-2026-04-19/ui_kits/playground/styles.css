@@ -1,0 +1,148 @@
+/* UI Kit · XR Playground Shell
+   Recreates the desktop shell + canvas + 3D HUD float at 1280px wide.
+   Tokens come from ../../colors_and_type.css. Local file holds layout-only rules.
+*/
+
+html, body { margin: 0; padding: 0; min-height: 100%; }
+body {
+  font-family: var(--pg-font-sans);
+  color: var(--pg-shell-text-primary);
+  background: var(--pg-shell-bg-elevated);
+  overflow-x: hidden;
+}
+
+#app { min-height: 100vh; height: 100vh; display: flex; flex-direction: column; }
+
+/* -------- Canvas (3D scene mock) -------- */
+.canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+.canvas[data-pg-theme="warm-night"] {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 100%, #2A2422 0%, transparent 60%),
+    linear-gradient(180deg, #28313A 0%, #866560 55%, #231F1D 100%);
+}
+.canvas[data-pg-theme="cloud-park"] {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 100%, #BDEFD2 0%, transparent 60%),
+    linear-gradient(180deg, #83D5ED 0%, #FFE4A8 55%, #BDEFD2 100%);
+}
+
+/* Floor grid (simple perspective hint) */
+.floor {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 42%;
+  background-image:
+    linear-gradient(transparent 0%, var(--pg-xr-floor-albedo) 60%);
+  opacity: 0.95;
+}
+.floor-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(to right, var(--pg-xr-grid-cell) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--pg-xr-grid-cell) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: linear-gradient(to top, black 0%, transparent 90%);
+  -webkit-mask-image: linear-gradient(to top, black 0%, transparent 90%);
+  opacity: 0.5;
+  transform: perspective(600px) rotateX(60deg);
+  transform-origin: bottom;
+}
+
+/* Lab heading floats on top of canvas */
+.lab-heading {
+  position: absolute; top: 22%; left: 50%; transform: translateX(-50%);
+  text-align: center; pointer-events: none;
+}
+.lab-heading .title {
+  font-size: 28px; font-weight: 600; letter-spacing: -0.01em;
+  color: var(--pg-xr-hud-text-primary);
+  text-shadow: 0 1px 0 var(--pg-xr-void-clear);
+}
+.lab-heading .sub {
+  margin-top: 4px;
+  font-size: 13px; color: var(--pg-xr-hud-text-muted);
+}
+
+/* Stage props (the three pedestals for Selection lab) */
+.stage { position: absolute; left: 50%; bottom: 22%; transform: translateX(-50%); display: flex; gap: 80px; align-items: end; }
+.pedestal { display: flex; flex-direction: column; align-items: center; gap: 0; }
+.pedestal .obj {
+  width: 56px; height: 56px; border-radius: 8px;
+  box-shadow: 0 12px 18px rgba(0,0,0,0.35);
+  transform: rotate(45deg) skew(-2deg, -2deg);
+}
+.pedestal .base {
+  width: 88px; height: 36px; border-radius: 50%;
+  background: var(--pg-xr-accent-stone);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+  margin-top: -8px;
+}
+/* Per-method object tints */
+.obj.ray   { background: linear-gradient(135deg, var(--pg-xr-accent-orange), var(--pg-xr-accent-amber)); }
+.obj.pinch { background: linear-gradient(135deg, var(--pg-xr-accent-amber), var(--pg-xr-accent-stone)); border: 1.5px solid var(--pg-xr-accent-orange); }
+.obj.touch { background: linear-gradient(135deg, var(--pg-xr-accent-stone), var(--pg-xr-accent-mustard)); }
+
+/* -------- HUD float -------- */
+.hud-float {
+  position: absolute; left: 24px; bottom: 100px;
+  filter: drop-shadow(0 6px 28px rgba(0,0,0,0.5));
+}
+
+/* -------- Leva float -------- */
+.leva-float {
+  position: absolute; right: 20px; top: 20px; width: 360px;
+}
+
+/* -------- Lab heading line above shell --------
+   Reads as part of the shell (not the canvas):
+   it carries lab name + description so users know what they're tuning.
+   Uses shell tokens so it themes correctly between warm-night and cloud-park. */
+.lab-line {
+  background: var(--pg-shell-bg-elevated);
+  padding: 10px 24px;
+  text-align: center;
+  border-top: 1px solid var(--pg-shell-border-subtle);
+  border-bottom: 1px solid var(--pg-shell-border-subtle);
+  color: var(--pg-shell-text-primary);
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+}
+.lab-line .name {
+  font-size: 13px; font-weight: 600;
+  color: var(--pg-shell-text-primary);
+  white-space: nowrap;
+}
+.lab-line .badge {
+  font-size: 9.5px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 999px;
+  background: color-mix(in srgb, var(--pg-shell-accent-primary) 12%, transparent);
+  border: 1px solid var(--pg-shell-accent-primary);
+  color: var(--pg-shell-accent-primary-hover);
+}
+.lab-line .desc {
+  font-size: 11.5px; color: var(--pg-shell-text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 60ch;
+}
+.lab-line .sep {
+  width: 1px; height: 14px; flex-shrink: 0;
+  background: var(--pg-shell-border-subtle);
+}
+
+/* -------- Shell bar -------- */
+.shell-bar {
+  background: var(--pg-shell-bg-canvas);
+  padding: 14px 20px;
+  display: flex; align-items: center; gap: 18px;
+  border-top: 1px solid var(--pg-shell-border-subtle);
+  color: var(--pg-shell-text-primary);
+}
+.shell-bar button { white-space: nowrap; }
+.shell-bar .group { display: flex; align-items: center; gap: 10px; }
+.shell-bar .label {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--pg-shell-text-muted); margin-right: 4px;
+}
+.shell-bar .divider { width: 1px; height: 24px; background: var(--pg-shell-border-subtle); }
+.theme-toggle { margin-left: auto; }

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" data-pg-theme="warm-night">
+<head>
+<meta charset="UTF-8">
+<title>Logger Card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: #1C1B1D; padding: 18px; font-family: var(--pg-font-sans); color: #3A2820; }
+  .panel {
+    width: 460px;
+    background: #FBF7EF; border: 1px solid #D3BCAC; border-radius: 14px;
+    box-shadow: 0 1px 0 rgba(58,40,32,.08); overflow: hidden;
+  }
+  .head { padding: 10px 16px; border-bottom: 1px solid #D3BCAC; display: flex; align-items: center; gap: 8px; }
+  .head .title { font-size: 13px; font-weight: 600; }
+  .head .count { margin-left: auto; font-size: 10px; padding: 2px 8px; border-radius: 999px; background: #E8D7CA; color: #6B5A50; font-family: "DM Mono", monospace; }
+  .log { font-family: "DM Mono", monospace; font-size: 12px; padding: 12px 16px; line-height: 1.55; }
+  .ts { color: #6B5A50; }
+  .tag { color: #B9564E; }
+  .tag-cy { color: #6F8792; }
+  .row-log { display: flex; gap: 10px; }
+  .controls { padding: 10px 16px; border-top: 1px solid #E8D7CA; display: flex; gap: 8px; }
+  .pri { background: #B9564E; color: #FFF7EF; border: 1px solid #97463F; border-radius: 10px; padding: 8px 14px; font-size: 12px; font-weight: 500; }
+  .ghost { background: transparent; color: #3A2820; border: 1px solid #B99B89; border-radius: 10px; padding: 8px 14px; font-size: 12px; }
+</style>
+</head>
+<body>
+  <div class="panel">
+    <div class="head">
+      <span class="title">Session Logger</span>
+      <span class="count">42 entries</span>
+    </div>
+    <div class="log">
+      <div class="row-log"><span class="ts">12:04:18</span><span class="tag">[selection]</span><span>ray hit · target A · 11.2ms</span></div>
+      <div class="row-log"><span class="ts">12:04:21</span><span class="tag">[selection]</span><span>pinch hit · target B · 8.4ms</span></div>
+      <div class="row-log"><span class="ts">12:04:25</span><span class="tag-cy">[placement]</span><span>valid · floor surface · 0.42m</span></div>
+      <div class="row-log"><span class="ts">12:04:29</span><span class="tag">[manipulation]</span><span>grab released · 3.4° · 0.04m</span></div>
+    </div>
+    <div class="controls">
+      <button class="pri">Log entry</button>
+      <button class="ghost">Sync to desktop</button>
+      <button class="ghost" style="margin-left:auto">Clear</button>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" data-pg-theme="warm-night">
+<head>
+<meta charset="UTF-8">
+<title>Type · Display & Body</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--pg-shell-bg-elevated); padding: 18px 22px; font-family: var(--pg-font-sans); color: var(--pg-shell-text-primary); }
+  .row { display: flex; align-items: baseline; gap: 16px; padding: 5px 0; border-bottom: 1px solid var(--pg-shell-border-subtle); }
+  .row:last-child { border-bottom: none; }
+  .meta { font-family: var(--pg-font-mono); font-size: 10px; color: var(--pg-shell-text-muted); width: 130px; flex-shrink: 0; letter-spacing: 0.02em; }
+  .specimen { line-height: 1.2; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="meta">DM Sans · 22 / 600</div>
+    <div class="specimen" style="font-size: 22px; font-weight: 600; letter-spacing: -0.005em;">Build for comparison.</div>
+  </div>
+  <div class="row">
+    <div class="meta">DM Sans · 16 / 600</div>
+    <div class="specimen" style="font-size: 16px; font-weight: 600;">Selection Lab · cross-xr</div>
+  </div>
+  <div class="row">
+    <div class="meta">DM Sans · 12.5 / 400</div>
+    <div class="specimen" style="font-size: 12.5px;">Compare selection via ray, direct touch, and hand pinch.</div>
+  </div>
+  <div class="row">
+    <div class="meta">DM Sans · 11 / 400 muted</div>
+    <div class="specimen" style="font-size: 11px; color: var(--pg-shell-text-muted);">Default theme · Patina Instrument Lab</div>
+  </div>
+  <div class="row">
+    <div class="meta">DM Sans · 9.5 / 500 caps</div>
+    <div class="specimen" style="font-size: 9.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em;">VR · AR · CROSS-XR</div>
+  </div>
+  <div class="row">
+    <div class="meta">DM Mono · 12 / 400</div>
+    <div class="specimen" style="font-family: var(--pg-font-mono); font-size: 12px;">[selection] ray hit target A · 11.2 ms</div>
+  </div>
+</body>
+</html>

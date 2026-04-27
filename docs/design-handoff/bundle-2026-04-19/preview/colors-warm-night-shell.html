@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" data-pg-theme="warm-night">
+<head>
+<meta charset="UTF-8">
+<title>Color · Warm Night Shell</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--pg-shell-bg-elevated); padding: 16px 18px; font-family: var(--pg-font-sans); color: var(--pg-shell-text-primary); }
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .sw { display: flex; flex-direction: column; gap: 4px; }
+  .chip { height: 56px; border-radius: 10px; border: 1px solid var(--pg-shell-border-subtle); }
+  .name { font-size: 10.5px; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; }
+  .hex { font-family: var(--pg-font-mono); font-size: 10px; color: var(--pg-shell-text-muted); }
+  h3 { font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pg-shell-text-muted); margin: 0 0 8px; }
+  .row { margin-bottom: 12px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <h3>Surface · Border · Text</h3>
+    <div class="grid">
+      <div class="sw"><div class="chip" style="background:#F0E3D4"></div><span class="name">bg.canvas</span><span class="hex">#F0E3D4</span></div>
+      <div class="sw"><div class="chip" style="background:#FBF7EF"></div><span class="name">bg.elevated</span><span class="hex">#FBF7EF</span></div>
+      <div class="sw"><div class="chip" style="background:#E8D7CA"></div><span class="name">bg.subtle</span><span class="hex">#E8D7CA</span></div>
+      <div class="sw"><div class="chip" style="background:#D3BCAC"></div><span class="name">border.subtle</span><span class="hex">#D3BCAC</span></div>
+      <div class="sw"><div class="chip" style="background:#B99B89"></div><span class="name">border.default</span><span class="hex">#B99B89</span></div>
+      <div class="sw"><div class="chip" style="background:#3A2820"></div><span class="name">text.primary</span><span class="hex">#3A2820</span></div>
+    </div>
+  </div>
+  <div class="row">
+    <h3>Accent · Focus · State</h3>
+    <div class="grid">
+      <div class="sw"><div class="chip" style="background:#B9564E"></div><span class="name">accent.primary</span><span class="hex">#B9564E</span></div>
+      <div class="sw"><div class="chip" style="background:#97463F"></div><span class="name">accent.hover</span><span class="hex">#97463F</span></div>
+      <div class="sw"><div class="chip" style="background:#DEA199"></div><span class="name">accent.soft</span><span class="hex">#DEA199</span></div>
+      <div class="sw"><div class="chip" style="background:#6F8792"></div><span class="name">state.success</span><span class="hex">#6F8792</span></div>
+      <div class="sw"><div class="chip" style="background:#9C6B4E"></div><span class="name">state.warning</span><span class="hex">#9C6B4E</span></div>
+      <div class="sw"><div class="chip" style="background:#8F3C37"></div><span class="name">state.danger</span><span class="hex">#8F3C37</span></div>
+    </div>
+  </div>
+</body>
+</html>
