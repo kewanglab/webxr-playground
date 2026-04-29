@@ -83,8 +83,11 @@
 /* ============================================================================
    Theme: Warm Night (default — "Patina Instrument Lab")
    Selector matches both `default` and `warm-night` for API stability.
+   :root:not([data-pg-theme]) covers the pre-JS moment before applyShellTheme
+   runs; unknown ids are NOT covered, so typos produce visible missing-token
+   artifacts during development rather than silently falling back to warm-night.
    ============================================================================ */
-:root,
+:root:not([data-pg-theme]),
 :root[data-pg-theme="warm-night"],
 :root[data-pg-theme="default"] {
   /* Shell — surfaces & lines */
