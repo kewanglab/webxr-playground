@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en" data-pg-theme="warm-night">
+<head>
+<meta charset="UTF-8">
+<title>Spacing · 4px Grid</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--pg-shell-bg-elevated); padding: 16px 18px; font-family: var(--pg-font-sans); color: var(--pg-shell-text-primary); }
+  .row { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
+  .name { width: 110px; font-size: 11px; font-weight: 600; }
+  .val { width: 50px; font-family: var(--pg-font-mono); font-size: 10px; color: var(--pg-shell-text-muted); }
+  .bar { background: var(--pg-shell-accent-soft); height: 14px; border-radius: 3px; }
+  .note { font-size: 10px; color: var(--pg-shell-text-muted); margin-left: 8px; }
+</style>
+</head>
+<body>
+  <div class="row"><span class="name">space.micro</span><span class="val">2 px</span><span class="bar" style="width:2px"></span><span class="note">badge inset only</span></div>
+  <div class="row"><span class="name">space.xs</span><span class="val">4 px</span><span class="bar" style="width:4px"></span><span class="note">tight icon gaps</span></div>
+  <div class="row"><span class="name">space.sm</span><span class="val">8 px</span><span class="bar" style="width:8px"></span><span class="note">inline control gaps</span></div>
+  <div class="row"><span class="name">space.md</span><span class="val">12 px</span><span class="bar" style="width:12px"></span><span class="note">button padding (Y)</span></div>
+  <div class="row"><span class="name">space.lg</span><span class="val">16 px</span><span class="bar" style="width:16px"></span><span class="note">section padding</span></div>
+  <div class="row"><span class="name">space.xl</span><span class="val">20 px</span><span class="bar" style="width:20px"></span><span class="note">primary X padding</span></div>
+  <div class="row"><span class="name">space.xxl</span><span class="val">24 px</span><span class="bar" style="width:24px"></span><span class="note">major group gap</span></div>
+</body>
+</html>

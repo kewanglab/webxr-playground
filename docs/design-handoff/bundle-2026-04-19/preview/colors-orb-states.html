@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" data-pg-theme="warm-night">
+<head>
+<meta charset="UTF-8">
+<title>Selection Orb States</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--pg-xr-void-clear); padding: 16px 18px; font-family: var(--pg-font-sans); color: var(--pg-xr-hud-text-primary); display: flex; gap: 18px; }
+  .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .orb-wrap { width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; }
+  .label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--pg-xr-hud-text-muted); }
+  .sub { font-family: var(--pg-font-mono); font-size: 10px; color: var(--pg-xr-hud-text-metric); }
+</style>
+</head>
+<body>
+  <div class="col">
+    <div class="orb-wrap">
+      <svg width="92" height="92" viewBox="0 0 92 92">
+        <radialGradient id="idle" cx=".4" cy=".4" r=".6">
+          <stop offset="0%" stop-color="#F5EDE0"/>
+          <stop offset="60%" stop-color="#6E5E50"/>
+          <stop offset="100%" stop-color="#281C10"/>
+        </radialGradient>
+        <circle cx="46" cy="46" r="32" fill="url(#idle)"/>
+      </svg>
+    </div>
+    <span class="label">Idle</span>
+    <span class="sub">core·mid·rim</span>
+  </div>
+  <div class="col">
+    <div class="orb-wrap">
+      <svg width="92" height="92" viewBox="0 0 92 92">
+        <radialGradient id="targ" cx=".4" cy=".4" r=".6">
+          <stop offset="0%" stop-color="#F5EDE0"/>
+          <stop offset="55%" stop-color="#B58866"/>
+          <stop offset="100%" stop-color="#3E2818"/>
+        </radialGradient>
+        <circle cx="46" cy="46" r="38" fill="none" stroke="rgba(200,95,88,.52)" stroke-width="2"/>
+        <circle cx="46" cy="46" r="34" fill="none" stroke="rgba(200,95,88,.80)" stroke-width="2"/>
+        <circle cx="46" cy="46" r="30" fill="url(#targ)"/>
+      </svg>
+    </div>
+    <span class="label">Targeted</span>
+    <span class="sub">ring 1.2 Hz</span>
+  </div>
+  <div class="col">
+    <div class="orb-wrap">
+      <svg width="92" height="92" viewBox="0 0 92 92">
+        <radialGradient id="conf" cx=".4" cy=".4" r=".6">
+          <stop offset="0%" stop-color="#F5EDE0"/>
+          <stop offset="55%" stop-color="#8ABFB0"/>
+          <stop offset="100%" stop-color="#2F6A5E"/>
+        </radialGradient>
+        <radialGradient id="halo" cx=".5" cy=".5" r=".6">
+          <stop offset="60%" stop-color="rgba(140,220,195,.30)"/>
+          <stop offset="100%" stop-color="rgba(140,220,195,0)"/>
+        </radialGradient>
+        <circle cx="46" cy="46" r="44" fill="url(#halo)"/>
+        <circle cx="46" cy="46" r="30" fill="url(#conf)"/>
+      </svg>
+    </div>
+    <span class="label">Confirmed</span>
+    <span class="sub">halo · 400ms</span>
+  </div>
+</body>
+</html>

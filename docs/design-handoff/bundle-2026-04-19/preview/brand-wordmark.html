@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en" data-pg-theme="warm-night">
+<head>
+<meta charset="UTF-8">
+<title>Wordmark</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--pg-shell-bg-elevated); padding: 22px 24px; font-family: var(--pg-font-sans); color: var(--pg-shell-text-primary); display: flex; flex-direction: column; gap: 16px; }
+  .wm { display: flex; align-items: baseline; gap: 10px; }
+  .mark {
+    width: 22px; height: 22px; border-radius: 6px;
+    background:
+      radial-gradient(circle at 35% 35%, #F5EDE0 0%, #C85F58 55%, #3E2818 100%);
+    border: 1px solid #C85F58;
+    align-self: center;
+  }
+  .word { font-size: 22px; font-weight: 600; letter-spacing: -0.012em; }
+  .sub { font-size: 11px; color: var(--pg-shell-text-muted); letter-spacing: 0.04em; text-transform: uppercase; align-self: center; }
+  .tag { font-size: 10px; color: var(--pg-shell-text-muted); font-family: "DM Mono", monospace; }
+</style>
+</head>
+<body>
+  <div class="wm">
+    <div class="mark"></div>
+    <span class="word">XR Playground</span>
+    <span class="sub">Patina Instrument Lab</span>
+  </div>
+  <div class="wm">
+    <div class="mark" style="background: radial-gradient(circle at 35% 35%, #FFFAEE 0%, #FFD166 55%, #2F6971 100%); border-color: #2EAEC3;"></div>
+    <span class="word" style="color:#24484B">XR Playground</span>
+    <span class="sub" style="color:#5D7F7E">Cloud Park</span>
+  </div>
+  <span class="tag">Placeholder · no real wordmark in source bundle. Treat the orb mark as a 22 px target-orb miniature.</span>
+</body>
+</html>

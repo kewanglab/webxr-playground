@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" data-pg-theme="cloud-park">
+<head>
+<meta charset="UTF-8">
+<title>Color · Cloud Park XR</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--pg-xr-void-clear); padding: 16px 18px; font-family: var(--pg-font-sans); color: var(--pg-xr-hud-text-primary); }
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .sw { display: flex; flex-direction: column; gap: 4px; }
+  .chip { height: 56px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.06); }
+  .name { font-size: 10.5px; font-weight: 600; line-height: 1.2; }
+  .hex { font-family: var(--pg-font-mono); font-size: 10px; color: var(--pg-xr-hud-text-muted); }
+  h3 { font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pg-xr-hud-text-muted); margin: 0 0 8px; }
+  .row { margin-bottom: 12px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <h3>Environment</h3>
+    <div class="grid">
+      <div class="sw"><div class="chip" style="background:linear-gradient(180deg,#83D5ED 0%,#FFE4A8 60%,#BDEFD2 100%)"></div><span class="name">skydome</span><span class="hex">top→bottom</span></div>
+      <div class="sw"><div class="chip" style="background:#C7F0DE"></div><span class="name">fog</span><span class="hex">#C7F0DE</span></div>
+      <div class="sw"><div class="chip" style="background:#91DBAE"></div><span class="name">floor.albedo</span><span class="hex">#91DBAE</span></div>
+      <div class="sw"><div class="chip" style="background:#E6FFF4"></div><span class="name">grid.cell</span><span class="hex">#E6FFF4</span></div>
+      <div class="sw"><div class="chip" style="background:#FFD985"></div><span class="name">grid.section</span><span class="hex">#FFD985</span></div>
+      <div class="sw"><div class="chip" style="background:#9ADFF0"></div><span class="name">void.clear</span><span class="hex">#9ADFF0</span></div>
+    </div>
+  </div>
+  <div class="row">
+    <h3>Accents · 6 identity colors</h3>
+    <div class="grid">
+      <div class="sw"><div class="chip" style="background:#E76456"></div><span class="name">orange · coral</span><span class="hex">#E76456</span></div>
+      <div class="sw"><div class="chip" style="background:#FFD166"></div><span class="name">amber · sunny</span><span class="hex">#FFD166</span></div>
+      <div class="sw"><div class="chip" style="background:#2EAEC3"></div><span class="name">cyan · ocean</span><span class="hex">#2EAEC3</span></div>
+      <div class="sw"><div class="chip" style="background:#BED36A"></div><span class="name">mustard · soft lime</span><span class="hex">#BED36A</span></div>
+      <div class="sw"><div class="chip" style="background:#FFF2C7"></div><span class="name">stone · cream</span><span class="hex">#FFF2C7</span></div>
+      <div class="sw"><div class="chip" style="background:#2F6971"></div><span class="name">seal · deep teal</span><span class="hex">#2F6971</span></div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" data-pg-theme="warm-night">
+<head>
+<meta charset="UTF-8">
+<title>Badges & Chips</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--pg-shell-bg-elevated); padding: 16px 18px; font-family: var(--pg-font-sans); color: var(--pg-shell-text-primary); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .h3 { font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pg-shell-text-muted); margin: 0 0 6px; }
+  .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; background: #E8D7CA; border: 1px solid #D3BCAC; font-size: 9.5px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: #6B5A50; }
+  .badge-coral { background: rgba(185,86,78,0.12); border: 1px solid #B9564E; color: #97463F; }
+  .badge-cyan { background: rgba(111,135,146,0.14); border: 1px solid #6F8792; color: #6F8792; }
+  .badge-amber { background: rgba(222,161,153,0.18); border: 1px solid #DEA199; color: #97463F; }
+  .meta { font-family: ui-monospace, monospace; font-size: 11px; color: #6B5A50; }
+</style>
+</head>
+<body>
+  <div class="h3">Mode badges</div>
+  <div class="row">
+    <span class="badge">VR</span>
+    <span class="badge">AR</span>
+    <span class="badge">CROSS-XR</span>
+    <span class="meta">2 px · 8 px inset · pill radius</span>
+  </div>
+  <div class="h3">State tags</div>
+  <div class="row">
+    <span class="badge badge-coral">Active</span>
+    <span class="badge badge-cyan">Sync OK</span>
+    <span class="badge badge-amber">Targeted</span>
+    <span class="badge">Idle</span>
+  </div>
+  <div class="h3">In-line lab line</div>
+  <div class="row">
+    <span style="font-size:13px; font-weight:600;">Selection Lab</span>
+    <span style="color:#6B5A50;">·</span>
+    <span class="badge">CROSS-XR</span>
+    <span style="color:#6B5A50; font-size:11px;">Compare selection via ray, direct touch, and hand pinch</span>
+  </div>
+</body>
+</html>

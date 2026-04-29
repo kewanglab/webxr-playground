@@ -1,0 +1,308 @@
+/* ============================================================================
+   XR Playground · Design tokens
+   Source of truth: src/config/playgroundTheme.ts (TS object consumed by R3F).
+   This stylesheet mirrors those values for HTML / DOM consumers (chrome, Leva,
+   future overlays). When TS values change, update this file too.
+
+   Theme switching: write `data-pg-theme="warm-night"` (or `"default"`) /
+   `"cloud-park"` on <html>. Aliases for legacy names included.
+   Tokens are namespaced --pg-shell-* (HTML chrome) and --pg-xr-* (3D scene).
+   ============================================================================ */
+
+/* ---------- Shared tokens (theme-agnostic) ----------- */
+:root {
+  /* Typography stacks — DM Sans / DM Mono are first if a future webfont is
+     loaded; fallback chains keep us on system fonts today. */
+  --pg-font-sans: "DM Sans", ui-sans-serif, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  --pg-font-mono: "DM Mono", ui-monospace, "SF Mono", "Cascadia Code", monospace;
+  /* Legacy aliases used by existing chrome. */
+  --pg-shell-font-ui: var(--pg-font-sans);
+  --pg-shell-font-mono: var(--pg-font-mono);
+
+  --pg-fw-regular: 400;
+  --pg-fw-medium: 500;
+  --pg-fw-semibold: 600;
+  --pg-fw-bold: 700;
+
+  /* Shell type scale (px) */
+  --pg-fs-shell-h1: 16px;
+  --pg-fs-shell-body: 12.5px;
+  --pg-fs-shell-muted: 11px;
+  --pg-fs-state-tag: 9.5px;
+
+  /* HUD type scale (px in the 2D mockup; in XR these become world-units via PX=0.00125) */
+  --pg-fs-hud-fps-min: 16px;
+  --pg-fs-hud-fps-exp: 32px;
+  --pg-fs-hud-metric: 13.5px;
+  --pg-fs-hud-muted: 11px;
+  --pg-fs-hud-label: 9px;
+  --pg-fs-scene-label: 11px;
+  --pg-fs-scene-sub: 10px;
+
+  /* Spacing — 4px grid + 2px micro */
+  --pg-space-micro: 2px;
+  --pg-space-xs: 4px;
+  --pg-space-sm: 8px;
+  --pg-space-md: 12px;
+  --pg-space-lg: 16px;
+  --pg-space-xl: 20px;
+  --pg-space-xxl: 24px;
+  /* Legacy aliases — many existing chrome rules still use --pg-shell-space-*. */
+  --pg-shell-space-micro: var(--pg-space-micro);
+  --pg-shell-space-xs: var(--pg-space-xs);
+  --pg-shell-space-sm: var(--pg-space-sm);
+  --pg-shell-space-md: var(--pg-space-md);
+  --pg-shell-space-lg: var(--pg-space-lg);
+  --pg-shell-space-xl: var(--pg-space-xl);
+  --pg-shell-space-xxl: var(--pg-space-xxl);
+
+  /* Radii */
+  --pg-radius-sm: 6px;
+  --pg-radius-md: 10px;
+  --pg-radius-lg: 14px;
+  --pg-shell-radius-sm: var(--pg-radius-sm);
+  --pg-shell-radius-md: var(--pg-radius-md);
+  --pg-shell-radius-lg: var(--pg-radius-lg);
+
+  /* HUD pill / panel canonical dimensions (CSS px; world ≈ value × 0.00125) */
+  --pg-hud-min-w: 158px;
+  --pg-hud-min-h: 38px;
+  --pg-hud-exp-w: 295px;
+  --pg-hud-exp-min-h: 168px;
+  --pg-hud-radius-min: 19px;
+  --pg-hud-radius-exp: 13px;
+  --pg-hud-stroke-w: 1.4px;
+  --pg-hud-shadow: 0 6px 28px rgba(0, 0, 0, .5);
+
+  /* Motion */
+  --pg-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --pg-dur-fast: 120ms;
+  --pg-dur-base: 180ms;
+}
+
+/* ============================================================================
+   Theme: Warm Night (default — "Patina Instrument Lab")
+   Selector matches both `default` and `warm-night` for API stability.
+   :root:not([data-pg-theme]) covers the pre-JS moment before applyShellTheme
+   runs; unknown ids are NOT covered, so typos produce visible missing-token
+   artifacts during development rather than silently falling back to warm-night.
+   ============================================================================ */
+:root:not([data-pg-theme]),
+:root[data-pg-theme="warm-night"],
+:root[data-pg-theme="default"] {
+  /* Shell — surfaces & lines */
+  --pg-shell-bg-canvas: #F0E3D4;
+  --pg-shell-bg-elevated: #FBF7EF;
+  --pg-shell-bg-subtle: #E8D7CA;
+  --pg-shell-border-subtle: #D3BCAC;
+  --pg-shell-border-default: #B99B89;
+
+  /* Shell — derived gradient surfaces (used by chrome panels). */
+  --pg-shell-bg-panel: linear-gradient(180deg, var(--pg-shell-bg-elevated) 0%, var(--pg-shell-bg-canvas) 145%);
+  --pg-shell-bg-control: linear-gradient(180deg, var(--pg-shell-bg-canvas) 0%, var(--pg-shell-bg-subtle) 160%);
+
+  /* Shell — text */
+  --pg-shell-text-primary: #3A2820;
+  --pg-shell-text-muted: #6B5A50;
+  --pg-shell-text-inverse: #FFF7EF;
+
+  /* Shell — accent (coral red is the only primary action color) */
+  --pg-shell-accent-primary: #B9564E;
+  --pg-shell-accent-primary-hover: #97463F;
+  --pg-shell-accent-soft: #DEA199;
+
+  /* Shell — focus / state */
+  --pg-shell-focus-ring: #B9564E;
+  --pg-shell-state-success: #6F8792;
+  --pg-shell-state-warning: #9C6B4E;
+  --pg-shell-state-danger: #8F3C37;
+
+  /* Shell — depth */
+  --pg-shell-shadow-soft: rgba(58, 40, 32, 0.08);
+  --pg-shell-overlay-scrim: rgba(58, 40, 32, 0.35);
+
+  /* XR — environment */
+  --pg-xr-void-clear: #1C1B1D;
+  --pg-xr-skydome-top: #28313A;
+  --pg-xr-skydome-horizon: #866560;
+  --pg-xr-skydome-bottom: #231F1D;
+  --pg-xr-fog-color: #282321;
+  --pg-xr-floor-albedo: #403A36;
+  --pg-xr-floor-emissive: #292522;
+  --pg-xr-grid-cell: #706862;
+  --pg-xr-grid-section: #D7AEA8;
+
+  /* XR — lighting (color values; numerics live in TS) */
+  --pg-xr-light-key: #FFE8D6;
+  --pg-xr-light-hemi-sky: #8298A0;
+  --pg-xr-light-hemi-ground: #4A3A34;
+
+  /* XR — accents (six identity colors) */
+  --pg-xr-accent-cyan: #829AA2;
+  --pg-xr-accent-amber: #DDB2AB;
+  --pg-xr-accent-orange: #C85F58;
+  --pg-xr-accent-mustard: #9A7A68;
+  --pg-xr-accent-stone: #DED2C3;
+  --pg-xr-accent-seal: #62504A;
+
+  /* XR — HUD */
+  --pg-xr-hud-panel-fill: #51443E;
+  --pg-xr-hud-panel-opacity: 0.70;
+  --pg-xr-hud-panel-border: #C85F58;
+  --pg-xr-hud-text-primary: #FFF5EA;
+  --pg-xr-hud-text-metric: #B4C7CC;
+  --pg-xr-hud-text-muted: #E5C9C0;
+
+  /* XR — AR overlay */
+  --pg-xr-ar-stroke: #829AA2;
+  --pg-xr-ar-opacity: 0.42;
+
+  /* XR — orb states (selection target) */
+  --pg-xr-orb-idle-core: #F5EDE0;
+  --pg-xr-orb-idle-mid: #6E5E50;
+  --pg-xr-orb-idle-rim: #281C10;
+  --pg-xr-orb-idle-base: #6E5E50;
+
+  --pg-xr-orb-targeted-core: #F5EDE0;
+  --pg-xr-orb-targeted-mid: #B58866;
+  --pg-xr-orb-targeted-rim: #3E2818;
+  --pg-xr-orb-targeted-base: #C85F58;
+  --pg-xr-orb-targeted-ring: rgba(200, 95, 88, .80);
+  --pg-xr-orb-targeted-ring-outer: rgba(200, 95, 88, .52);
+  --pg-xr-orb-targeted-ring-glow: rgba(200, 95, 88, .50);
+
+  --pg-xr-orb-confirmed-core: #F5EDE0;
+  --pg-xr-orb-confirmed-mid: #8ABFB0;
+  --pg-xr-orb-confirmed-rim: #2F6A5E;
+  --pg-xr-orb-confirmed-base: #7FD4B8;
+  --pg-xr-orb-confirmed-halo: rgba(140, 220, 195, .30);
+
+  /* XR — glow recipes (canvas shadow approximations) */
+  --pg-xr-glow-arch: rgba(200, 95, 88, .5);
+  --pg-xr-glow-platform: rgba(200, 95, 88, .45);
+  --pg-xr-glow-hud: rgba(200, 95, 88, .84);
+  --pg-xr-glow-targeted-orb: rgba(200, 95, 88, .5);
+
+  /* Lab accent routing */
+  --pg-lab-selection-primary: var(--pg-xr-accent-orange);
+  --pg-lab-selection-secondary: var(--pg-xr-accent-amber);
+  --pg-lab-placement-primary: var(--pg-xr-accent-cyan);
+  --pg-lab-placement-secondary: var(--pg-xr-accent-orange);
+  --pg-lab-locomotion-primary: var(--pg-xr-accent-cyan);
+  --pg-lab-locomotion-secondary: var(--pg-xr-accent-amber);
+  --pg-lab-manipulation-primary: var(--pg-xr-accent-orange);
+  --pg-lab-manipulation-secondary: var(--pg-xr-accent-mustard);
+
+  /* Unprefixed semantic aliases */
+  --pg-bg: var(--pg-shell-bg-canvas);
+  --pg-fg: var(--pg-shell-text-primary);
+  --pg-fg-muted: var(--pg-shell-text-muted);
+  --pg-accent: var(--pg-shell-accent-primary);
+}
+
+/* ============================================================================
+   Theme: Cloud Park
+   ============================================================================ */
+:root[data-pg-theme="cloud-park"] {
+  /* Shell */
+  --pg-shell-bg-canvas: #EAF8F1;
+  --pg-shell-bg-elevated: #FFF8E8;
+  --pg-shell-bg-subtle: #DDF3E8;
+  --pg-shell-border-subtle: #B6DDD2;
+  --pg-shell-border-default: #76BBB6;
+
+  --pg-shell-bg-panel: linear-gradient(180deg, var(--pg-shell-bg-elevated) 0%, var(--pg-shell-bg-canvas) 145%);
+  --pg-shell-bg-control: linear-gradient(180deg, var(--pg-shell-bg-canvas) 0%, var(--pg-shell-bg-subtle) 160%);
+
+  --pg-shell-text-primary: #24484B;
+  --pg-shell-text-muted: #5D7F7E;
+  --pg-shell-text-inverse: #FFF9EC;
+
+  --pg-shell-accent-primary: #D65F55;
+  --pg-shell-accent-primary-hover: #B94B45;
+  --pg-shell-accent-soft: #FFE0B6;
+
+  --pg-shell-focus-ring: #238F9F;
+  --pg-shell-state-success: #2B9A86;
+  --pg-shell-state-warning: #C3852C;
+  --pg-shell-state-danger: #B6474C;
+
+  --pg-shell-shadow-soft: rgba(36, 72, 75, 0.14);
+  --pg-shell-overlay-scrim: rgba(36, 72, 75, 0.30);
+
+  /* XR */
+  --pg-xr-void-clear: #9ADFF0;
+  --pg-xr-skydome-top: #83D5ED;
+  --pg-xr-skydome-horizon: #FFE4A8;
+  --pg-xr-skydome-bottom: #BDEFD2;
+  --pg-xr-fog-color: #C7F0DE;
+  --pg-xr-floor-albedo: #91DBAE;
+  --pg-xr-floor-emissive: #4BB694;
+  --pg-xr-grid-cell: #E6FFF4;
+  --pg-xr-grid-section: #FFD985;
+
+  --pg-xr-light-key: #FFF5C7;
+  --pg-xr-light-hemi-sky: #C8F2FF;
+  --pg-xr-light-hemi-ground: #6CCBA0;
+
+  --pg-xr-accent-cyan: #2EAEC3;
+  --pg-xr-accent-amber: #FFD166;
+  --pg-xr-accent-orange: #E76456;
+  --pg-xr-accent-mustard: #BED36A;
+  --pg-xr-accent-stone: #FFF2C7;
+  --pg-xr-accent-seal: #2F6971;
+
+  --pg-xr-hud-panel-fill: #F2FFF5;
+  --pg-xr-hud-panel-opacity: 0.78;
+  --pg-xr-hud-panel-border: #E86455;
+  --pg-xr-hud-text-primary: #1D464B;
+  --pg-xr-hud-text-metric: #117D91;
+  --pg-xr-hud-text-muted: #5A8180;
+
+  --pg-xr-ar-stroke: #2FAFC6;
+  --pg-xr-ar-opacity: 0.48;
+
+  --pg-xr-orb-idle-core: #FFFAEE;
+  --pg-xr-orb-idle-mid: #EDD8A0;
+  --pg-xr-orb-idle-rim: #C4A070;
+  --pg-xr-orb-idle-base: #C9A86C;
+
+  --pg-xr-orb-targeted-core: #FFFAEE;
+  --pg-xr-orb-targeted-mid: #FFDF8A;
+  --pg-xr-orb-targeted-rim: #E0A840;
+  --pg-xr-orb-targeted-base: #FFD166;
+  --pg-xr-orb-targeted-ring: rgba(255, 209, 102, .78);
+  --pg-xr-orb-targeted-ring-outer: rgba(255, 209, 102, .50);
+  --pg-xr-orb-targeted-ring-glow: transparent;
+
+  --pg-xr-orb-confirmed-core: #FFFAEE;
+  --pg-xr-orb-confirmed-mid: #B8E8CC;
+  --pg-xr-orb-confirmed-rim: #6DCFAA;
+  --pg-xr-orb-confirmed-base: #6DCFAA;
+  --pg-xr-orb-confirmed-halo: rgba(109, 207, 170, .32);
+
+  --pg-xr-glow-arch: transparent;
+  --pg-xr-glow-platform: transparent;
+  --pg-xr-glow-hud: rgba(255, 209, 102, .88);
+  --pg-xr-glow-targeted-orb: transparent;
+
+  --pg-lab-selection-primary: var(--pg-xr-accent-orange);
+  --pg-lab-selection-secondary: var(--pg-xr-accent-amber);
+  --pg-lab-placement-primary: var(--pg-xr-accent-cyan);
+  --pg-lab-placement-secondary: var(--pg-xr-accent-orange);
+  --pg-lab-locomotion-primary: var(--pg-xr-accent-cyan);
+  --pg-lab-locomotion-secondary: var(--pg-xr-accent-amber);
+  --pg-lab-manipulation-primary: var(--pg-xr-accent-orange);
+  --pg-lab-manipulation-secondary: var(--pg-xr-accent-mustard);
+
+  --pg-bg: var(--pg-shell-bg-canvas);
+  --pg-fg: var(--pg-shell-text-primary);
+  --pg-fg-muted: var(--pg-shell-text-muted);
+  --pg-accent: var(--pg-shell-accent-primary);
+}
+
+/* Apply the sans family at the document root so chrome inherits it. Mirrors
+   the previous `applyShellTheme` behavior of writing `font-family` to <html>. */
+:root {
+  font-family: var(--pg-font-sans);
+}

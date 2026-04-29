@@ -5,6 +5,7 @@ import {
   defaultPlaygroundPresetId,
   isValidPresetId,
   THEME_STORAGE_KEY,
+  type PlaygroundPresetId,
 } from '../config/playgroundTheme'
 
 const FPS_HUD_STORAGE_KEY = 'xr-playground-fps-hud-visible'
@@ -22,7 +23,7 @@ function readInitialLabId(): LabId {
   return 'selection'
 }
 
-function readInitialThemePresetId(): string {
+function readInitialThemePresetId(): PlaygroundPresetId {
   if (typeof window === 'undefined') return defaultPlaygroundPresetId
   try {
     const q = new URLSearchParams(window.location.search).get('theme')
@@ -81,7 +82,7 @@ export const defaultHudReport: HudReport = {
 type PlaygroundState = {
   currentLab: LabId
   setLab: (lab: LabId) => void
-  themePresetId: string
+  themePresetId: PlaygroundPresetId
   setThemePresetId: (id: string) => void
   /** AR-only: world-space alignment ring (see spatial polish plan). */
   arAlignmentGuide: boolean

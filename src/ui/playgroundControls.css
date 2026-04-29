@@ -1,4 +1,4 @@
-/* Focus rings for bottom-left chrome (WCAG 2.4.7). Tokens come from applyShellTheme. */
+/* Focus rings for bottom-left chrome (WCAG 2.4.7). Tokens come from src/styles/tokens.css. */
 .pg-playground-controls :where(button, select, input):focus {
   outline: none;
 }

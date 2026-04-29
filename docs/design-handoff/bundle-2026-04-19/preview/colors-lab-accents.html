@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" data-pg-theme="warm-night">
+<head>
+<meta charset="UTF-8">
+<title>Lab Accent Routing</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--pg-shell-bg-elevated); padding: 16px 18px; font-family: var(--pg-font-sans); color: var(--pg-shell-text-primary); }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { text-align: left; font-weight: 600; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pg-shell-text-muted); padding: 6px 8px 6px 0; border-bottom: 1px solid var(--pg-shell-border-subtle); }
+  td { padding: 8px 8px 8px 0; border-bottom: 1px solid var(--pg-shell-border-subtle); vertical-align: middle; }
+  .lab { font-weight: 600; }
+  .pair { display: flex; align-items: center; gap: 8px; }
+  .swatch { width: 22px; height: 22px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.08); }
+  .hex { font-family: var(--pg-font-mono); font-size: 10px; color: var(--pg-shell-text-muted); }
+</style>
+</head>
+<body>
+  <table>
+    <tr><th>Lab</th><th>Primary · Warm Night</th><th>Secondary · Warm Night</th><th>Primary · Cloud Park</th><th>Secondary · Cloud Park</th></tr>
+    <tr>
+      <td class="lab">Selection</td>
+      <td><div class="pair"><div class="swatch" style="background:#C85F58"></div><span class="hex">orange</span></div></td>
+      <td><div class="pair"><div class="swatch" style="background:#DDB2AB"></div><span class="hex">amber</span></div></td>
+      <td><div class="pair"><div class="swatch" style="background:#E76456"></div><span class="hex">orange</span></div></td>
+      <td><div class="pair"><div class="swatch" style="background:#FFD166"></div><span class="hex">amber</span></div></td>
+    </tr>
+    <tr>
+      <td class="lab">Placement</td>
+      <td><div class="pair"><div class="swatch" style="background:#829AA2"></div><span class="hex">cyan</span></div></td>
+      <td><div class="pair"><div class="swatch" style="background:#C85F58"></div><span class="hex">orange</span></div></td>
+      <td><div class="pair"><div class="swatch" style="background:#2EAEC3"></div><span class="hex">cyan</span></div></td>
+      <td><div class="pair"><div class="swatch" style="background:#E76456"></div><span class="hex">orange</span></div></td>
+    </tr>
+    <tr>
+      <td class="lab">Locomotion</td>
+      <td><div class="pair"><div class="swatch" style="background:#829AA2"></div><span class="hex">cyan</span></div></td>
+      <td><div class="pair"><div class="swatch" style="background:#DDB2AB"></div><span class="hex">amber</span></div></td>
+      <td><div class="pair"><div class="swatch" style="background:#2EAEC3"></div><span class="hex">cyan</span></div></td>
+      <td><div class="pair"><div class="swatch" style="background:#FFD166"></div><span class="hex">amber</span></div></td>
+    </tr>
+    <tr>
+      <td class="lab">Manipulation</td>
+      <td><div class="pair"><div class="swatch" style="background:#C85F58"></div><span class="hex">orange</span></div></td>
+      <td><div class="pair"><div class="swatch" style="background:#9A7A68"></div><span class="hex">mustard</span></div></td>
+      <td><div class="pair"><div class="swatch" style="background:#E76456"></div><span class="hex">orange</span></div></td>
+      <td><div class="pair"><div class="swatch" style="background:#BED36A"></div><span class="hex">mustard</span></div></td>
+    </tr>
+  </table>
+</body>
+</html>
