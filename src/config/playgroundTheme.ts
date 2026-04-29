@@ -150,8 +150,11 @@ export type XrTheme = {
 
 export type LabAccentPair = { primary: string; secondary: string }
 
+/** Union of all valid preset identifiers. Extend here when adding a new theme. */
+export type PlaygroundPresetId = 'default' | 'cloud-park'
+
 export type PlaygroundThemePreset = {
-  id: string
+  id: PlaygroundPresetId
   label: string
   shell: ShellTheme
   xr: XrTheme
@@ -556,7 +559,7 @@ export const HUD_DIMS: HudDimensions = {
   panelShadow: '0 6px 28px rgba(0,0,0,.5)',
 }
 
-export function isValidPresetId(id: string): boolean {
+export function isValidPresetId(id: string): id is PlaygroundPresetId {
   return playgroundPresets.some((p) => p.id === id)
 }
 
