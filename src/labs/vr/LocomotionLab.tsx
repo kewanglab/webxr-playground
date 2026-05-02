@@ -12,13 +12,14 @@ import { LabHeading } from '../LabHeading'
 import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
 import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
 import {
-  CloudParkArch,
   CloudParkRouteMarker,
   CloudParkShadowBlob,
   CloudParkSideIsland,
   FloatingCloudMat,
 } from '../../xr/visual/CloudParkScenery'
+import { LocomotionHolo } from '../../xr/visual/holos'
 import { scaleColumnAstraToHeight } from '../../xr/visual/kitNative'
+import { SharedArch, StagePlatform } from '../../xr/visual/SharedScenery'
 import { KitInstance } from '../../xr/visual/useKitModel'
 
 // Scratch vectors reused inside useFrame to avoid per-frame allocations.
@@ -312,11 +313,6 @@ function DestinationPortal({
           shadeColor="#DFF4E6"
           rimColor={glow}
         />
-        <CloudParkArch position={[0, 0.42, 0]} scale={1.28} stone={stone} rim={glow} />
-        <mesh position={[0, 1.55, 0.02]}>
-          <ringGeometry args={[0.38, 0.58, 42]} />
-          <meshBasicMaterial color={glow} transparent opacity={0.64} depthWrite={false} />
-        </mesh>
         <CloudParkShadowBlob position={[0, 0.04, 0.72]} scale={[1.85, 1, 1.18]} color={seal} opacity={0.12} />
       </group>
     )
@@ -324,31 +320,6 @@ function DestinationPortal({
 
   return (
     <group position={[0, 0, -12.2]}>
-      <mesh position={[-1.5, 1.45, 0]}>
-        <boxGeometry args={[0.46, 2.9, 0.5]} />
-        <meshStandardMaterial color={stone} roughness={0.9} />
-      </mesh>
-      <mesh position={[1.5, 1.45, 0]}>
-        <boxGeometry args={[0.46, 2.9, 0.5]} />
-        <meshStandardMaterial color={stone} roughness={0.9} />
-      </mesh>
-      <mesh position={[0, 3.08, 0]}>
-        <boxGeometry args={[3.46, 0.44, 0.5]} />
-        <meshStandardMaterial color={stone} roughness={0.88} />
-      </mesh>
-      <mesh position={[0, 1.35, -0.04]}>
-        <boxGeometry args={[2.08, 2.32, 0.08]} />
-        <meshStandardMaterial
-          color={seal}
-          roughness={0.95}
-          emissive={seal}
-          emissiveIntensity={0.05}
-        />
-      </mesh>
-      <mesh position={[0, 1.48, 0.01]}>
-        <ringGeometry args={[0.42, 0.62, 48]} />
-        <meshBasicMaterial color={glow} transparent opacity={0.72} />
-      </mesh>
       <mesh position={[0, 0.03, 0.7]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.8, 36]} />
         <meshStandardMaterial
@@ -580,6 +551,10 @@ export function LocomotionLab() {
         title={getLabTitle('locomotion')}
         subtitle={`${stickHand} stick · Move ${moveSpeedN.toFixed(1)} · ${turnMode} (${turnMode === 'snap' ? `${Math.round(snapDegN)}°` : `${Math.round(smoothDegN)}°/s`})`}
       />
+      <IfInSessionMode deny="immersive-ar">
+        <SharedArch position={[0, 0, -12.2]} holo={<LocomotionHolo />} />
+        <StagePlatform position={[0, 0, -12.2]} />
+      </IfInSessionMode>
       <StartZone
         fill={xr.accent.stone}
         ring={labAccents.locomotion.secondary}

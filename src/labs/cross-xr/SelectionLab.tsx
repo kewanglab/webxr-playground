@@ -1,5 +1,6 @@
 import { Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
+import { IfInSessionMode } from '@react-three/xr'
 import { useEffect, useRef, useState } from 'react'
 import { useControls } from 'leva'
 import { DoubleSide, Group, MeshBasicMaterial, MeshStandardMaterial } from 'three'
@@ -9,14 +10,9 @@ import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
 import { useHapticPulse } from '../../xr/feedback/haptics/useHapticPulse'
 import { useConfirmTone } from '../../xr/feedback/audio/useConfirmTone'
 import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
-import {
-  CloudParkArch,
-  CloudParkShadowBlob,
-  CloudParkSideIsland,
-  CloudParkWindLine,
-  FloatingCloudMat,
-} from '../../xr/visual/CloudParkScenery'
 import { useInitialEyeLevelOffset } from '../../xr/core/useInitialEyeLevelOffset'
+import { SelectionHolo } from '../../xr/visual/holos'
+import { SharedArch, StagePlatform } from '../../xr/visual/SharedScenery'
 import { LabHeading } from '../LabHeading'
 
 const SELECTION_FOCUS_Y = 1.26
@@ -33,186 +29,6 @@ const CONFIRM_HOLD_S = 1.4 // halo sits at peak alpha
 const CONFIRM_FADE_S = 0.4 // fade to idle
 const CONFIRM_TOTAL_S =
   CONFIRM_HALO_EXPAND_S + CONFIRM_HOLD_S + CONFIRM_FADE_S // 2.02s
-
-function SelectionStage({
-  stone,
-  rim,
-  voidColor,
-  isCloudPark,
-}: {
-  stone: string
-  rim: string
-  voidColor: string
-  isCloudPark: boolean
-}) {
-  if (isCloudPark) {
-    return (
-      <group>
-        <FloatingCloudMat
-          position={[0, 0.018, -1.48]}
-          scale={1.55}
-          cloudColor={stone}
-          shadeColor="#DDF4E3"
-          rimColor={rim}
-        />
-        <CloudParkShadowBlob
-          position={[0, 0.02, -0.98]}
-          scale={[3.2, 1, 1.45]}
-          color={rim}
-          opacity={0.11}
-        />
-        <mesh position={[0, 0.76, -2.58]}>
-          <planeGeometry args={[2.75, 1.08]} />
-          <meshBasicMaterial
-            color={stone}
-            transparent
-            opacity={0.42}
-            depthWrite={false}
-          />
-        </mesh>
-        <CloudParkArch position={[0, 0.28, -2.5]} scale={1.18} stone={stone} rim={rim} />
-        <CloudParkWindLine
-          position={[-0.88, 1.76, -2.42]}
-          rotation={[0, 0, -0.18]}
-          length={0.76}
-          opacity={0.28}
-        />
-        <CloudParkWindLine
-          position={[0.94, 1.88, -2.4]}
-          rotation={[0, 0, 0.16]}
-          length={0.9}
-          opacity={0.22}
-        />
-      </group>
-    )
-  }
-
-  return (
-    <group>
-      <mesh position={[0, 0.03, -1.48]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[1.42, 44]} />
-        <meshStandardMaterial
-          color={stone}
-          roughness={0.96}
-          metalness={0}
-          emissive={voidColor}
-          emissiveIntensity={0.08}
-        />
-      </mesh>
-      <mesh position={[0, 0.042, -1.48]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.94, 1.22, 48]} />
-        <meshStandardMaterial
-          color={rim}
-          roughness={0.55}
-          emissive={rim}
-          emissiveIntensity={0.18}
-        />
-      </mesh>
-      <mesh position={[0, 1.28, -2.48]}>
-        <torusGeometry args={[1.62, 0.085, 12, 54, Math.PI * 1.08]} />
-        <meshStandardMaterial
-          color={stone}
-          roughness={0.92}
-          emissive={rim}
-          emissiveIntensity={0.1}
-        />
-      </mesh>
-      <mesh position={[0, 1.28, -2.5]}>
-        <torusGeometry args={[1.38, 0.02, 8, 40, Math.PI * 1.08]} />
-        <meshBasicMaterial color={rim} transparent opacity={0.75} />
-      </mesh>
-      <mesh position={[0, 0.72, -2.52]}>
-        <boxGeometry args={[2.55, 1.24, 0.08]} />
-        <meshStandardMaterial
-          color={stone}
-          roughness={0.98}
-          metalness={0}
-          emissive={voidColor}
-          emissiveIntensity={0.05}
-        />
-      </mesh>
-    </group>
-  )
-}
-
-function SelectionBackdropPiers({
-  stone,
-  rim,
-  shadow,
-  isCloudPark,
-}: {
-  stone: string
-  rim: string
-  shadow: string
-  isCloudPark: boolean
-}) {
-  if (isCloudPark) {
-    return (
-      <group>
-        <CloudParkSideIsland position={[-2.05, 0.04, -1.82]} scale={0.78} rimColor={rim} />
-        <CloudParkSideIsland position={[2.05, 0.05, -1.96]} scale={0.72} rimColor={rim} />
-        {[-1, 1].map((dir) => (
-          <group key={`cloud-selection-marker-${dir}`} position={[dir * 2.02, 0.16, -1.86]}>
-            <FloatingCloudMat
-              position={[0, -0.16, 0.02]}
-              scale={0.28}
-              cloudColor={stone}
-              shadeColor="#DDF4E3"
-              rimColor={rim}
-            />
-            <mesh position={[0, 0.32, 0]}>
-              <capsuleGeometry args={[0.047, 0.62, 7, 12]} />
-              <meshStandardMaterial
-                color={stone}
-                roughness={0.92}
-                emissive={shadow}
-                emissiveIntensity={0.04}
-              />
-            </mesh>
-            <mesh position={[0, 0.69, 0.012]}>
-              <sphereGeometry args={[0.115, 12, 8]} />
-              <meshStandardMaterial color={rim} roughness={0.58} emissive={rim} emissiveIntensity={0.08} />
-            </mesh>
-            <mesh position={[0, 0.49, 0.014]} rotation={[Math.PI / 2, 0, 0]}>
-              <torusGeometry args={[0.1, 0.008, 6, 24]} />
-              <meshBasicMaterial color={rim} transparent opacity={0.28} depthWrite={false} />
-            </mesh>
-          </group>
-        ))}
-      </group>
-    )
-  }
-
-  return (
-    <group>
-      {[-1, 1].map((dir) => (
-        <group key={`selection-pier-${dir}`} position={[dir * 1.78, 0, -2.16]}>
-          <mesh position={[0, 0.74, 0]}>
-            <boxGeometry args={[0.22, 1.48, 0.18]} />
-            <meshStandardMaterial
-              color={stone}
-              roughness={0.94}
-              emissive={shadow}
-              emissiveIntensity={0.035}
-            />
-          </mesh>
-          <mesh position={[0, 1.49, 0]}>
-            <boxGeometry args={[0.36, 0.08, 0.24]} />
-            <meshStandardMaterial color={stone} roughness={0.9} />
-          </mesh>
-          <mesh position={[0, 0.08, 0.01]}>
-            <boxGeometry args={[0.42, 0.16, 0.28]} />
-            <meshStandardMaterial color={stone} roughness={0.92} />
-          </mesh>
-          <mesh position={[-dir * 0.08, 0.82, 0.095]}>
-            <boxGeometry args={[0.035, 1.06, 0.012]} />
-            <meshBasicMaterial color={rim} transparent opacity={0.5} />
-          </mesh>
-        </group>
-      ))}
-    </group>
-  )
-}
 
 /**
  * Small 3D affordance hint floating next to the orb.
@@ -562,13 +378,11 @@ export function SelectionLab() {
         title={getLabTitle('selection')}
         subtitle={`Target ${size.toFixed(2)} · Confirm boost ${boost.toFixed(2)} · Haptics ${enableHaptics ? 'on' : 'off'} · Audio ${enableAudio ? 'on' : 'off'}`}
       />
+      <IfInSessionMode deny="immersive-ar">
+        <SharedArch position={[0, 0, -2.5]} holo={<SelectionHolo />} />
+        <StagePlatform position={[0, 0, -2.5]} />
+      </IfInSessionMode>
       <group position={[0, stageOffsetY, 0]}>
-        <SelectionStage
-          stone={xr.accent.stone}
-          rim={labAccents.selection.secondary}
-          voidColor={xr.floor.emissive}
-          isCloudPark={isCloudPark}
-        />
         <StateOrb
           variant="ray"
           position={selectionTargetPositions.ray}
@@ -600,12 +414,6 @@ export function SelectionLab() {
           enableAudio={enableAudio}
         />
 
-        <SelectionBackdropPiers
-          stone={xr.accent.stone}
-          rim={labAccents.selection.secondary}
-          shadow={xr.floor.emissive}
-          isCloudPark={isCloudPark}
-        />
       </group>
     </group>
   )
