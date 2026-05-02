@@ -550,6 +550,7 @@ export function LocomotionLab() {
       <LabHeading
         title={getLabTitle('locomotion')}
         subtitle={`${stickHand} stick · Move ${moveSpeedN.toFixed(1)} · ${turnMode} (${turnMode === 'snap' ? `${Math.round(snapDegN)}°` : `${Math.round(smoothDegN)}°/s`})`}
+        archPosition={[0, 0, -12.2]}
       />
       <IfInSessionMode deny="immersive-ar">
         <SharedArch position={[0, 0, -12.2]} holo={<LocomotionHolo />} />

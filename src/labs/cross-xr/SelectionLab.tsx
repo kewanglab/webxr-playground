@@ -377,6 +377,7 @@ export function SelectionLab() {
       <LabHeading
         title={getLabTitle('selection')}
         subtitle={`Target ${size.toFixed(2)} · Confirm boost ${boost.toFixed(2)} · Haptics ${enableHaptics ? 'on' : 'off'} · Audio ${enableAudio ? 'on' : 'off'}`}
+        archPosition={[0, 0, -2.5]}
       />
       <IfInSessionMode deny="immersive-ar">
         <SharedArch position={[0, 0, -2.5]} holo={<SelectionHolo />} />
