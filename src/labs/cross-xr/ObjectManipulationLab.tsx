@@ -74,6 +74,7 @@ export function ObjectManipulationLab() {
       <LabHeading
         title={getLabTitle('manipulation')}
         subtitle={`${labModeLabels[labMode as 'docking' | 'zen']} · ${acquisitionLabels[acquisition as ManipulationAcquisition]} · ${techniqueLabels[technique as ManipulationTechnique]}`}
+        archPosition={[0, 0, -2.5]}
       />
       <IfInSessionMode deny="immersive-ar">
         <SharedArch position={[0, 0, -2.5]} holo={<ManipulationHolo />} />
