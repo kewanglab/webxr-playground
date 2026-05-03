@@ -21,7 +21,17 @@ type OrbVariant = 'ray' | 'pinch' | 'touch'
 type OrbState = 'idle' | 'targeted' | 'confirmed'
 
 /** Design-handoff v0.2 Section 03 timings (seconds). */
-const PULSE_FREQ_HZ = 1.2
+// Hover pulse cadence — slow contemplative breathing (one full cycle every ~3.3 s).
+const PULSE_FREQ_HZ = 0.3
+// Softens the sine wave by holding it longer at the peaks/troughs and
+// accelerating through the midpoint — reads as "inhale → hold → exhale → hold"
+// instead of a uniform mechanical pulse. `Math.sign(s) * |s|^EXP` with
+// `EXP < 1` lifts the magnitude near the extremes and snaps it through zero.
+const BREATHING_EXP = 0.6
+function breathingPhase(now: number): number {
+  const raw = Math.sin(now * PULSE_FREQ_HZ * Math.PI * 2)
+  return Math.sign(raw) * Math.pow(Math.abs(raw), BREATHING_EXP)
+}
 const CONFIRM_COLLAPSE_S = 0.18
 const CONFIRM_HALO_EXPAND_S = 0.22
 const CONFIRM_SCALE_PULSE_S = 0.22
@@ -132,9 +142,12 @@ function StateOrb({
   const radius = size / 2
   const innerRingRadius = radius + 0.025
   const outerRingRadius = radius + 0.045
-  const idleColors = xr.orb.idle
   const targetedColors = xr.orb.targeted
   const confirmedColors = xr.orb.confirmed
+  // Idle now adopts the targeted (hover) look statically — same base color, same
+  // mid-pulse emissive intensity — but with no animation and no rings. Hover then
+  // layers in the pulse + both rings as the actual hover affordance.
+  const IDLE_EMISSIVE = 1.75
 
   // Reset timer whenever state changes.
   useEffect(() => {
@@ -149,11 +162,11 @@ function StateOrb({
     const mat = sphereMatRef.current
     if (mat) {
       if (state === 'idle') {
-        mat.emissiveIntensity = 0.15
+        // Static hover-like glow — same intensity as the targeted pulse midpoint.
+        mat.emissiveIntensity = IDLE_EMISSIVE
       } else if (state === 'targeted') {
-        // Emissive pulse 1.6 ↔ 1.9 at 1.2 Hz.
-        const phase = Math.sin(now * PULSE_FREQ_HZ * Math.PI * 2)
-        mat.emissiveIntensity = 1.75 + 0.15 * phase
+        // Emissive breathing pulse 1.6 ↔ 1.9.
+        mat.emissiveIntensity = IDLE_EMISSIVE + 0.15 * breathingPhase(now)
       } else if (state === 'confirmed') {
         // Decay from 0.8 to 0.3 over the confirmed lifetime.
         const frac = Math.min(elapsed / CONFIRM_TOTAL_S, 1)
@@ -161,18 +174,21 @@ function StateOrb({
       }
     }
 
-    // Targeted rings: opacity pulse; not rendered when collapsed (state !== targeted).
+    // Inner / outer rings.
     if (state === 'targeted') {
-      const phase = Math.sin(now * PULSE_FREQ_HZ * Math.PI * 2)
-      // Inner ring 0.78 ↔ 0.55; outer 0.50 ↔ 0.30.
-      if (innerRingMatRef.current) innerRingMatRef.current.opacity = 0.665 + 0.115 * phase
-      if (outerRingMatRef.current) outerRingMatRef.current.opacity = 0.4 + 0.1 * phase
+      // Both rings breathe from fully transparent (0) to fully opaque (1) on the
+      // shared breathing curve — full fade-in/fade-out per cycle, in sync with the
+      // sphere's emissive pulse.
+      const ringOpacity = (breathingPhase(now) + 1) * 0.5
+      if (innerRingMatRef.current) innerRingMatRef.current.opacity = ringOpacity
+      if (outerRingMatRef.current) outerRingMatRef.current.opacity = ringOpacity
     } else if (state === 'confirmed' && elapsed < CONFIRM_COLLAPSE_S) {
       // Collapse over 180ms — scale inner ring down to 0 as we leave targeted.
       const frac = 1 - elapsed / CONFIRM_COLLAPSE_S
       if (innerRingMatRef.current) innerRingMatRef.current.opacity = 0.78 * frac
       if (outerRingMatRef.current) outerRingMatRef.current.opacity = 0.5 * frac
     } else {
+      // Idle and confirmed post-collapse — no rings.
       if (innerRingMatRef.current) innerRingMatRef.current.opacity = 0
       if (outerRingMatRef.current) outerRingMatRef.current.opacity = 0
     }
@@ -236,9 +252,10 @@ function StateOrb({
   }
 
   // Pick the current base color for the sphere material (deeply tied to state).
-  let sphereBase = idleColors.base
-  if (state === 'targeted') sphereBase = targetedColors.base
-  else if (state === 'confirmed') sphereBase = confirmedColors.base
+  // Idle now uses the targeted base so the orbs read as "lit / available" by default;
+  // confirmed swaps to its own success color during the post-click pulse.
+  let sphereBase = targetedColors.base
+  if (state === 'confirmed') sphereBase = confirmedColors.base
 
   // Halo peak scale is r×2 (spec). The group scale above represents 0..1 progress.
   const haloPeakRadius = radius * 2
