@@ -630,28 +630,6 @@ export function DockingMode({
 
   return (
     <group>
-      <Text
-        position={[0.4, 1.6 + tableOffsetY, -0.7]}
-        fontSize={0.05}
-        color={xr.hud.textMuted}
-        anchorX="left"
-        anchorY="middle"
-      >
-        {`Trial ${trialIndex + 1}/${trials.length} — ${currentTrial.type}`}
-      </Text>
-
-      {lastResult && (
-        <Text
-          position={[0.4, 1.53 + tableOffsetY, -0.7]}
-          fontSize={0.04}
-          color={xr.accent.stone}
-          anchorX="left"
-          anchorY="middle"
-        >
-          {`Last: ${(lastResult.positionalOffset * 100).toFixed(1)}cm / ${lastResult.rotationalOffsetDeg.toFixed(1)}°`}
-        </Text>
-      )}
-
       {/* Target ghost — upright key crystal at dock, with UP arrow visible. */}
       <group
         position={targetPosition ?? currentTrial.targetPosition}
@@ -788,46 +766,20 @@ export function DockingMode({
           secondary={labAccents.manipulation.secondary}
         />
       ) : (
-        <>
-          <KitInstance
-            name="platform_simple"
-            position={addYOffset(
-              [OBJECT_ORIGIN.x, DESK_SURFACE_Y + 0.002, OBJECT_ORIGIN.z + 0.04],
-              tableOffsetY,
-            )}
-            scale={[DESK_PLATFORM_WIDTH / 4, 1, DESK_PLATFORM_DEPTH / 4]}
-            options={{
-              color: xr.accent.stone,
-              emissive: xr.accent.mustard,
-              emissiveIntensity: 0.04,
-              roughness: 0.88,
-            }}
-          />
-          <KitInstance
-            name="prop_computer"
-            position={[-1.18, SIDE_CONSOLE_GROUND_Y, -1.32]}
-            scale={scalePropComputerToHeight(SIDE_CONSOLE_HEIGHT_M)}
-            rotation={[0, Math.PI * 0.22, 0]}
-            options={{
-              color: xr.accent.stone,
-              emissive: xr.accent.amber,
-              emissiveIntensity: 0.1,
-              roughness: 0.55,
-            }}
-          />
-          <KitInstance
-            name="prop_computer"
-            position={[1.18, SIDE_CONSOLE_GROUND_Y, -1.26]}
-            scale={scalePropComputerToHeight(SIDE_CONSOLE_HEIGHT_M)}
-            rotation={[0, -Math.PI * 0.18, 0]}
-            options={{
-              color: xr.accent.stone,
-              emissive: xr.accent.amber,
-              emissiveIntensity: 0.1,
-              roughness: 0.55,
-            }}
-          />
-        </>
+        <KitInstance
+          name="platform_simple"
+          position={addYOffset(
+            [OBJECT_ORIGIN.x, DESK_SURFACE_Y + 0.002, OBJECT_ORIGIN.z + 0.04],
+            tableOffsetY,
+          )}
+          scale={[DESK_PLATFORM_WIDTH / 4, 1, DESK_PLATFORM_DEPTH / 4]}
+          options={{
+            color: xr.accent.stone,
+            emissive: xr.accent.mustard,
+            emissiveIntensity: 0.04,
+            roughness: 0.88,
+          }}
+        />
       )}
     </group>
   )
