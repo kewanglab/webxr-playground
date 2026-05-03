@@ -20,21 +20,25 @@ type CameraView = {
 }
 
 /**
- * First-person Quest 3 framing shared by all labs: stand at the XR origin,
- * head at standing eye height, looking straight forward.
+ * First-person Quest 3 framing shared by all labs: standing eye height,
+ * looking forward, with a small step back from the strict XR origin.
  *
- * - Position: (0, 1.66, 0) — `DEFAULT_STANDING_EYE_HEIGHT_M` from `DockingMode.tsx`.
- * - Target:   (0, 1.66, -1) — looking down the -Z axis (the lab's "front").
- * - FOV:      90° vertical — approximates Quest 3's per-eye field on a typical
- *             16:9 desktop browser. Quest 3 is roughly 96°V × 110°H per eye;
+ * - Position: (0, 1.66, 0.2) — eye height matches `DEFAULT_STANDING_EYE_HEIGHT_M`,
+ *             pulled back 0.2 m from the strict XR origin so foreground lab
+ *             content (e.g. Selection lab's pinch/touch orbs at z=-0.55)
+ *             doesn't fill half the desktop view. The small standoff lets the
+ *             orbs sit inside the arch silhouette without making the framing
+ *             feel like a third-person showcase shot.
+ * - Target:   (0, 1.66, -1) — straight forward from eye level.
+ * - FOV:      100° vertical — slightly wider than Quest 3's ~96°V per eye.
  *             three.js uses vertical FOV and derives horizontal from canvas
- *             aspect, so 90 lands close to the in-headset feel without the
- *             extreme distortion you'd get from going much wider.
+ *             aspect, so 100°V at ~1.5:1 aspect gives ~125°H, in the
+ *             ballpark of perceived headset peripheral vision.
  */
 const HEADSET_VIEW: CameraView = {
-  position: [0, 1.66, 0],
+  position: [0, 1.66, 0.2],
   target: [0, 1.66, -1],
-  fov: 90,
+  fov: 100,
 }
 
 const LAB_CAMERA_VIEWS: Record<LabId, Record<CaptureViewId, CameraView>> = {
