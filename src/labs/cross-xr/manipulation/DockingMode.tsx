@@ -570,6 +570,24 @@ export function DockingMode({
     if (proximate !== handProximate) setHandProximate(proximate)
   })
 
+  // "Desk height" / "Bench lift" floating label fades out 60 s after mount so it
+  // doesn't sit on top of the scene forever in the desktop preview.
+  const heightLabelRef = useRef<{
+    fillOpacity?: number
+    outlineOpacity?: number
+  } | null>(null)
+  const heightLabelStartedAt = useRef(performance.now() / 1000)
+  useFrame(() => {
+    const elapsed = performance.now() / 1000 - heightLabelStartedAt.current
+    let opacity = 1
+    if (elapsed >= 62) opacity = 0
+    else if (elapsed >= 60) opacity = 1 - (elapsed - 60) / 2
+    if (heightLabelRef.current) {
+      heightLabelRef.current.fillOpacity = opacity
+      heightLabelRef.current.outlineOpacity = opacity
+    }
+  })
+
   const trialType = currentTrial?.type ?? null
   const trialsTotal = trials.length
   useHudReport(
@@ -710,24 +728,41 @@ export function DockingMode({
           />
         ) : (
           <group>
-            <mesh
-              position={[
-                0,
-                -0.105,
-                0,
-              ]}
-            >
-              <cylinderGeometry args={[0.018, 0.022, 0.14, 14]} />
-              <meshStandardMaterial color={xr.accent.stone} roughness={0.48} metalness={0.14} />
+            {/* Mount foot — visible attachment base. Reads as the bracket
+                holding the lever to the desk side. Top edge at y=-0.14. */}
+            <mesh position={[0, -0.15, 0]}>
+              <cylinderGeometry args={[0.026, 0.032, 0.02, 24]} />
+              <meshStandardMaterial color={xr.accent.seal} roughness={0.85} metalness={0.06} />
             </mesh>
-            <mesh position={[0, 0.02, 0]}>
-              <sphereGeometry args={[0.055, 18, 16]} />
+            {/* Mount collar — colored ring around the post base. Spans
+                y=-0.141..-0.129 so it kisses the foot top and the post bottom. */}
+            <mesh position={[0, -0.135, 0]}>
+              <cylinderGeometry args={[0.018, 0.022, 0.012, 20]} />
+              <meshStandardMaterial color={xr.accent.mustard} roughness={0.5} metalness={0.18} />
+            </mesh>
+            {/* Lever post — slim metallic shaft. Spans y=-0.13..0.01. */}
+            <mesh position={[0, -0.06, 0]}>
+              <cylinderGeometry args={[0.0095, 0.011, 0.14, 16]} />
+              <meshStandardMaterial color={xr.accent.stone} roughness={0.32} metalness={0.55} />
+            </mesh>
+            {/* Mid-collar — accent on the shaft mid-section so the knob
+                doesn't swallow it. */}
+            <mesh position={[0, -0.04, 0]}>
+              <cylinderGeometry args={[0.014, 0.014, 0.006, 20]} />
+              <meshStandardMaterial color={xr.accent.mustard} roughness={0.45} metalness={0.3} />
+            </mesh>
+            {/* Knob — slightly oblate grip ball, positioned so its bottom
+                slips below the post's top edge. Effective Y radius is
+                0.036 * 0.88 = 0.0317 → bottom at y=-0.0017, post top at 0.01,
+                so the knob clearly sits ON the post rather than hovering. */}
+            <mesh position={[0, 0.03, 0]} scale={[1.04, 0.88, 1.04]}>
+              <sphereGeometry args={[0.036, 24, 18]} />
               <meshStandardMaterial
                 color={state.targetId === 'table-height-handle' ? labAccents.manipulation.primary : '#ece2d1'}
-                roughness={0.22}
-                metalness={0.12}
+                roughness={0.24}
+                metalness={0.16}
                 emissive={labAccents.manipulation.primary}
-                emissiveIntensity={state.targetId === 'table-height-handle' ? 0.18 : 0.05}
+                emissiveIntensity={state.targetId === 'table-height-handle' ? 0.22 : 0.07}
               />
             </mesh>
           </group>
@@ -735,6 +770,7 @@ export function DockingMode({
       </ManipulableObject>
 
       <Text
+        ref={heightLabelRef}
         position={[
           tableHandleAnchor.x,
           DESK_SURFACE_Y + tableOffsetY + 0.04,
