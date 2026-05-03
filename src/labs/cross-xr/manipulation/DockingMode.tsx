@@ -13,9 +13,7 @@ import {
 import { KitInstance } from '../../../xr/visual/useKitModel'
 import {
   CloudParkShadowBlob,
-  CloudParkSideIsland,
   CloudParkWorkbenchHandle,
-  CloudParkWindLine,
   FloatingCloudMat,
 } from '../../../xr/visual/CloudParkScenery'
 import { useHandJoints } from './useHandJoints'
@@ -282,29 +280,6 @@ function DockingStation({
             <meshStandardMaterial color={stone} roughness={0.9} emissive={secondary} emissiveIntensity={0.025} />
           </mesh>
         ))}
-        <mesh
-          position={addYOffset([OBJECT_ORIGIN.x, MIN_TARGET_Y - 0.05, OBJECT_ORIGIN.z - 0.23], offsetY)}
-          rotation={[0, 0, Math.PI / 2]}
-        >
-          <capsuleGeometry args={[0.022, 0.54, 7, 18]} />
-          <meshStandardMaterial
-            color={secondary}
-            roughness={0.58}
-            emissive={secondary}
-            emissiveIntensity={0.12}
-          />
-        </mesh>
-        <mesh position={addYOffset([OBJECT_ORIGIN.x, MIN_TARGET_Y - 0.025, OBJECT_ORIGIN.z - 0.12], offsetY)}>
-          <torusGeometry args={[0.48, 0.014, 8, 32]} />
-          <meshBasicMaterial color={primary} transparent opacity={0.46} depthWrite={false} />
-        </mesh>
-        <CloudParkWindLine
-          position={addYOffset([OBJECT_ORIGIN.x - 0.6, DESK_SURFACE_Y + 0.18, OBJECT_ORIGIN.z + 0.22], offsetY)}
-          rotation={[0, 0, 0.16]}
-          length={0.7}
-          color={primary}
-          opacity={0.3}
-        />
       </group>
     )
   }
@@ -359,42 +334,6 @@ function DockingStation({
         <torusGeometry args={[0.48, 0.014, 8, 32]} />
         <meshBasicMaterial color={primary} transparent opacity={0.42} depthWrite={false} />
       </mesh>
-    </group>
-  )
-}
-
-function CloudParkDockingScenery({
-  stone,
-  primary,
-  secondary,
-}: {
-  stone: string
-  primary: string
-  secondary: string
-}) {
-  return (
-    <group>
-      <CloudParkSideIsland position={[-1.32, 0.02, -1.32]} scale={0.54} rimColor={secondary} />
-      <CloudParkSideIsland position={[1.28, 0.02, -1.28]} scale={0.5} rimColor={primary} />
-      {[-1, 1].map((dir) => (
-        <group key={`cloud-docking-panel-${dir}`} position={[dir * 1.12, 0.92, -1.18]} rotation={[0, -dir * 0.24, 0]}>
-          <mesh>
-            <planeGeometry args={[0.36, 0.28]} />
-            <meshBasicMaterial color={stone} transparent opacity={0.58} depthWrite={false} />
-          </mesh>
-          <mesh position={[0, -0.01, 0.012]}>
-            <ringGeometry args={[0.07, 0.105, 24]} />
-            <meshBasicMaterial color={dir < 0 ? primary : secondary} transparent opacity={0.5} />
-          </mesh>
-          <CloudParkWindLine
-            position={[0, 0.18, 0.02]}
-            rotation={[0, 0, dir * 0.12]}
-            length={0.32}
-            color={dir < 0 ? primary : secondary}
-            opacity={0.28}
-          />
-        </group>
-      ))}
     </group>
   )
 }
@@ -751,12 +690,12 @@ export function DockingMode({
               <cylinderGeometry args={[0.014, 0.014, 0.006, 20]} />
               <meshStandardMaterial color={xr.accent.mustard} roughness={0.45} metalness={0.3} />
             </mesh>
-            {/* Knob — slightly oblate grip ball, positioned so its bottom
-                slips below the post's top edge. Effective Y radius is
-                0.036 * 0.88 = 0.0317 → bottom at y=-0.0017, post top at 0.01,
-                so the knob clearly sits ON the post rather than hovering. */}
-            <mesh position={[0, 0.03, 0]} scale={[1.04, 0.88, 1.04]}>
-              <sphereGeometry args={[0.036, 24, 18]} />
+            {/* Knob — true sphere grip, positioned so its bottom slips below
+                the post's top edge. Radius 0.032, center at y=0.022 → bottom
+                at y=-0.01, post top at 0.01, so the knob clearly sits ON the
+                post rather than hovering. */}
+            <mesh position={[0, 0.022, 0]}>
+              <sphereGeometry args={[0.032, 24, 18]} />
               <meshStandardMaterial
                 color={state.targetId === 'table-height-handle' ? labAccents.manipulation.primary : '#ece2d1'}
                 roughness={0.24}
@@ -795,13 +734,7 @@ export function DockingMode({
         offsetY={tableOffsetY}
         isCloudPark={isCloudPark}
       />
-      {isCloudPark ? (
-        <CloudParkDockingScenery
-          stone={xr.accent.stone}
-          primary={labAccents.manipulation.primary}
-          secondary={labAccents.manipulation.secondary}
-        />
-      ) : (
+      {!isCloudPark && (
         <KitInstance
           name="platform_simple"
           position={addYOffset(

@@ -138,13 +138,58 @@ export function CloudParkWorkbenchHandle({
 
   return (
     <group>
-      <mesh position={[0, -0.105, 0]}>
-        <capsuleGeometry args={[0.018, 0.1, 5, 8]} />
-        <meshStandardMaterial color={stone} roughness={0.84} emissive={secondary} emissiveIntensity={0.035} />
+      {/* Mount foot — visible attachment base on the bench. Top at y=-0.141. */}
+      <mesh position={[0, -0.15, 0]}>
+        <cylinderGeometry args={[0.026, 0.03, 0.018, 24]} />
+        <meshStandardMaterial
+          color={stone}
+          roughness={0.92}
+          emissive={secondary}
+          emissiveIntensity={0.04}
+        />
       </mesh>
-      <mesh position={[0, 0.025, 0]} scale={[1.08, 0.78, 1.08]}>
-        <sphereGeometry args={[0.056, 12, 8]} />
-        <meshStandardMaterial color={active ? primary : '#FFF3D4'} roughness={0.54} emissive={accent} emissiveIntensity={active ? 0.16 : 0.06} />
+      {/* Mount collar — accent ring around the post base. Spans -0.141..-0.129. */}
+      <mesh position={[0, -0.135, 0]}>
+        <cylinderGeometry args={[0.018, 0.022, 0.012, 20]} />
+        <meshStandardMaterial
+          color={accent}
+          roughness={0.55}
+          emissive={accent}
+          emissiveIntensity={0.08}
+        />
+      </mesh>
+      {/* Capsule post — soft Cloud-Park silhouette. Total height 0.14 (cylinder
+          0.118 + 2 × 0.011 caps), centered at -0.06 → spans -0.13..0.01. */}
+      <mesh position={[0, -0.06, 0]}>
+        <capsuleGeometry args={[0.011, 0.118, 6, 10]} />
+        <meshStandardMaterial
+          color={stone}
+          roughness={0.84}
+          emissive={secondary}
+          emissiveIntensity={0.035}
+        />
+      </mesh>
+      {/* Mid-collar accent on the shaft. */}
+      <mesh position={[0, -0.04, 0]}>
+        <cylinderGeometry args={[0.014, 0.014, 0.006, 20]} />
+        <meshStandardMaterial
+          color={accent}
+          roughness={0.5}
+          emissive={accent}
+          emissiveIntensity={0.08}
+        />
+      </mesh>
+      {/* Knob — true sphere grip. Radius 0.042, center at y=0.028 → bottom at
+          y=-0.014, well below the post top at 0.01. The post visibly enters
+          the bottom of the knob — no hovering gap, no oblate fattening. */}
+      <mesh position={[0, 0.028, 0]}>
+        <sphereGeometry args={[0.042, 18, 14]} />
+        <meshStandardMaterial
+          color={active ? primary : '#FFF3D4'}
+          roughness={0.5}
+          emissive={accent}
+          emissiveIntensity={active ? 0.18 : 0.07}
+        />
       </mesh>
     </group>
   )
