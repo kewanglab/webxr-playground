@@ -19,8 +19,27 @@ type CameraView = {
   orthographicZoom?: number
 }
 
+/**
+ * First-person Quest 3 framing shared by all labs: stand at the XR origin,
+ * head at standing eye height, looking straight forward.
+ *
+ * - Position: (0, 1.66, 0) — `DEFAULT_STANDING_EYE_HEIGHT_M` from `DockingMode.tsx`.
+ * - Target:   (0, 1.66, -1) — looking down the -Z axis (the lab's "front").
+ * - FOV:      90° vertical — approximates Quest 3's per-eye field on a typical
+ *             16:9 desktop browser. Quest 3 is roughly 96°V × 110°H per eye;
+ *             three.js uses vertical FOV and derives horizontal from canvas
+ *             aspect, so 90 lands close to the in-headset feel without the
+ *             extreme distortion you'd get from going much wider.
+ */
+const HEADSET_VIEW: CameraView = {
+  position: [0, 1.66, 0],
+  target: [0, 1.66, -1],
+  fov: 90,
+}
+
 const LAB_CAMERA_VIEWS: Record<LabId, Record<CaptureViewId, CameraView>> = {
   selection: {
+    headset: HEADSET_VIEW,
     hero: {
       position: [0, 1.72, 4.8],
       target: [0, 1.18, -1.55],
@@ -45,6 +64,7 @@ const LAB_CAMERA_VIEWS: Record<LabId, Record<CaptureViewId, CameraView>> = {
     },
   },
   placement: {
+    headset: HEADSET_VIEW,
     hero: {
       position: [0, 1.5, 3.9],
       target: [0, 1.15, -1.2],
@@ -69,6 +89,7 @@ const LAB_CAMERA_VIEWS: Record<LabId, Record<CaptureViewId, CameraView>> = {
     },
   },
   locomotion: {
+    headset: HEADSET_VIEW,
     hero: {
       position: [0, 1.95, 5.8],
       target: [0, 1.1, -7.4],
@@ -93,6 +114,7 @@ const LAB_CAMERA_VIEWS: Record<LabId, Record<CaptureViewId, CameraView>> = {
     },
   },
   manipulation: {
+    headset: HEADSET_VIEW,
     hero: {
       position: [0.75, 1.52, 3.25],
       target: [0, 1.08, -0.85],
@@ -142,6 +164,11 @@ function DesktopPerspectiveCamera({ view }: { view: CameraView }) {
     perspective.position.set(...view.position)
     perspective.up.set(...(view.up ?? [0, 1, 0]))
     perspective.fov = view.fov
+    // The skydome sits at radius 130 m — well beyond the App's default `far: 80`.
+    // Without bumping far here, the back of the dome falls behind the far clipping
+    // plane and renders incorrectly (or not at all), making the sky gradient look
+    // like a curved silhouette of "what fits inside 80 m" instead of the whole sky.
+    perspective.far = 300
     perspective.lookAt(...view.target)
     perspective.updateProjectionMatrix()
     perspective.updateMatrixWorld()
