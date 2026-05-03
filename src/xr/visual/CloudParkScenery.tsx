@@ -3,6 +3,12 @@ import { usePlaygroundTheme } from '../theme/PlaygroundThemeContext'
 
 type Vec3 = [number, number, number]
 
+/**
+ * Cloud Park world dressing. Distant set-pieces (clouds, sun disc, atmospheric
+ * bands) were stripped — they competed with the SharedArch as the focal element
+ * and read as floating cards at the new eye-level POV. Only the under-feet
+ * shadow blob remains, providing a subtle ground-contact cue.
+ */
 export function CloudParkWorld() {
   const preset = usePlaygroundTheme()
   if (preset.id !== 'cloud-park') return null
@@ -11,44 +17,6 @@ export function CloudParkWorld() {
 
   return (
     <group>
-      <mesh position={[0, 1.16, -44]}>
-        <planeGeometry args={[90, 9]} />
-        <meshBasicMaterial color="#FFE4AC" transparent opacity={0.18} depthWrite={false} side={DoubleSide} />
-      </mesh>
-      <mesh position={[0, 0.42, -34]} rotation={[-0.04, 0, 0]}>
-        <planeGeometry args={[78, 2.6]} />
-        <meshBasicMaterial color="#79BFD1" transparent opacity={0.12} depthWrite={false} side={DoubleSide} />
-      </mesh>
-      <mesh position={[8.6, 5.85, -42]}>
-        <circleGeometry args={[1.55, 32]} />
-        <meshBasicMaterial color="#FFECC2" transparent opacity={0.22} depthWrite={false} side={DoubleSide} />
-      </mesh>
-      <mesh position={[8.7, 5.82, -41.9]}>
-        <circleGeometry args={[0.36, 24]} />
-        <meshBasicMaterial color="#FFFDF0" transparent opacity={0.78} depthWrite={false} side={DoubleSide} />
-      </mesh>
-      {[
-        [-7.6, 3.1, -18, 1.9, 0.34, '#FFF7DE', 0.34],
-        [5.8, 3.7, -25, 2.5, 0.38, '#FFFBEA', 0.28],
-        [0.2, 2.35, -15, 1.4, 0.24, '#E4F7EB', 0.22],
-      ].map(([x, y, z, sx, sy, color, opacity], i) => (
-        <mesh key={`cloud-park-simple-cloud-${i}`} position={[x as number, y as number, z as number]} scale={[sx as number, sy as number, 1]}>
-          <circleGeometry args={[1, 28]} />
-          <meshBasicMaterial color={color as string} transparent opacity={opacity as number} depthWrite={false} side={DoubleSide} />
-        </mesh>
-      ))}
-      {[
-        [-5.8, 3.8, -13.5, -0.16, 2.4, 0.2],
-        [4.9, 4.75, -18, 0.11, 2.8, 0.16],
-      ].map(([x, y, z, rz, length, opacity], i) => (
-        <CloudParkWindLine
-          key={`cloud-park-world-wind-${i}`}
-          position={[x as number, y as number, z as number]}
-          rotation={[0, 0, rz as number]}
-          length={length as number}
-          opacity={opacity as number}
-        />
-      ))}
       <CloudParkShadowBlob position={[0, 0.012, -2.2]} scale={[5.7, 1, 2.3]} color={xr.accent.cyan} opacity={0.04} />
     </group>
   )
