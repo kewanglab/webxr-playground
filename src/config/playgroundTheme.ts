@@ -63,18 +63,26 @@ export type OrbStateColors = {
   base: string
 }
 
+/**
+ * Color + alpha pair, kept as one token. `THREE.Color` only accepts rgb so the alpha must be
+ * fed to a material's `opacity` prop separately — bundling them here keeps both halves of a
+ * design intent in a single token. For animated consumers the `opacity` is the baseline /
+ * peak; the runtime is free to scale it down (e.g. breathing pulse).
+ */
+export type Tinted = { color: string; opacity: number }
+
 export type OrbTargetedState = OrbStateColors & {
   /** Inner concentric ring, pulses at 1.2 Hz ±15% opacity. */
-  ring: string
+  ring: Tinted
   /** Outer ring at visual r + 45mm. */
-  ringOuter: string
+  ringOuter: Tinted
   /** Ember shadow color for WN targeted glow (blur 12). CP omits — uses higher ring alpha instead. */
-  ringGlow?: string
+  ringGlow?: Tinted
 }
 
 export type OrbConfirmedState = OrbStateColors & {
   /** Radial halo gradient, peaks at r×2, fades over 400 ms hold. */
-  halo: string
+  halo: Tinted
 }
 
 export type OrbTheme = {
@@ -85,13 +93,13 @@ export type OrbTheme = {
 
 /** Tint colors for per-method affordance hints (ray arrow, pinch calipers, touch ring, etc.). */
 export type AffordanceTheme = {
-  rayArrow: string
-  pinchCalipers: string
-  touchRing: string
-  controllerRay: string
-  proximityRing: string
-  dockEmpty: string
-  dockActive: string
+  rayArrow: Tinted
+  pinchCalipers: Tinted
+  touchRing: Tinted
+  controllerRay: Tinted
+  proximityRing: Tinted
+  dockEmpty: Tinted
+  dockActive: Tinted
 }
 
 /** Recipe for a rim / outline glow — canvas shadow in 2D; additive bloom pass in engine. */
@@ -297,26 +305,26 @@ const defaultXr: XrTheme = {
       mid: '#B58866',
       rim: '#3E2818',
       base: '#C85F58',
-      ring: 'rgba(200,95,88,.8)',
-      ringOuter: 'rgba(200,95,88,.52)',
-      ringGlow: 'rgba(200,95,88,.5)',
+      ring: { color: '#C85F58', opacity: 0.8 },
+      ringOuter: { color: '#C85F58', opacity: 0.52 },
+      ringGlow: { color: '#C85F58', opacity: 0.5 },
     },
     confirmed: {
       core: '#F5EDE0',
       mid: '#8ABFB0',
       rim: '#2F6A5E',
       base: '#7FD4B8',
-      halo: 'rgba(140,220,195,.3)',
+      halo: { color: '#8CDCC3', opacity: 0.3 },
     },
   },
   affordance: {
-    rayArrow: 'rgba(200,95,88,.45)',
-    pinchCalipers: 'rgba(240,170,100,.88)',
-    touchRing: 'rgba(130,200,180,.7)',
-    controllerRay: 'rgba(200,95,88,.85)',
-    proximityRing: 'rgba(200,95,88,.35)',
-    dockEmpty: 'rgba(200,95,88,.45)',
-    dockActive: 'rgba(160,200,220,.75)',
+    rayArrow: { color: '#C85F58', opacity: 0.45 },
+    pinchCalipers: { color: '#F0AA64', opacity: 0.88 },
+    touchRing: { color: '#82C8B4', opacity: 0.7 },
+    controllerRay: { color: '#C85F58', opacity: 0.85 },
+    proximityRing: { color: '#C85F58', opacity: 0.35 },
+    dockEmpty: { color: '#C85F58', opacity: 0.45 },
+    dockActive: { color: '#A0C8DC', opacity: 0.75 },
   },
   glow: {
     archRim: {
@@ -458,25 +466,25 @@ const cloudParkXr: XrTheme = {
       mid: '#FFDF8A',
       rim: '#E0A840',
       base: '#FFD166',
-      ring: 'rgba(255,209,102,.78)',
-      ringOuter: 'rgba(255,209,102,.50)',
+      ring: { color: '#FFD166', opacity: 0.78 },
+      ringOuter: { color: '#FFD166', opacity: 0.5 },
     },
     confirmed: {
       core: '#FFFAEE',
       mid: '#B8E8CC',
       rim: '#6DCFAA',
       base: '#6DCFAA',
-      halo: 'rgba(109,207,170,.32)',
+      halo: { color: '#6DCFAA', opacity: 0.32 },
     },
   },
   affordance: {
-    rayArrow: 'rgba(255,209,102,.35)',
-    pinchCalipers: 'rgba(255,209,102,.8)',
-    touchRing: 'rgba(109,207,170,.75)',
-    controllerRay: 'rgba(230,100,86,.8)',
-    proximityRing: 'rgba(255,209,102,.38)',
-    dockEmpty: 'rgba(255,209,102,.45)',
-    dockActive: 'rgba(47,175,198,.7)',
+    rayArrow: { color: '#FFD166', opacity: 0.35 },
+    pinchCalipers: { color: '#FFD166', opacity: 0.8 },
+    touchRing: { color: '#6DCFAA', opacity: 0.75 },
+    controllerRay: { color: '#E66456', opacity: 0.8 },
+    proximityRing: { color: '#FFD166', opacity: 0.38 },
+    dockEmpty: { color: '#FFD166', opacity: 0.45 },
+    dockActive: { color: '#2FAFC6', opacity: 0.7 },
   },
   glow: {
     archRim: {

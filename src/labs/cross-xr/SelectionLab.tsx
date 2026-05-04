@@ -9,6 +9,7 @@ import { getLabTitle, selectionTargetPositions, tuningPresets } from '../../conf
 import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
 import { useHapticPulse } from '../../xr/feedback/haptics/useHapticPulse'
 import { useConfirmTone } from '../../xr/feedback/audio/useConfirmTone'
+import type { Tinted } from '../../config/playgroundTheme'
 import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
 import { useInitialEyeLevelOffset } from '../../xr/core/useInitialEyeLevelOffset'
 import { SelectionHolo } from '../../xr/visual/holos'
@@ -54,7 +55,7 @@ function AffordanceGlyph({
 }: {
   variant: OrbVariant
   radius: number
-  tint: string
+  tint: Tinted
 }) {
   const glyphY = radius + 0.07
   const glyphScale = Math.max(0.04, radius * 0.5)
@@ -69,7 +70,12 @@ function AffordanceGlyph({
             rotation={[0, 0, Math.PI / 4]}
           >
             <planeGeometry args={[glyphScale * 0.6, glyphScale * 0.1]} />
-            <meshBasicMaterial color={tint} transparent opacity={0.55 - i * 0.12} depthWrite={false} />
+            <meshBasicMaterial
+              color={tint.color}
+              transparent
+              opacity={tint.opacity * (1 - i * 0.22)}
+              depthWrite={false}
+            />
           </mesh>
         ))}
       </group>
@@ -86,7 +92,12 @@ function AffordanceGlyph({
             rotation={[0, 0, dir * Math.PI * 0.75]}
           >
             <planeGeometry args={[glyphScale * 0.5, glyphScale * 0.1]} />
-            <meshBasicMaterial color={tint} transparent opacity={0.7} depthWrite={false} />
+            <meshBasicMaterial
+              color={tint.color}
+              transparent
+              opacity={tint.opacity}
+              depthWrite={false}
+            />
           </mesh>
         ))}
       </group>
@@ -97,7 +108,12 @@ function AffordanceGlyph({
   return (
     <mesh position={[0, glyphY, 0]} rotation={[-Math.PI / 2, 0, 0]}>
       <ringGeometry args={[glyphScale * 0.45, glyphScale * 0.58, 32]} />
-      <meshBasicMaterial color={tint} transparent opacity={0.65} depthWrite={false} />
+      <meshBasicMaterial
+        color={tint.color}
+        transparent
+        opacity={tint.opacity}
+        depthWrite={false}
+      />
     </mesh>
   )
 }
@@ -176,17 +192,22 @@ function StateOrb({
 
     // Inner / outer rings.
     if (state === 'targeted') {
-      // Both rings breathe from fully transparent (0) to fully opaque (1) on the
-      // shared breathing curve — full fade-in/fade-out per cycle, in sync with the
-      // sphere's emissive pulse.
-      const ringOpacity = (breathingPhase(now) + 1) * 0.5
-      if (innerRingMatRef.current) innerRingMatRef.current.opacity = ringOpacity
-      if (outerRingMatRef.current) outerRingMatRef.current.opacity = ringOpacity
+      // Both rings breathe from 0 to the token peak opacity on the shared breathing
+      // curve — full fade-in/fade-out per cycle, in sync with the sphere's emissive
+      // pulse. Token opacity sets the visible peak, so the design value actually drives
+      // the render.
+      const phase = (breathingPhase(now) + 1) * 0.5
+      if (innerRingMatRef.current)
+        innerRingMatRef.current.opacity = phase * targetedColors.ring.opacity
+      if (outerRingMatRef.current)
+        outerRingMatRef.current.opacity = phase * targetedColors.ringOuter.opacity
     } else if (state === 'confirmed' && elapsed < CONFIRM_COLLAPSE_S) {
-      // Collapse over 180ms — scale inner ring down to 0 as we leave targeted.
+      // Collapse over 180ms — fade rings from token peak to 0 as we leave targeted.
       const frac = 1 - elapsed / CONFIRM_COLLAPSE_S
-      if (innerRingMatRef.current) innerRingMatRef.current.opacity = 0.78 * frac
-      if (outerRingMatRef.current) outerRingMatRef.current.opacity = 0.5 * frac
+      if (innerRingMatRef.current)
+        innerRingMatRef.current.opacity = targetedColors.ring.opacity * frac
+      if (outerRingMatRef.current)
+        outerRingMatRef.current.opacity = targetedColors.ringOuter.opacity * frac
     } else {
       // Idle and confirmed post-collapse — no rings.
       if (innerRingMatRef.current) innerRingMatRef.current.opacity = 0
@@ -207,26 +228,25 @@ function StateOrb({
     // Halo: expand to r×2 over 220ms, hold, fade over 400ms at end.
     if (haloGroupRef.current && haloMatRef.current) {
       if (state === 'confirmed') {
+        // `phase` runs 0 → 1 (expand) → 1 (hold) → 0 (fade); token opacity is the peak.
         let expand = 0
-        let alpha = 0
+        let phase = 0
         if (elapsed < CONFIRM_HALO_EXPAND_S) {
-          // Expanding (ease-out).
           expand = 1 - Math.pow(1 - elapsed / CONFIRM_HALO_EXPAND_S, 3)
-          alpha = expand
+          phase = expand
         } else if (elapsed < CONFIRM_HALO_EXPAND_S + CONFIRM_HOLD_S) {
           expand = 1
-          alpha = 1
+          phase = 1
         } else {
-          // Fade to zero.
           const fadeFrac = Math.min(
             (elapsed - CONFIRM_HALO_EXPAND_S - CONFIRM_HOLD_S) / CONFIRM_FADE_S,
             1,
           )
           expand = 1
-          alpha = 1 - fadeFrac
+          phase = 1 - fadeFrac
         }
         haloGroupRef.current.scale.setScalar(Math.max(expand, 0.001))
-        haloMatRef.current.opacity = alpha
+        haloMatRef.current.opacity = phase * confirmedColors.halo.opacity
       } else {
         haloGroupRef.current.scale.setScalar(0.001)
         haloMatRef.current.opacity = 0
@@ -293,7 +313,7 @@ function StateOrb({
         <ringGeometry args={[innerRingRadius - 0.004, innerRingRadius + 0.004, 48]} />
         <meshBasicMaterial
           ref={innerRingMatRef}
-          color={targetedColors.ring}
+          color={targetedColors.ring.color}
           transparent
           opacity={0}
           depthWrite={false}
@@ -303,7 +323,7 @@ function StateOrb({
         <ringGeometry args={[outerRingRadius - 0.003, outerRingRadius + 0.003, 48]} />
         <meshBasicMaterial
           ref={outerRingMatRef}
-          color={targetedColors.ringOuter}
+          color={targetedColors.ringOuter.color}
           transparent
           opacity={0}
           depthWrite={false}
@@ -316,7 +336,7 @@ function StateOrb({
           <sphereGeometry args={[haloPeakRadius, 32, 20]} />
           <meshBasicMaterial
             ref={haloMatRef}
-            color={confirmedColors.halo}
+            color={confirmedColors.halo.color}
             transparent
             opacity={0}
             depthWrite={false}
