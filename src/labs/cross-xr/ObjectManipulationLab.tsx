@@ -1,3 +1,4 @@
+import { IfInSessionMode } from '@react-three/xr'
 import { useControls } from 'leva'
 import { useEffect } from 'react'
 import { getLabTitle, tuningPresets } from '../../config/labs'
@@ -7,6 +8,8 @@ import {
   resetXRInputDefaults,
   xrStore,
 } from '../../xr/core/xrStore'
+import { ManipulationHolo } from '../../xr/visual/holos'
+import { SharedArch, StagePlatform } from '../../xr/visual/SharedScenery'
 import { DockingMode } from './manipulation/DockingMode'
 import { ZenGardenMode } from './manipulation/ZenGardenMode'
 
@@ -71,7 +74,12 @@ export function ObjectManipulationLab() {
       <LabHeading
         title={getLabTitle('manipulation')}
         subtitle={`${labModeLabels[labMode as 'docking' | 'zen']} · ${acquisitionLabels[acquisition as ManipulationAcquisition]} · ${techniqueLabels[technique as ManipulationTechnique]}`}
+        archPosition={[0, 0, -2.5]}
       />
+      <IfInSessionMode deny="immersive-ar">
+        <SharedArch position={[0, 0, -2.5]} holo={<ManipulationHolo />} />
+        <StagePlatform position={[0, 0, -2.5]} />
+      </IfInSessionMode>
 
       {labMode === 'docking' ? (
         <DockingMode

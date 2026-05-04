@@ -18,6 +18,8 @@ import { resetXRInputDefaults } from '../../xr/core/xrStore'
 import { useXRMode } from '../../xr/core/hooks'
 import { useHapticPulse } from '../../xr/feedback/haptics/useHapticPulse'
 import { useConfirmTone } from '../../xr/feedback/audio/useConfirmTone'
+import { PlacementHolo } from '../../xr/visual/holos'
+import { SharedArch, StagePlatform } from '../../xr/visual/SharedScenery'
 
 type PlacementTransform = {
   position: Vector3
@@ -350,7 +352,12 @@ export function PlacementLab() {
       <LabHeading
         title={getLabTitle('placement')}
         subtitle={`Source ${sourceLabel} · Object ${objSize.toFixed(2)} · Preview ${previewOp.toFixed(2)} · ${phase}`}
+        archPosition={[0, 0, -2.5]}
       />
+      <IfInSessionMode deny="immersive-ar">
+        <SharedArch position={[0, 0, -2.5]} holo={<PlacementHolo />} />
+        <StagePlatform position={[0, 0, -2.5]} />
+      </IfInSessionMode>
 
       <IfInSessionMode allow="immersive-ar">
         <group>
@@ -436,8 +443,10 @@ function PlacementShowcase({
 }) {
   const displaySize = Math.max(0.16, objectSize * 1.5)
 
+  // Lift crystals to eye/arm height so they match the Selection lab's
+  // pinch/touch orbs (y = 1.35 m), rather than sitting on the floor.
   return (
-    <group position={[0, 0, -1.2]}>
+    <group position={[0, 1.35, -1.2]}>
       <group position={[-0.25, 0, 0]}>
         <CrystalPrism
           objectSize={displaySize}

@@ -11,15 +11,8 @@ import { getLabTitle, tuningPresets } from '../../config/labs'
 import { LabHeading } from '../LabHeading'
 import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
 import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
-import {
-  CloudParkArch,
-  CloudParkRouteMarker,
-  CloudParkShadowBlob,
-  CloudParkSideIsland,
-  FloatingCloudMat,
-} from '../../xr/visual/CloudParkScenery'
-import { scaleColumnAstraToHeight } from '../../xr/visual/kitNative'
-import { KitInstance } from '../../xr/visual/useKitModel'
+import { LocomotionHolo } from '../../xr/visual/holos'
+import { SharedArch, StagePlatform } from '../../xr/visual/SharedScenery'
 
 // Scratch vectors reused inside useFrame to avoid per-frame allocations.
 const SCRATCH_FORWARD = new Vector3()
@@ -188,40 +181,15 @@ function DestinationFlag({
 }
 
 function StartZone({
-  fill,
   ring,
   seal,
-  isCloudPark,
 }: {
-  fill: string
   ring: string
   seal: string
-  isCloudPark: boolean
 }) {
-  if (isCloudPark) {
-    return (
-      <group>
-        <FloatingCloudMat
-          position={[0, 0.02, 0.64]}
-          scale={1.22}
-          cloudColor={fill}
-          shadeColor="#DFF4E6"
-          rimColor={ring}
-        />
-        <CloudParkShadowBlob
-          position={[0, 0.035, 0.68]}
-          scale={[2.5, 1, 1.42]}
-          color={seal}
-          opacity={0.14}
-        />
-        <mesh position={[0, 0.09, 1.02]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.58, 0.84, 40]} />
-          <meshBasicMaterial color={ring} transparent opacity={0.5} depthWrite={false} />
-        </mesh>
-      </group>
-    )
-  }
-
+  // Both themes use the same patina-style stage: a darker disc + a brighter
+  // emissive rim. Tokens (seal / ring) come from the active theme, so the
+  // park theme picks up its own palette automatically.
   return (
     <group>
       <mesh position={[0, 0.02, 0.6]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -242,113 +210,22 @@ function StartZone({
           emissiveIntensity={0.16}
         />
       </mesh>
-      <mesh position={[0, 0.08, 1.02]}>
-        <boxGeometry args={[2.4, 0.14, 0.5]} />
-        <meshStandardMaterial color={fill} roughness={0.92} />
-      </mesh>
-    </group>
-  )
-}
-
-function PathChevron({
-  position,
-  stone,
-  glow,
-  isCloudPark,
-}: {
-  position: [number, number, number]
-  stone: string
-  glow: string
-  isCloudPark: boolean
-}) {
-  if (isCloudPark) {
-    return (
-      <CloudParkRouteMarker position={position} stone={stone} glow={glow} />
-    )
-  }
-
-  return (
-    <group position={position}>
-      <mesh position={[-0.34, 0, 0]} rotation={[0, -0.62, 0]}>
-        <boxGeometry args={[0.18, 0.05, 0.92]} />
-        <meshStandardMaterial
-          color={stone}
-          roughness={0.72}
-          emissive={glow}
-          emissiveIntensity={0.12}
-        />
-      </mesh>
-      <mesh position={[0.34, 0, 0]} rotation={[0, 0.62, 0]}>
-        <boxGeometry args={[0.18, 0.05, 0.92]} />
-        <meshStandardMaterial
-          color={stone}
-          roughness={0.72}
-          emissive={glow}
-          emissiveIntensity={0.12}
-        />
-      </mesh>
     </group>
   )
 }
 
 function DestinationPortal({
-  stone,
   glow,
   seal,
-  isCloudPark,
 }: {
-  stone: string
   glow: string
   seal: string
-  isCloudPark: boolean
 }) {
-  if (isCloudPark) {
-    return (
-      <group position={[0, 0, -12.2]}>
-        <FloatingCloudMat
-          position={[0, 0.02, 0.72]}
-          scale={1.08}
-          cloudColor={stone}
-          shadeColor="#DFF4E6"
-          rimColor={glow}
-        />
-        <CloudParkArch position={[0, 0.42, 0]} scale={1.28} stone={stone} rim={glow} />
-        <mesh position={[0, 1.55, 0.02]}>
-          <ringGeometry args={[0.38, 0.58, 42]} />
-          <meshBasicMaterial color={glow} transparent opacity={0.64} depthWrite={false} />
-        </mesh>
-        <CloudParkShadowBlob position={[0, 0.04, 0.72]} scale={[1.85, 1, 1.18]} color={seal} opacity={0.12} />
-      </group>
-    )
-  }
-
+  // Both themes share the patina-style destination platform: inner disc + ring.
+  // Tokens come from the active theme so the park theme picks up its own
+  // palette without needing a separate cloud-mat variant.
   return (
     <group position={[0, 0, -12.2]}>
-      <mesh position={[-1.5, 1.45, 0]}>
-        <boxGeometry args={[0.46, 2.9, 0.5]} />
-        <meshStandardMaterial color={stone} roughness={0.9} />
-      </mesh>
-      <mesh position={[1.5, 1.45, 0]}>
-        <boxGeometry args={[0.46, 2.9, 0.5]} />
-        <meshStandardMaterial color={stone} roughness={0.9} />
-      </mesh>
-      <mesh position={[0, 3.08, 0]}>
-        <boxGeometry args={[3.46, 0.44, 0.5]} />
-        <meshStandardMaterial color={stone} roughness={0.88} />
-      </mesh>
-      <mesh position={[0, 1.35, -0.04]}>
-        <boxGeometry args={[2.08, 2.32, 0.08]} />
-        <meshStandardMaterial
-          color={seal}
-          roughness={0.95}
-          emissive={seal}
-          emissiveIntensity={0.05}
-        />
-      </mesh>
-      <mesh position={[0, 1.48, 0.01]}>
-        <ringGeometry args={[0.42, 0.62, 48]} />
-        <meshBasicMaterial color={glow} transparent opacity={0.72} />
-      </mesh>
       <mesh position={[0, 0.03, 0.7]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.8, 36]} />
         <meshStandardMaterial
@@ -367,51 +244,6 @@ function DestinationPortal({
           emissiveIntensity={0.16}
         />
       </mesh>
-    </group>
-  )
-}
-
-function CloudParkLocomotionScenery({
-  stone,
-  ring,
-  seal,
-}: {
-  stone: string
-  ring: string
-  seal: string
-}) {
-  const sideIslands: Array<[number, number, number, number]> = [
-    [-2.4, 0.02, -3.9, 0.58],
-    [2.5, 0.02, -5.2, 0.62],
-    [-2.55, 0.02, -7.9, 0.66],
-    [2.4, 0.02, -9.2, 0.54],
-  ]
-
-  return (
-    <group>
-      <mesh position={[0, 0.014, -5.9]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[1.58, 10.4]} />
-        <meshBasicMaterial color="#FFF4CD" transparent opacity={0.22} depthWrite={false} />
-      </mesh>
-      <CloudParkShadowBlob position={[0, 0.016, -5.9]} scale={[2.2, 1, 9.5]} color={ring} opacity={0.055} />
-      {sideIslands.map(([x, y, z, s], i) => (
-        <CloudParkSideIsland
-          key={`cloud-locomotion-island-${i}`}
-          position={[x, y, z]}
-          scale={s}
-          rimColor={ring}
-        />
-      ))}
-      {[-3.2, -6.2, -9.2].map((z, i) => (
-        <FloatingCloudMat
-          key={`cloud-locomotion-checkpoint-${z}`}
-          position={[0, 0.018, z]}
-          scale={0.72 + i * 0.05}
-          cloudColor={stone}
-          shadeColor="#DFF4E6"
-          rimColor={i === 1 ? seal : ring}
-        />
-      ))}
     </group>
   )
 }
@@ -550,7 +382,9 @@ export function LocomotionLab() {
     () => [
       { position: [0, 0, -3.2], step: 1 },
       { position: [0, 0, -6.2], step: 2 },
-      { position: [0, 0, -9.2], step: 3, final: true },
+      // Step 3 sits on top of the destination platform (z = -11.5 in both
+      // themes — see `DestinationPortal`).
+      { position: [0, 0, -11.5], step: 3, final: true },
     ],
     [],
   )
@@ -570,8 +404,16 @@ export function LocomotionLab() {
       final: i === chain.length - 2,
     }))
   }, [waypoints])
-  const stepColor = labAccents.locomotion.primary
-  const destColor = xr.orb.confirmed.base
+  // Per-theme contrast override. Park theme's default
+  // `labAccents.locomotion.primary` (cyan) sits too close to the bright
+  // green ground tone, so swap to `xr.accent.orange` (#E76456) — warm
+  // against cool gives strong contrast for both the path arcs and the
+  // destination flag. Warm-night keeps its existing primary token since
+  // it already contrasts well against the dark patina floor.
+  // Flag and path arcs share `stepColor` so the line of travel reads as
+  // one continuous color leading to the destination marker.
+  const stepColor = isCloudPark ? xr.accent.orange : labAccents.locomotion.primary
+  const destColor = stepColor
   const bloomColor = xr.orb.confirmed.halo
 
   return (
@@ -579,12 +421,18 @@ export function LocomotionLab() {
       <LabHeading
         title={getLabTitle('locomotion')}
         subtitle={`${stickHand} stick · Move ${moveSpeedN.toFixed(1)} · ${turnMode} (${turnMode === 'snap' ? `${Math.round(snapDegN)}°` : `${Math.round(smoothDegN)}°/s`})`}
+        archPosition={[0, 0, -12.2]}
       />
+      <IfInSessionMode deny="immersive-ar">
+        <SharedArch position={[0, 0, -12.2]} holo={<LocomotionHolo />} />
+        <StagePlatform position={[0, 0, -12.2]} />
+      </IfInSessionMode>
       <StartZone
-        fill={xr.accent.stone}
         ring={labAccents.locomotion.secondary}
-        seal={xr.accent.seal}
-        isCloudPark={isCloudPark}
+        // Park theme `xr.accent.seal` is dark teal — too dim for the bright
+        // park stage. Swap to `xr.accent.stone` (cream) so the disc reads as
+        // a paved stage in the park; warm-night keeps its dark patina disc.
+        seal={isCloudPark ? xr.accent.stone : xr.accent.seal}
       />
 
       <IfInSessionMode allow="immersive-vr">
@@ -637,107 +485,50 @@ export function LocomotionLab() {
         />
       ))}
 
-      {[-1.6, -3.4, -5.8, -8.3, -10.7].map((z) => (
-        <PathChevron
-          key={`chevron-${z}`}
-          position={[0, 0.06, z]}
-          stone={xr.accent.stone}
-          glow={labAccents.locomotion.primary}
-          isCloudPark={isCloudPark}
-        />
+      {/* Side walls flanking the path — same patina structure for both
+          themes; tokens come from the active palette. */}
+      {[
+        [-2.55, 0.52, -4.8, 3.8],
+        [2.55, 0.52, -4.8, 3.8],
+        [-2.75, 0.62, -8.4, 3.6],
+        [2.75, 0.62, -8.4, 3.6],
+      ].map(([x, y, z, depth], i) => (
+        <mesh key={`wall-${i}`} position={[x, y, z]}>
+          <boxGeometry args={[0.24, 1.04, depth]} />
+          <meshStandardMaterial
+            color={xr.accent.stone}
+            roughness={0.93}
+            emissive={xr.accent.seal}
+            emissiveIntensity={0.04}
+          />
+        </mesh>
       ))}
 
-      {isCloudPark ? (
-        <CloudParkLocomotionScenery
-          stone={xr.accent.stone}
-          ring={labAccents.locomotion.secondary}
-          seal={labAccents.locomotion.primary}
-        />
-      ) : (
-        <>
-          {[
-            [-2.55, 0.52, -4.8, 3.8],
-            [2.55, 0.52, -4.8, 3.8],
-            [-2.75, 0.62, -8.4, 3.6],
-            [2.75, 0.62, -8.4, 3.6],
-          ].map(([x, y, z, depth], i) => (
-            <mesh key={`wall-${i}`} position={[x, y, z]}>
-              <boxGeometry args={[0.24, 1.04, depth]} />
-              <meshStandardMaterial
-                color={xr.accent.stone}
-                roughness={0.93}
-                emissive={xr.accent.seal}
-                emissiveIntensity={0.04}
-              />
-            </mesh>
-          ))}
-
-          {[
-            [-1.2, 1.15, -6.5, 0.18, 2.3, 0.28],
-            [1.2, 1.15, -6.5, 0.18, 2.3, 0.28],
-            [-1.65, 1.45, -10.15, 0.24, 2.9, 0.32],
-            [1.65, 1.45, -10.15, 0.24, 2.9, 0.32],
-          ].map(([x, y, z, w, h, d], i) => (
-            <mesh key={`spire-${i}`} position={[x, y, z]}>
-              <boxGeometry args={[w, h, d]} />
-              <meshStandardMaterial
-                color={xr.accent.stone}
-                roughness={0.88}
-                emissive={labAccents.locomotion.secondary}
-                emissiveIntensity={0.05}
-              />
-            </mesh>
-          ))}
-        </>
-      )}
-
       <DestinationPortal
-        stone={xr.accent.stone}
-        glow={labAccents.locomotion.primary}
-        seal={xr.accent.seal}
-        isCloudPark={isCloudPark}
+        glow={stepColor}
+        // Same per-theme swap as StartZone: cream stage in CP, dark patina in WN.
+        seal={isCloudPark ? xr.accent.stone : xr.accent.seal}
       />
-      {!isCloudPark && (
-        <>
-          <mesh position={[0, 0.018, -11.5]} rotation={[-Math.PI / 2, 0, 0]}>
-            <circleGeometry args={[1.04, 40]} />
-            <meshStandardMaterial
-              color={xr.accent.seal}
-              roughness={0.94}
-              emissive={labAccents.locomotion.secondary}
-              emissiveIntensity={0.06}
-            />
-          </mesh>
-          <mesh position={[0, 0.028, -11.5]} rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.62, 0.92, 40]} />
-            <meshStandardMaterial
-              color={labAccents.locomotion.primary}
-              roughness={0.58}
-              emissive={labAccents.locomotion.primary}
-              emissiveIntensity={0.18}
-            />
-          </mesh>
-        </>
-      )}
-      {isCloudPark ? (
-        <CloudParkSideIsland
-          position={[0, 0.02, -15.8]}
-          scale={1.1}
-          rimColor={labAccents.locomotion.primary}
+      {/* Outer destination platform: a wider, softer stage around the inner
+          DestinationPortal disc. Identical structure for both themes. */}
+      <mesh position={[0, 0.018, -11.5]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[1.04, 40]} />
+        <meshStandardMaterial
+          color={isCloudPark ? xr.accent.stone : xr.accent.seal}
+          roughness={0.94}
+          emissive={labAccents.locomotion.secondary}
+          emissiveIntensity={0.06}
         />
-      ) : (
-        <KitInstance
-          name="column_astra"
-          position={[0, 0, -15.8]}
-          scale={scaleColumnAstraToHeight(4.3)}
-          options={{
-            color: xr.accent.stone,
-            emissive: xr.accent.amber,
-            emissiveIntensity: 0.08,
-            roughness: 0.85,
-          }}
+      </mesh>
+      <mesh position={[0, 0.028, -11.5]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.62, 0.92, 40]} />
+        <meshStandardMaterial
+          color={stepColor}
+          roughness={0.58}
+          emissive={stepColor}
+          emissiveIntensity={0.18}
         />
-      )}
+      </mesh>
     </group>
   )
 }
