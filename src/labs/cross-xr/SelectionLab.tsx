@@ -1,5 +1,6 @@
 import { Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
+import { IfInSessionMode } from '@react-three/xr'
 import { useEffect, useRef, useState } from 'react'
 import { useControls } from 'leva'
 import { DoubleSide, Group, MeshBasicMaterial, MeshStandardMaterial } from 'three'
@@ -9,14 +10,9 @@ import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
 import { useHapticPulse } from '../../xr/feedback/haptics/useHapticPulse'
 import { useConfirmTone } from '../../xr/feedback/audio/useConfirmTone'
 import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
-import {
-  CloudParkArch,
-  CloudParkShadowBlob,
-  CloudParkSideIsland,
-  CloudParkWindLine,
-  FloatingCloudMat,
-} from '../../xr/visual/CloudParkScenery'
 import { useInitialEyeLevelOffset } from '../../xr/core/useInitialEyeLevelOffset'
+import { SelectionHolo } from '../../xr/visual/holos'
+import { SharedArch, StagePlatform } from '../../xr/visual/SharedScenery'
 import { LabHeading } from '../LabHeading'
 
 const SELECTION_FOCUS_Y = 1.26
@@ -25,7 +21,17 @@ type OrbVariant = 'ray' | 'pinch' | 'touch'
 type OrbState = 'idle' | 'targeted' | 'confirmed'
 
 /** Design-handoff v0.2 Section 03 timings (seconds). */
-const PULSE_FREQ_HZ = 1.2
+// Hover pulse cadence — slow contemplative breathing (one full cycle every ~3.3 s).
+const PULSE_FREQ_HZ = 0.3
+// Softens the sine wave by holding it longer at the peaks/troughs and
+// accelerating through the midpoint — reads as "inhale → hold → exhale → hold"
+// instead of a uniform mechanical pulse. `Math.sign(s) * |s|^EXP` with
+// `EXP < 1` lifts the magnitude near the extremes and snaps it through zero.
+const BREATHING_EXP = 0.6
+function breathingPhase(now: number): number {
+  const raw = Math.sin(now * PULSE_FREQ_HZ * Math.PI * 2)
+  return Math.sign(raw) * Math.pow(Math.abs(raw), BREATHING_EXP)
+}
 const CONFIRM_COLLAPSE_S = 0.18
 const CONFIRM_HALO_EXPAND_S = 0.22
 const CONFIRM_SCALE_PULSE_S = 0.22
@@ -33,186 +39,6 @@ const CONFIRM_HOLD_S = 1.4 // halo sits at peak alpha
 const CONFIRM_FADE_S = 0.4 // fade to idle
 const CONFIRM_TOTAL_S =
   CONFIRM_HALO_EXPAND_S + CONFIRM_HOLD_S + CONFIRM_FADE_S // 2.02s
-
-function SelectionStage({
-  stone,
-  rim,
-  voidColor,
-  isCloudPark,
-}: {
-  stone: string
-  rim: string
-  voidColor: string
-  isCloudPark: boolean
-}) {
-  if (isCloudPark) {
-    return (
-      <group>
-        <FloatingCloudMat
-          position={[0, 0.018, -1.48]}
-          scale={1.55}
-          cloudColor={stone}
-          shadeColor="#DDF4E3"
-          rimColor={rim}
-        />
-        <CloudParkShadowBlob
-          position={[0, 0.02, -0.98]}
-          scale={[3.2, 1, 1.45]}
-          color={rim}
-          opacity={0.11}
-        />
-        <mesh position={[0, 0.76, -2.58]}>
-          <planeGeometry args={[2.75, 1.08]} />
-          <meshBasicMaterial
-            color={stone}
-            transparent
-            opacity={0.42}
-            depthWrite={false}
-          />
-        </mesh>
-        <CloudParkArch position={[0, 0.28, -2.5]} scale={1.18} stone={stone} rim={rim} />
-        <CloudParkWindLine
-          position={[-0.88, 1.76, -2.42]}
-          rotation={[0, 0, -0.18]}
-          length={0.76}
-          opacity={0.28}
-        />
-        <CloudParkWindLine
-          position={[0.94, 1.88, -2.4]}
-          rotation={[0, 0, 0.16]}
-          length={0.9}
-          opacity={0.22}
-        />
-      </group>
-    )
-  }
-
-  return (
-    <group>
-      <mesh position={[0, 0.03, -1.48]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[1.42, 44]} />
-        <meshStandardMaterial
-          color={stone}
-          roughness={0.96}
-          metalness={0}
-          emissive={voidColor}
-          emissiveIntensity={0.08}
-        />
-      </mesh>
-      <mesh position={[0, 0.042, -1.48]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.94, 1.22, 48]} />
-        <meshStandardMaterial
-          color={rim}
-          roughness={0.55}
-          emissive={rim}
-          emissiveIntensity={0.18}
-        />
-      </mesh>
-      <mesh position={[0, 1.28, -2.48]}>
-        <torusGeometry args={[1.62, 0.085, 12, 54, Math.PI * 1.08]} />
-        <meshStandardMaterial
-          color={stone}
-          roughness={0.92}
-          emissive={rim}
-          emissiveIntensity={0.1}
-        />
-      </mesh>
-      <mesh position={[0, 1.28, -2.5]}>
-        <torusGeometry args={[1.38, 0.02, 8, 40, Math.PI * 1.08]} />
-        <meshBasicMaterial color={rim} transparent opacity={0.75} />
-      </mesh>
-      <mesh position={[0, 0.72, -2.52]}>
-        <boxGeometry args={[2.55, 1.24, 0.08]} />
-        <meshStandardMaterial
-          color={stone}
-          roughness={0.98}
-          metalness={0}
-          emissive={voidColor}
-          emissiveIntensity={0.05}
-        />
-      </mesh>
-    </group>
-  )
-}
-
-function SelectionBackdropPiers({
-  stone,
-  rim,
-  shadow,
-  isCloudPark,
-}: {
-  stone: string
-  rim: string
-  shadow: string
-  isCloudPark: boolean
-}) {
-  if (isCloudPark) {
-    return (
-      <group>
-        <CloudParkSideIsland position={[-2.05, 0.04, -1.82]} scale={0.78} rimColor={rim} />
-        <CloudParkSideIsland position={[2.05, 0.05, -1.96]} scale={0.72} rimColor={rim} />
-        {[-1, 1].map((dir) => (
-          <group key={`cloud-selection-marker-${dir}`} position={[dir * 2.02, 0.16, -1.86]}>
-            <FloatingCloudMat
-              position={[0, -0.16, 0.02]}
-              scale={0.28}
-              cloudColor={stone}
-              shadeColor="#DDF4E3"
-              rimColor={rim}
-            />
-            <mesh position={[0, 0.32, 0]}>
-              <capsuleGeometry args={[0.047, 0.62, 7, 12]} />
-              <meshStandardMaterial
-                color={stone}
-                roughness={0.92}
-                emissive={shadow}
-                emissiveIntensity={0.04}
-              />
-            </mesh>
-            <mesh position={[0, 0.69, 0.012]}>
-              <sphereGeometry args={[0.115, 12, 8]} />
-              <meshStandardMaterial color={rim} roughness={0.58} emissive={rim} emissiveIntensity={0.08} />
-            </mesh>
-            <mesh position={[0, 0.49, 0.014]} rotation={[Math.PI / 2, 0, 0]}>
-              <torusGeometry args={[0.1, 0.008, 6, 24]} />
-              <meshBasicMaterial color={rim} transparent opacity={0.28} depthWrite={false} />
-            </mesh>
-          </group>
-        ))}
-      </group>
-    )
-  }
-
-  return (
-    <group>
-      {[-1, 1].map((dir) => (
-        <group key={`selection-pier-${dir}`} position={[dir * 1.78, 0, -2.16]}>
-          <mesh position={[0, 0.74, 0]}>
-            <boxGeometry args={[0.22, 1.48, 0.18]} />
-            <meshStandardMaterial
-              color={stone}
-              roughness={0.94}
-              emissive={shadow}
-              emissiveIntensity={0.035}
-            />
-          </mesh>
-          <mesh position={[0, 1.49, 0]}>
-            <boxGeometry args={[0.36, 0.08, 0.24]} />
-            <meshStandardMaterial color={stone} roughness={0.9} />
-          </mesh>
-          <mesh position={[0, 0.08, 0.01]}>
-            <boxGeometry args={[0.42, 0.16, 0.28]} />
-            <meshStandardMaterial color={stone} roughness={0.92} />
-          </mesh>
-          <mesh position={[-dir * 0.08, 0.82, 0.095]}>
-            <boxGeometry args={[0.035, 1.06, 0.012]} />
-            <meshBasicMaterial color={rim} transparent opacity={0.5} />
-          </mesh>
-        </group>
-      ))}
-    </group>
-  )
-}
 
 /**
  * Small 3D affordance hint floating next to the orb.
@@ -316,9 +142,12 @@ function StateOrb({
   const radius = size / 2
   const innerRingRadius = radius + 0.025
   const outerRingRadius = radius + 0.045
-  const idleColors = xr.orb.idle
   const targetedColors = xr.orb.targeted
   const confirmedColors = xr.orb.confirmed
+  // Idle now adopts the targeted (hover) look statically — same base color, same
+  // mid-pulse emissive intensity — but with no animation and no rings. Hover then
+  // layers in the pulse + both rings as the actual hover affordance.
+  const IDLE_EMISSIVE = 1.75
 
   // Reset timer whenever state changes.
   useEffect(() => {
@@ -333,11 +162,11 @@ function StateOrb({
     const mat = sphereMatRef.current
     if (mat) {
       if (state === 'idle') {
-        mat.emissiveIntensity = 0.15
+        // Static hover-like glow — same intensity as the targeted pulse midpoint.
+        mat.emissiveIntensity = IDLE_EMISSIVE
       } else if (state === 'targeted') {
-        // Emissive pulse 1.6 ↔ 1.9 at 1.2 Hz.
-        const phase = Math.sin(now * PULSE_FREQ_HZ * Math.PI * 2)
-        mat.emissiveIntensity = 1.75 + 0.15 * phase
+        // Emissive breathing pulse 1.6 ↔ 1.9.
+        mat.emissiveIntensity = IDLE_EMISSIVE + 0.15 * breathingPhase(now)
       } else if (state === 'confirmed') {
         // Decay from 0.8 to 0.3 over the confirmed lifetime.
         const frac = Math.min(elapsed / CONFIRM_TOTAL_S, 1)
@@ -345,18 +174,21 @@ function StateOrb({
       }
     }
 
-    // Targeted rings: opacity pulse; not rendered when collapsed (state !== targeted).
+    // Inner / outer rings.
     if (state === 'targeted') {
-      const phase = Math.sin(now * PULSE_FREQ_HZ * Math.PI * 2)
-      // Inner ring 0.78 ↔ 0.55; outer 0.50 ↔ 0.30.
-      if (innerRingMatRef.current) innerRingMatRef.current.opacity = 0.665 + 0.115 * phase
-      if (outerRingMatRef.current) outerRingMatRef.current.opacity = 0.4 + 0.1 * phase
+      // Both rings breathe from fully transparent (0) to fully opaque (1) on the
+      // shared breathing curve — full fade-in/fade-out per cycle, in sync with the
+      // sphere's emissive pulse.
+      const ringOpacity = (breathingPhase(now) + 1) * 0.5
+      if (innerRingMatRef.current) innerRingMatRef.current.opacity = ringOpacity
+      if (outerRingMatRef.current) outerRingMatRef.current.opacity = ringOpacity
     } else if (state === 'confirmed' && elapsed < CONFIRM_COLLAPSE_S) {
       // Collapse over 180ms — scale inner ring down to 0 as we leave targeted.
       const frac = 1 - elapsed / CONFIRM_COLLAPSE_S
       if (innerRingMatRef.current) innerRingMatRef.current.opacity = 0.78 * frac
       if (outerRingMatRef.current) outerRingMatRef.current.opacity = 0.5 * frac
     } else {
+      // Idle and confirmed post-collapse — no rings.
       if (innerRingMatRef.current) innerRingMatRef.current.opacity = 0
       if (outerRingMatRef.current) outerRingMatRef.current.opacity = 0
     }
@@ -420,9 +252,10 @@ function StateOrb({
   }
 
   // Pick the current base color for the sphere material (deeply tied to state).
-  let sphereBase = idleColors.base
-  if (state === 'targeted') sphereBase = targetedColors.base
-  else if (state === 'confirmed') sphereBase = confirmedColors.base
+  // Idle now uses the targeted base so the orbs read as "lit / available" by default;
+  // confirmed swaps to its own success color during the post-click pulse.
+  let sphereBase = targetedColors.base
+  if (state === 'confirmed') sphereBase = confirmedColors.base
 
   // Halo peak scale is r×2 (spec). The group scale above represents 0..1 progress.
   const haloPeakRadius = radius * 2
@@ -561,14 +394,13 @@ export function SelectionLab() {
       <LabHeading
         title={getLabTitle('selection')}
         subtitle={`Target ${size.toFixed(2)} · Confirm boost ${boost.toFixed(2)} · Haptics ${enableHaptics ? 'on' : 'off'} · Audio ${enableAudio ? 'on' : 'off'}`}
+        archPosition={[0, 0, -2.5]}
       />
+      <IfInSessionMode deny="immersive-ar">
+        <SharedArch position={[0, 0, -2.5]} holo={<SelectionHolo />} />
+        <StagePlatform position={[0, 0, -2.5]} />
+      </IfInSessionMode>
       <group position={[0, stageOffsetY, 0]}>
-        <SelectionStage
-          stone={xr.accent.stone}
-          rim={labAccents.selection.secondary}
-          voidColor={xr.floor.emissive}
-          isCloudPark={isCloudPark}
-        />
         <StateOrb
           variant="ray"
           position={selectionTargetPositions.ray}
@@ -600,12 +432,6 @@ export function SelectionLab() {
           enableAudio={enableAudio}
         />
 
-        <SelectionBackdropPiers
-          stone={xr.accent.stone}
-          rim={labAccents.selection.secondary}
-          shadow={xr.floor.emissive}
-          isCloudPark={isCloudPark}
-        />
       </group>
     </group>
   )

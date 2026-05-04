@@ -169,4 +169,48 @@ Keep hitboxes and interaction math unchanged; this is a prop-language pass, not 
 
 ---
 
+## Camera `far` clipping silently truncates faraway geometry
+
+### Symptom: large background object (skydome, distant landmark) renders with a curved or partial silhouette in the desktop preview but looks fine in the headset
+
+The sky shows a "blue circle in the middle, peach surrounding it" or a clearly-bounded oval cap of color, with the boundary tracing a smooth curve across the screen. The boundary moves with camera position. Geometry that *should* fill the whole upper hemisphere (a sphere with `BackSide` rendering) instead reads as a localized dome-shaped region. The desktop preview shows the artifact; the same scene in an immersive WebXR session looks correct.
+
+**Cause:** the camera's far clipping plane is closer to the camera than the geometry is. WebGL/three.js silently discards any fragment whose post-projection NDC z exceeds 1.0 — that's everything beyond `camera.far`. For a mesh that *straddles* the far plane (some triangles within `far`, some past it), the GPU clips the triangles geometrically along the plane, leaving a sliced-open mesh whose visible silhouette is the projection of the far-plane intersection. There is no warning, no console output, and `tsc` cannot detect it because the mismatch is geometric, not type-based.
+
+In this repo, the bug landed when:
+
+- `src/app/App.tsx` instantiates the R3F `<Canvas camera={...}>` with `far: 80` — sensible for the original lab content (3 m arches, 50 m floor, color clear sky).
+- `src/xr/visual/Skydome.tsx` later added a sphere of radius 130 m with `side: BackSide`.
+- `src/xr/core/DesktopPreviewCamera.tsx` overrides `position`, `up`, `fov`, and the lookAt target on every render but leaves `near` / `far` untouched.
+
+Result: ~75% of the dome's inside surface was past the 80 m far plane and clipped. The visible boundary was the projected ellipse where the far plane intersected the sphere — exactly the curved blue/peach edge users were seeing.
+
+The reason it looked correct in the headset: WebXR overrides the camera's projection matrix entirely with the runtime's own per-eye projection (Meta's near/far come from the headset's lens calibration, not your three.js values). So the desktop preview was the only render path where the stale `far: 80` mattered.
+
+**Fix:** when introducing scene geometry well outside the existing scene radius, update `camera.far` (and consider `near`) to cover it with headroom:
+
+```ts
+// In DesktopPreviewCamera.tsx, alongside fov / position / lookAt:
+perspective.far = 300 // skydome at 130 m + headroom
+perspective.updateProjectionMatrix()
+```
+
+A practical rule of thumb on a 24-bit depth buffer: keep `far / near` under ~10,000 to avoid z-fighting in the distance. With `near: 0.1`, that gives you up to `far: 1000` comfortably. We use 300 here.
+
+**How to recognize this class of bug quickly:**
+
+- The "missing" region has a precisely *curved* boundary (an ellipse, not a hard line) — that's the signature of a plane intersecting a sphere/curved surface.
+- The boundary changes with camera position but not with scene content — clipping is a frustum property.
+- Disabling the suspect material and re-running shows the *whole* mesh disappears uniformly — not a material/shader bug.
+- A debug shader that outputs solid color (e.g. `gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0)`) reveals exactly where the geometry *is* drawing, making coverage gaps obvious.
+
+### Related project files
+
+- `src/app/App.tsx` — `<Canvas camera={...}>` initial camera config (sets the default `near` / `far`)
+- `src/xr/core/DesktopPreviewCamera.tsx` — per-view overrides applied each render; bump `far` here when adding distant geometry
+- `src/xr/visual/Skydome.tsx` — `SKYDOME_RADIUS = 130`; the constant that has to fit inside `camera.far`
+- `src/xr/scene/VRScene.tsx` — also sets `<fog>` ranges; fog `far` is independent of camera `far`, but both should agree with the scene scale
+
+---
+
 <!-- Add new ## Section titles below for other domains (e.g. Quest browser, adb reverse). -->

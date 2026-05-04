@@ -140,6 +140,22 @@ export type XrTheme = {
     textMuted: string
   }
   ar: { stroke: string; opacity: number }
+  /**
+   * SharedArch / per-lab holo tokens. The holo glyphs draw their primary stroke from `rim`
+   * and their secondary detail from `rimSoft`, so the same color system reads across the
+   * arch crown, halo, and the lab's holographic mark inside the half-disc.
+   */
+  arch: {
+    stone: string
+    rim: string
+    rimSoft: string
+    haloOuter: string
+    haloOuterOp: number
+    haloOuterTube: number
+    haloInner: string
+    haloInnerOp: number
+    haloInnerTube: number
+  }
   /** Selection-target orb colors per state — design handoff v0.2. */
   orb: OrbTheme
   /** Per-method affordance hint tint colors. */
@@ -260,6 +276,17 @@ const defaultXr: XrTheme = {
   ar: {
     stroke: '#829AA2',
     opacity: 0.42,
+  },
+  arch: {
+    stone: '#62504A',
+    rim: '#C85F58',
+    rimSoft: '#DDB2AB',
+    haloOuter: '#C85F58',
+    haloOuterOp: 0.28,
+    haloOuterTube: 0.07,
+    haloInner: '#DDB2AB',
+    haloInnerOp: 0.22,
+    haloInnerTube: 0.07,
   },
   // Warm Night orb / affordance / glow tokens per design-handoff-v0.2.
   // TOKENS_JSON['warm-night'] in docs/design-handoff/project/XR Themes Design.html.
@@ -410,6 +437,17 @@ const cloudParkXr: XrTheme = {
   ar: {
     stroke: '#2FAFC6',
     opacity: 0.48,
+  },
+  arch: {
+    stone: '#FFF5DA',
+    rim: '#FFD166',
+    rimSoft: '#FFE4A8',
+    haloOuter: '#FFE4A8',
+    haloOuterOp: 0.2,
+    haloOuterTube: 0.05,
+    haloInner: '#9CE7F0',
+    haloInnerOp: 0.14,
+    haloInnerTube: 0.05,
   },
   // Cloud Park orb / affordance / glow tokens per design-handoff-v0.2.
   // TOKENS_JSON['cloud-park'] in docs/design-handoff/project/XR Themes Design.html.
