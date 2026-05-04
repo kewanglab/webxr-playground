@@ -10,6 +10,7 @@ import { usePlaygroundStore } from '../../app/store'
 import { getLabTitle, tuningPresets } from '../../config/labs'
 import { LabHeading } from '../LabHeading'
 import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
+import type { Tinted } from '../../config/playgroundTheme'
 import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
 import { LocomotionHolo } from '../../xr/visual/holos'
 import { SharedArch, StagePlatform } from '../../xr/visual/SharedScenery'
@@ -64,7 +65,7 @@ function NumberedWaypoint({
   final?: boolean
   stepColor: string
   destinationColor: string
-  bloomColor: string
+  bloomColor: Tinted
   textColor: string
   textOutline: string
   /** WN-only: additive-blended halo beneath the rings. */
@@ -107,9 +108,9 @@ function NumberedWaypoint({
         <mesh position={[0, 0.018, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.36, 0.54, 48]} />
           <meshBasicMaterial
-            color={bloomColor}
+            color={bloomColor.color}
             transparent
-            opacity={0.42}
+            opacity={bloomColor.opacity}
             depthWrite={false}
             blending={AdditiveBlending}
           />
