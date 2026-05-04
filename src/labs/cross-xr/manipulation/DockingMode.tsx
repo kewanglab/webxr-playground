@@ -321,18 +321,31 @@ function DockingStation({
           <meshStandardMaterial color={stone} roughness={0.84} />
         </mesh>
       ))}
-      <mesh position={addYOffset([OBJECT_ORIGIN.x, MIN_TARGET_Y - 0.06, OBJECT_ORIGIN.z - 0.22], offsetY)}>
-        <boxGeometry args={[0.68, 0.06, 0.12]} />
-        <meshStandardMaterial
-          color={secondary}
-          roughness={0.5}
-          emissive={secondary}
-          emissiveIntensity={0.1}
+      {/* Single holo rail spanning the inner top-far corners of the two
+          cradle blocks. Material mirrors the removed back half-dome torus:
+          basic, primary tint, transparent 0.42, no depth write — reads as a
+          continuation of that original holo "energy line".
+          The rail's top-back edge sits exactly at the corner: the
+          (0.028 / 2 = 0.014) y- and z-offsets push the rail's body down and
+          forward so it sits inside the cradle's top-far volume rather than
+          floating above and behind it. */}
+      <mesh
+        position={addYOffset(
+          [
+            OBJECT_ORIGIN.x,
+            MIN_TARGET_Y + 0.03 - 0.014,
+            OBJECT_ORIGIN.z - 0.2 + 0.014,
+          ],
+          offsetY,
+        )}
+      >
+        <boxGeometry args={[0.94, 0.028, 0.028]} />
+        <meshBasicMaterial
+          color={primary}
+          transparent
+          opacity={0.42}
+          depthWrite={false}
         />
-      </mesh>
-      <mesh position={addYOffset([OBJECT_ORIGIN.x, MIN_TARGET_Y - 0.03, OBJECT_ORIGIN.z - 0.12], offsetY)}>
-        <torusGeometry args={[0.48, 0.014, 8, 32]} />
-        <meshBasicMaterial color={primary} transparent opacity={0.42} depthWrite={false} />
       </mesh>
     </group>
   )
@@ -722,7 +735,7 @@ export function DockingMode({
         anchorX="center"
         anchorY="middle"
       >
-        {isCloudPark ? 'Bench lift' : 'Desk height'}
+        Desk height
       </Text>
 
       <DockingStation
