@@ -229,9 +229,11 @@ function DestinationPortal({
   // Both themes share the patina-style destination platform: inner disc + ring.
   // Tokens come from the active theme so the park theme picks up its own
   // palette without needing a separate cloud-mat variant.
+  // Group anchored at the arch (z=-12.2); inner offset z=1.2 places the discs
+  // at world z=-11.0 so they align with the moved destination platform.
   return (
     <group position={[0, 0, -12.2]}>
-      <mesh position={[0, 0.03, 0.7]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.03, 1.2]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.8, 36]} />
         <meshStandardMaterial
           color={seal}
@@ -240,7 +242,7 @@ function DestinationPortal({
           emissiveIntensity={0.12}
         />
       </mesh>
-      <mesh position={[0, 0.045, 0.7]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.045, 1.2]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.48, 0.7, 40]} />
         <meshStandardMaterial
           color={glow}
@@ -385,11 +387,13 @@ export function LocomotionLab() {
     { position: [number, number, number]; step: number; final?: boolean }[]
   >(
     () => [
-      { position: [0, 0, -3.2], step: 1 },
-      { position: [0, 0, -6.2], step: 2 },
-      // Step 3 sits on top of the destination platform (z = -11.5 in both
-      // themes — see `DestinationPortal`).
-      { position: [0, 0, -11.5], step: 3, final: true },
+      { position: [0, 0, -3.1], step: 1 },
+      { position: [0, 0, -5.9], step: 2 },
+      // Step 3 sits on top of the destination platform (z = -11.0 in both
+      // themes — see `DestinationPortal`). Pulled in 0.5 m from -11.5 so the
+      // base ring (r=1.04 → far edge z=-12.04) clears the arch threshold at
+      // z=-12.2; W1/W2 scaled proportionally (×11.0/11.5).
+      { position: [0, 0, -11.0], step: 3, final: true },
     ],
     [],
   )
@@ -493,10 +497,10 @@ export function LocomotionLab() {
       {/* Side walls flanking the path — same patina structure for both
           themes; tokens come from the active palette. */}
       {[
-        [-2.55, 0.52, -4.8, 3.8],
-        [2.55, 0.52, -4.8, 3.8],
-        [-2.75, 0.62, -8.4, 3.6],
-        [2.75, 0.62, -8.4, 3.6],
+        [-2.55, 0.52, -4.6, 3.8],
+        [2.55, 0.52, -4.6, 3.8],
+        [-2.75, 0.62, -8.05, 3.6],
+        [2.75, 0.62, -8.05, 3.6],
       ].map(([x, y, z, depth], i) => (
         <mesh key={`wall-${i}`} position={[x, y, z]}>
           <boxGeometry args={[0.24, 1.04, depth]} />
@@ -515,8 +519,10 @@ export function LocomotionLab() {
         seal={isCloudPark ? xr.accent.stone : xr.accent.seal}
       />
       {/* Outer destination platform: a wider, softer stage around the inner
-          DestinationPortal disc. Identical structure for both themes. */}
-      <mesh position={[0, 0.018, -11.5]} rotation={[-Math.PI / 2, 0, 0]}>
+          DestinationPortal disc. Identical structure for both themes.
+          z=-11.0 keeps the r=1.04 base ring's far edge (z=-12.04) just in
+          front of the arch threshold at z=-12.2. */}
+      <mesh position={[0, 0.018, -11.0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[1.04, 40]} />
         <meshStandardMaterial
           color={isCloudPark ? xr.accent.stone : xr.accent.seal}
@@ -525,7 +531,7 @@ export function LocomotionLab() {
           emissiveIntensity={0.06}
         />
       </mesh>
-      <mesh position={[0, 0.028, -11.5]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.028, -11.0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.62, 0.92, 40]} />
         <meshStandardMaterial
           color={stepColor}
