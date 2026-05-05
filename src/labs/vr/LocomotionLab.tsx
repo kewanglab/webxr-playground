@@ -415,7 +415,7 @@ export function LocomotionLab() {
   // one continuous color leading to the destination marker.
   const stepColor = isCloudPark ? xr.accent.orange : labAccents.locomotion.primary
   const destColor = stepColor
-  const bloomColor = xr.orb.confirmed.halo
+  const bloomColor = xr.locomotion.destinationBloom
 
   return (
     <group>
