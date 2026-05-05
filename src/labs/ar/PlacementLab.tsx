@@ -11,6 +11,7 @@ import { AdditiveBlending, Matrix4, Quaternion, Vector3, type Group } from 'thre
 import { useHudReport } from '../../app/useHudReport'
 import { stepperNumber } from '../../ui/levaPlugins/stepperNumber'
 import { getLabTitle, tuningPresets } from '../../config/labs'
+import type { Tinted } from '../../config/playgroundTheme'
 import { LabHeading } from '../LabHeading'
 import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
 import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
@@ -65,7 +66,8 @@ function CrystalPrism({
   variant: 'solid' | 'ghost'
   solidColor: string
   seamColor: string
-  ghostTint: string
+  /** Required when variant === 'ghost'; ignored when variant === 'solid'. */
+  ghostTint?: Tinted
   ghostAlpha?: number
   emissiveIntensity?: number
 }) {
@@ -76,6 +78,10 @@ function CrystalPrism({
   const centerY = fullHeight * 0.5
 
   if (variant === 'ghost') {
+    // Ghost alpha comes from the Leva preview-opacity slider; per-mesh ratios stay tuned
+    // against that slider, so we only consume `ghostTint.color` here. Token opacity is
+    // metadata for the design; the slider drives the actual render.
+    const tintColor = ghostTint?.color ?? '#A8D4E0'
     const haloAlpha = Math.min(1, ghostAlpha * 0.55)
     const fillAlpha = Math.min(1, ghostAlpha * 0.8)
     const edgeAlpha = Math.min(1, ghostAlpha * 2.4)
@@ -85,7 +91,7 @@ function CrystalPrism({
         <mesh position={[0, objectSize * 0.4, 0]}>
           <sphereGeometry args={[objectSize * 0.95, 20, 14]} />
           <meshBasicMaterial
-            color={ghostTint}
+            color={tintColor}
             transparent
             opacity={haloAlpha}
             depthWrite={false}
@@ -96,7 +102,7 @@ function CrystalPrism({
         <mesh position={[0, centerY, 0]} scale={scale}>
           <octahedronGeometry args={[0.5, 0]} />
           <meshBasicMaterial
-            color={ghostTint}
+            color={tintColor}
             transparent
             opacity={fillAlpha}
             depthWrite={false}
@@ -106,7 +112,7 @@ function CrystalPrism({
         <mesh position={[0, centerY, 0]} scale={scale}>
           <octahedronGeometry args={[0.5, 0]} />
           <meshBasicMaterial
-            color={ghostTint}
+            color={tintColor}
             wireframe
             transparent
             opacity={edgeAlpha}
@@ -150,29 +156,32 @@ function SurfaceReticle({
   tint,
 }: {
   objectSize: number
-  tint: string
+  tint: Tinted
 }) {
   const majorRadius = objectSize * 0.7
   const minorRadius = majorRadius * 0.5
   const crosshairLen = objectSize * 1.0
   const lineThickness = 0.004
+  // Outer ring is the focal element; crosshair sits 88% as bright so the eye lands on the ring.
+  const outerOpacity = tint.opacity
+  const crosshairOpacity = tint.opacity * 0.88
 
   return (
     <group position={[0, 0.003, 0]} rotation={[-Math.PI / 2, 0, 0]}>
       {/* Outer ring (stretched to ellipse via scale). */}
       <mesh scale={[1, minorRadius / majorRadius, 1]}>
         <ringGeometry args={[majorRadius * 0.93, majorRadius, 48]} />
-        <meshBasicMaterial color={tint} transparent opacity={0.9} depthWrite={false} />
+        <meshBasicMaterial color={tint.color} transparent opacity={outerOpacity} depthWrite={false} />
       </mesh>
       {/* Crosshair horizontal. */}
       <mesh>
         <planeGeometry args={[crosshairLen, lineThickness]} />
-        <meshBasicMaterial color={tint} transparent opacity={0.75} depthWrite={false} />
+        <meshBasicMaterial color={tint.color} transparent opacity={crosshairOpacity} depthWrite={false} />
       </mesh>
       {/* Crosshair vertical. */}
       <mesh>
         <planeGeometry args={[lineThickness, crosshairLen * 0.55]} />
-        <meshBasicMaterial color={tint} transparent opacity={0.75} depthWrite={false} />
+        <meshBasicMaterial color={tint.color} transparent opacity={crosshairOpacity} depthWrite={false} />
       </mesh>
     </group>
   )
@@ -188,10 +197,13 @@ function PinchHalo({
   tint,
 }: {
   objectSize: number
-  tint: string
+  tint: Tinted
 }) {
   const haloY = objectSize * 1.5
   const majorRadius = objectSize * 0.5
+  // Ring is the bright halo; the drop line is supportive at ~60% of ring brightness.
+  const ringOpacity = tint.opacity
+  const dropOpacity = tint.opacity * 0.6
 
   return (
     <group>
@@ -199,13 +211,13 @@ function PinchHalo({
       <group position={[0, haloY, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <mesh scale={[1, 0.35, 1]}>
           <ringGeometry args={[majorRadius * 0.92, majorRadius, 40]} />
-          <meshBasicMaterial color={tint} transparent opacity={0.85} depthWrite={false} />
+          <meshBasicMaterial color={tint.color} transparent opacity={ringOpacity} depthWrite={false} />
         </mesh>
       </group>
       {/* Vertical drop line from halo down to ghost top. */}
       <mesh position={[0, haloY - objectSize * 0.25, 0]}>
         <cylinderGeometry args={[0.003, 0.003, objectSize * 0.5, 6]} />
-        <meshBasicMaterial color={tint} transparent opacity={0.5} depthWrite={false} />
+        <meshBasicMaterial color={tint.color} transparent opacity={dropOpacity} depthWrite={false} />
       </mesh>
     </group>
   )
@@ -226,7 +238,6 @@ function PlacedArtifact({
       variant="solid"
       solidColor={solidColor}
       seamColor={seamColor}
-      ghostTint="#000"
     />
   )
 }
@@ -438,7 +449,7 @@ function PlacementShowcase({
   objectSize: number
   solidColor: string
   seamColor: string
-  ghostTint: string
+  ghostTint: Tinted
   textColor: string
 }) {
   const displaySize = Math.max(0.16, objectSize * 1.5)
@@ -513,9 +524,9 @@ function PlacementPreview({
   activeSource: ActivePlacementSource | null
   solidColor: string
   seamColor: string
-  reticleTint: string
-  pinchHaloTint: string
-  ghostTint: string
+  reticleTint: Tinted
+  pinchHaloTint: Tinted
+  ghostTint: Tinted
   opacity: number
   objectSize: number
   enableHaptics: boolean

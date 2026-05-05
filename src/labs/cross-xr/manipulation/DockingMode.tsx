@@ -6,6 +6,7 @@ import type { ManipulationAcquisition, ManipulationTechnique } from '../ObjectMa
 import type { ManipulationResult } from './techniques'
 import { useHudReport } from '../../../app/useHudReport'
 import { tuningPresets } from '../../../config/labs'
+import type { Tinted } from '../../../config/playgroundTheme'
 import { usePlaygroundTheme } from '../../../xr/theme/PlaygroundThemeContext'
 import {
   scalePropComputerToHeight,
@@ -81,7 +82,7 @@ function KeyCrystal({
   variant: 'solid' | 'ghost'
   solidColor: string
   accentColor: string
-  ghostTint?: string
+  ghostTint?: Tinted
   active?: boolean
 }) {
   const shaftW = objectSize * 0.24
@@ -106,7 +107,10 @@ function KeyCrystal({
   const headDepth = shaftD * 1.05
 
   if (variant === 'ghost') {
-    const tint = ghostTint ?? '#A8D4E0'
+    // Ghost wireframe is hand-tuned bright (0.95) — that reads as a clear "preview shell"
+    // even when the underlying token alpha (~0.7–0.75) would be too soft. Keep the
+    // hardcoded 0.95 here; only the color comes from the token.
+    const tint = ghostTint?.color ?? '#A8D4E0'
     return (
       <group>
         {/* Shaft wireframe. */}
@@ -200,7 +204,7 @@ function ProximityRing({
 }: {
   visible: boolean
   objectSize: number
-  tint: string
+  tint: Tinted
 }) {
   const matRef = useRef<import('three').MeshBasicMaterial | null>(null)
 
@@ -219,7 +223,7 @@ function ProximityRing({
       <ringGeometry args={[ringR - 0.004, ringR + 0.004, 48]} />
       <meshBasicMaterial
         ref={matRef}
-        color={tint}
+        color={tint.color}
         transparent
         opacity={0}
         depthWrite={false}
