@@ -76,8 +76,13 @@ export type OrbTargetedState = OrbStateColors & {
   ring: Tinted
   /** Outer ring at visual r + 45mm. */
   ringOuter: Tinted
-  /** Ember shadow color for WN targeted glow (blur 12). CP omits — uses higher ring alpha instead. */
-  ringGlow?: Tinted
+  /**
+   * Ember shadow color for WN targeted glow (blur 12). CP omits — uses higher ring alpha instead.
+   * Documentation token: not consumed by three.js (sibling of `glow.*.shadowColor`); kept as an
+   * rgba string so the design intent is preserved. If a bloom pass ever consumes it, promote
+   * to `Tinted`.
+   */
+  ringGlow?: string
 }
 
 export type OrbConfirmedState = OrbStateColors & {
@@ -170,6 +175,11 @@ export type XrTheme = {
   affordance: AffordanceTheme
   /** Rim / bloom glow recipes — canvas shadow values, engine-side additive hints. */
   glow: GlowRecipes
+  /** Locomotion lab three.js tokens. */
+  locomotion: {
+    /** Additive halo beneath the destination flag rings. WN-only at the call site. */
+    destinationBloom: Tinted
+  }
 }
 
 export type LabAccentPair = { primary: string; secondary: string }
@@ -307,7 +317,7 @@ const defaultXr: XrTheme = {
       base: '#C85F58',
       ring: { color: '#C85F58', opacity: 0.8 },
       ringOuter: { color: '#C85F58', opacity: 0.52 },
-      ringGlow: { color: '#C85F58', opacity: 0.5 },
+      ringGlow: 'rgba(200,95,88,.5)',
     },
     confirmed: {
       core: '#F5EDE0',
@@ -351,6 +361,11 @@ const defaultXr: XrTheme = {
       strokeWidth: 2,
       note: 'Mirrors orb.targeted.ringGlow. CP omits.',
     },
+  },
+  locomotion: {
+    // Cool mint additive halo under the destination rings — preserves the original
+    // pre-Tinted-refactor visible (#8CDCC3 @ 0.42).
+    destinationBloom: { color: '#8CDCC3', opacity: 0.42 },
   },
 }
 
@@ -498,6 +513,11 @@ const cloudParkXr: XrTheme = {
       strokeWidth: 1.4,
       note: 'Fallback: CSS box-shadow on HTML layer.',
     },
+  },
+  locomotion: {
+    // Cloud Park uses its mint success color; the call site currently disables bloom
+    // for CP (`showBloom={!isCloudPark}`), but the token is defined for future use.
+    destinationBloom: { color: '#6DCFAA', opacity: 0.42 },
   },
 }
 
