@@ -90,8 +90,10 @@ function NumberedWaypoint({
         </mesh>
       ))}
 
-      {/* Central disc — brighter for destination. */}
-      <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      {/* Central disc — brighter for destination. y=0.034 sits 4 mm above the
+          DestinationPortal inner disc (y=0.03 in world) so the two coplanar
+          surfaces don't z-fight at the flag base. */}
+      <mesh position={[0, final ? 0.034 : 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[discRadius, 40]} />
         <meshStandardMaterial
           color={tint}
@@ -103,9 +105,11 @@ function NumberedWaypoint({
         />
       </mesh>
 
-      {/* Additive-bloom halo (destination only, shown under WN theme). */}
+      {/* Additive-bloom halo (destination only, shown under WN theme).
+          y=0.022 clears the outer platform circle at y=0.018 so the additive
+          ring doesn't z-fight the opaque platform underneath. */}
       {final && showBloom && (
-        <mesh position={[0, 0.018, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh position={[0, 0.022, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.36, 0.54, 48]} />
           <meshBasicMaterial
             color={bloomColor.color}
