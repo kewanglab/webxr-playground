@@ -10,6 +10,7 @@ import { usePlaygroundStore } from '../../app/store'
 import { getLabTitle, tuningPresets } from '../../config/labs'
 import { LabHeading } from '../LabHeading'
 import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
+import type { Tinted } from '../../config/playgroundTheme'
 import { usePlaygroundTheme } from '../../xr/theme/PlaygroundThemeContext'
 import { LocomotionHolo } from '../../xr/visual/holos'
 import { SharedArch, StagePlatform } from '../../xr/visual/SharedScenery'
@@ -64,7 +65,7 @@ function NumberedWaypoint({
   final?: boolean
   stepColor: string
   destinationColor: string
-  bloomColor: string
+  bloomColor: Tinted
   textColor: string
   textOutline: string
   /** WN-only: additive-blended halo beneath the rings. */
@@ -89,8 +90,10 @@ function NumberedWaypoint({
         </mesh>
       ))}
 
-      {/* Central disc — brighter for destination. */}
-      <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      {/* Central disc — brighter for destination. y=0.034 sits 4 mm above the
+          DestinationPortal inner disc (y=0.03 in world) so the two coplanar
+          surfaces don't z-fight at the flag base. */}
+      <mesh position={[0, final ? 0.034 : 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[discRadius, 40]} />
         <meshStandardMaterial
           color={tint}
@@ -102,14 +105,16 @@ function NumberedWaypoint({
         />
       </mesh>
 
-      {/* Additive-bloom halo (destination only, shown under WN theme). */}
+      {/* Additive-bloom halo (destination only, shown under WN theme).
+          y=0.022 clears the outer platform circle at y=0.018 so the additive
+          ring doesn't z-fight the opaque platform underneath. */}
       {final && showBloom && (
-        <mesh position={[0, 0.018, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh position={[0, 0.022, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.36, 0.54, 48]} />
           <meshBasicMaterial
-            color={bloomColor}
+            color={bloomColor.color}
             transparent
-            opacity={0.42}
+            opacity={bloomColor.opacity}
             depthWrite={false}
             blending={AdditiveBlending}
           />
@@ -224,9 +229,11 @@ function DestinationPortal({
   // Both themes share the patina-style destination platform: inner disc + ring.
   // Tokens come from the active theme so the park theme picks up its own
   // palette without needing a separate cloud-mat variant.
+  // Group anchored at the arch (z=-12.2); inner offset z=1.2 places the discs
+  // at world z=-11.0 so they align with the moved destination platform.
   return (
     <group position={[0, 0, -12.2]}>
-      <mesh position={[0, 0.03, 0.7]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.03, 1.2]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.8, 36]} />
         <meshStandardMaterial
           color={seal}
@@ -235,7 +242,7 @@ function DestinationPortal({
           emissiveIntensity={0.12}
         />
       </mesh>
-      <mesh position={[0, 0.045, 0.7]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.045, 1.2]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.48, 0.7, 40]} />
         <meshStandardMaterial
           color={glow}
@@ -380,11 +387,13 @@ export function LocomotionLab() {
     { position: [number, number, number]; step: number; final?: boolean }[]
   >(
     () => [
-      { position: [0, 0, -3.2], step: 1 },
-      { position: [0, 0, -6.2], step: 2 },
-      // Step 3 sits on top of the destination platform (z = -11.5 in both
-      // themes — see `DestinationPortal`).
-      { position: [0, 0, -11.5], step: 3, final: true },
+      { position: [0, 0, -3.1], step: 1 },
+      { position: [0, 0, -5.9], step: 2 },
+      // Step 3 sits on top of the destination platform (z = -11.0 in both
+      // themes — see `DestinationPortal`). Pulled in 0.5 m from -11.5 so the
+      // base ring (r=1.04 → far edge z=-12.04) clears the arch threshold at
+      // z=-12.2; W1/W2 scaled proportionally (×11.0/11.5).
+      { position: [0, 0, -11.0], step: 3, final: true },
     ],
     [],
   )
@@ -414,7 +423,7 @@ export function LocomotionLab() {
   // one continuous color leading to the destination marker.
   const stepColor = isCloudPark ? xr.accent.orange : labAccents.locomotion.primary
   const destColor = stepColor
-  const bloomColor = xr.orb.confirmed.halo
+  const bloomColor = xr.locomotion.destinationBloom
 
   return (
     <group>
@@ -488,10 +497,10 @@ export function LocomotionLab() {
       {/* Side walls flanking the path — same patina structure for both
           themes; tokens come from the active palette. */}
       {[
-        [-2.55, 0.52, -4.8, 3.8],
-        [2.55, 0.52, -4.8, 3.8],
-        [-2.75, 0.62, -8.4, 3.6],
-        [2.75, 0.62, -8.4, 3.6],
+        [-2.55, 0.52, -4.6, 3.8],
+        [2.55, 0.52, -4.6, 3.8],
+        [-2.75, 0.62, -8.05, 3.6],
+        [2.75, 0.62, -8.05, 3.6],
       ].map(([x, y, z, depth], i) => (
         <mesh key={`wall-${i}`} position={[x, y, z]}>
           <boxGeometry args={[0.24, 1.04, depth]} />
@@ -510,8 +519,10 @@ export function LocomotionLab() {
         seal={isCloudPark ? xr.accent.stone : xr.accent.seal}
       />
       {/* Outer destination platform: a wider, softer stage around the inner
-          DestinationPortal disc. Identical structure for both themes. */}
-      <mesh position={[0, 0.018, -11.5]} rotation={[-Math.PI / 2, 0, 0]}>
+          DestinationPortal disc. Identical structure for both themes.
+          z=-11.0 keeps the r=1.04 base ring's far edge (z=-12.04) just in
+          front of the arch threshold at z=-12.2. */}
+      <mesh position={[0, 0.018, -11.0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[1.04, 40]} />
         <meshStandardMaterial
           color={isCloudPark ? xr.accent.stone : xr.accent.seal}
@@ -520,7 +531,7 @@ export function LocomotionLab() {
           emissiveIntensity={0.06}
         />
       </mesh>
-      <mesh position={[0, 0.028, -11.5]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.028, -11.0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.62, 0.92, 40]} />
         <meshStandardMaterial
           color={stepColor}
