@@ -10,7 +10,7 @@
 
 **An open, web-based laboratory for the people inventing how humans will touch, point, grab, and move through spatial computing.**
 
-Built and tested on Quest 3, but because it lives in the browser it carries the smallest possible learning and setup curve — no SDK installs, no app-store review, no platform lock-in. A `localhost` URL and a headset is all it takes to be in the lab. And because it is WebXR, the same playground reaches the widest possible range of AR and VR devices: Quest 2/3/Pro, Vision Pro, Pico, Magic Leap, ARCore phones, and whatever ships next.
+Built and tested on Quest 3, but because it lives in the browser it carries the smallest possible learning and setup curve — no SDK installs, no app-store review, no platform lock-in. A `localhost` URL and a headset is all it takes to be in the lab. And because it is WebXR, the same playground reaches the widest possible range of AR and VR devices: Quest 2/3/Pro, Vision Pro, Pico, Android XR headsets (Galaxy XR, Xreal), ARCore phones, and whatever ships next.
 
 ## Who it's for
 
@@ -26,8 +26,8 @@ This is the real differentiator. Not "for researchers" or "for designers" or "fo
 
 ## Why web, why Quest 3 as the primary target
 
-- **Web means lowest barrier.** Clone, `npm install`, open a URL in a headset browser. No native build, no SDK, no store review. New collaborators are productive in minutes.
-- **Web means widest reach.** WebXR runs on Quest, Vision Pro, Pico, Magic Leap, ARCore phones — the same code reaches the whole device matrix without per-platform forks.
+- **Web means lowest barrier.** No native build, no SDK, no store review. New collaborators are productive in minutes.
+- **Web means widest reach.** WebXR runs on Quest, Vision Pro, Pico, Android XR headsets, ARCore phones — the same code reaches the whole device matrix without per-platform forks.
 - **Quest 3 as primary test target.** Quest 3 is where most users are today and where performance constraints are honest. Optimizing for Quest-class WebXR keeps the playground fast everywhere else by construction.
 
 ## One primitive per lab — and mix-and-match across labs
@@ -64,6 +64,6 @@ Adding a lab is intentionally three edits:
 2. Create the component under `src/labs/<vr|ar|cross-xr>/`.
 3. Add the import in `src/app/LabContent.tsx`.
 
-That convention is not just an ergonomic — it is the contract that lets an AI agent scaffold a new lab from a paper or a sketch with high reliability. The repo's `AGENTS.md`, `CLAUDE.md`, and skill files are deliberate investments in that contract: the more an agent can do for you, the more time you spend on the actual interaction question.
+That convention is not just an ergonomic — it is the contract that lets an AI agent scaffold a new lab from a paper or a sketch with high reliability. The repo's `AGENTS.md` (and a planned `CLAUDE.md`), together with skill files and editor rules, are deliberate investments in that contract: the more an agent can do for you, the more time you spend on the actual interaction question.
 
 If you have an idea — from a paper, from a hallway conversation, from a headset session that left you wanting something different — the playground is built so you can try it tonight, share it tomorrow, and graduate it into shared primitives the week after.
