@@ -6,6 +6,7 @@ This **README** is the repository entry point: how to orient, run, and extend th
 
 | Doc | Role |
 |-----|------|
+| [docs/vision.md](docs/vision.md) | Long-horizon "why this exists": audience, web/Quest 3 framing, mix-and-match, agentic harness, future modalities. |
 | [docs/overview.md](docs/overview.md) | Stable reference: goals, stack, architecture, directories, conventions, device testing. |
 | [docs/roadmap.md](docs/roadmap.md) | Phased deliverables and editable near-term focus. |
 | [docs/pitfalls.md](docs/pitfalls.md) | Bugs and footguns we have already hit. |
@@ -14,19 +15,20 @@ This **README** is the repository entry point: how to orient, run, and extend th
 
 ---
 
-Interaction-design playground for fast WebXR prototyping in Cursor, optimized for Meta Quest 3 development on macOS across both VR and AR.
+A WebXR-first interaction-design playground for the people inventing how humans will touch, point, grab, and move through spatial computing. Validated on Meta Quest 3 from macOS; runs on any WebXR-capable headset.
 
 ## What this project is
 
-This project is an XR interaction playground, not a single product app. The goal is to explore, compare, and refine interaction patterns quickly before committing them into a larger experience.
+This project is an XR interaction playground, not a single product app. The goal is to give **researchers, designers, and developers** the lowest possible technical barrier to build and experiment with XR interaction primitives — with AI as a co-pilot. See [docs/vision.md](docs/vision.md) for the full framing.
 
-The playground is composed of small, focused labs. Each lab isolates one interaction question so it can be tested, tuned, and compared inside a shared prototype shell.
+The playground is composed of small, focused labs. Each lab isolates one interaction question so it can be tested, tuned, and compared inside a shared prototype shell — and primitives can be mixed and matched across labs to explore combinations no single paper would have proposed alone.
 
 - the whole app is the playground
 - each lab is one design experiment
 - each experiment belongs to `VR`, `AR`, or `cross-XR`
 - reusable interaction pieces live outside the labs so they work across both modes
 - both controllers and hand tracking are supported from the start
+- the architecture is deliberately AI-agent-friendly, so an agent can scaffold a new lab from a paper or sketch
 
 ## Stack
 
@@ -91,6 +93,7 @@ When creating a new lab, ask:
 
 ## Documentation
 
+- **Why this exists (vision):** [docs/vision.md](docs/vision.md)
 - **Architecture and conventions:** [docs/overview.md](docs/overview.md)
 - **What to build next:** [docs/roadmap.md](docs/roadmap.md)
 - **Avoid repeat mistakes:** [docs/pitfalls.md](docs/pitfalls.md)
