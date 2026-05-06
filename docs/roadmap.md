@@ -4,7 +4,7 @@
 
 **Roadmap** is for *what we are building and in what order*: phased deliverables, expansion ideas, and a short **near-term** section you edit as priorities shift. It is expected to change often.
 
-**Related docs:** [Overview](./overview.md) (architecture and conventions), [Pitfalls](./pitfalls.md) (known footguns), [README](../README.md) (quick start).
+**Related docs:** [Vision](./vision.md) (why this exists and where it's heading), [Overview](./overview.md) (architecture and conventions), [Pitfalls](./pitfalls.md) (known footguns), [README](../README.md) (quick start).
 
 ---
 
@@ -123,7 +123,7 @@ Builds on Phases 1–3. **MenuLab and broader AR labs (Phase 6) should reuse thi
 
 #### 5a. Interaction primitive library
 
-The playground's core value as a platform: labs **produce** graduated interaction variants and **consume** variants from other labs. Think of it as a design system, but for XR interactions.
+The playground's core value as a platform: labs **produce** graduated interaction variants and **consume** variants from other labs. Think of it as a design system, but for XR interactions. This is also where the *combinatorial* value emerges — the mix-and-match across labs is what surfaces emergent interaction patterns no single paper would have proposed alone (see [Vision](./vision.md)).
 
 **How it works for users:**
 
@@ -195,6 +195,20 @@ Deliverables:
 - Anchored AR object studies
 - Additional research-driven labs as papers are identified (e.g. dedicated HRI/HRS manipulation experiments, Gaze&Pinch when hardware allows)
 
+### Horizon: new input modalities & agentic harness
+
+Two long-term investment tracks, run in parallel with the phased work above. See [Vision](./vision.md) for the full framing.
+
+**New input modalities.** Eye-gaze (Quest Pro, Vision Pro) and EMG (Meta's neural wristband, CTRL-Labs lineage) plug in behind the same behavior-first primitives, so every existing lab inherits them on day one rather than requiring a rewrite. New modalities surface as additional pointer/source types inside `src/xr/interactions/`, not as parallel lab forks.
+
+**Agentic harness for scaffolding labs.** A growing layer of rules, skills, and agent prompts (`CLAUDE.md`, `AGENTS.md`, Claude Code skills, Cursor rules) that lets an AI agent take a research paper PDF or a napkin idea and scaffold a working lab — registry entry, component file, leva controls, measurement hooks, session-logger integration. The three-files-to-add-a-lab convention (config entry + component + LabContent import) is the seed; the harness compounds on top of it. Every convention added to [Overview](./overview.md) — naming, type placement, lab contracts — is also an investment in what an agent can do reliably.
+
+Concrete near-term harness work:
+
+- Audit and tighten `AGENTS.md` and `CLAUDE.md` so they describe the lab-scaffolding contract explicitly
+- Add Claude Code skills for "scaffold a new lab from this paper" and "graduate this primitive into the shared library"
+- Capture the current lab patterns (LabHeading, leva conventions, session-logger integration) as agent-readable templates
+
 ---
 
 ## Near-term focus
@@ -206,6 +220,7 @@ Deliverables:
 - **Alongside:** Optional Quest hardening passes on **ObjectManipulationLab** (docking + zen); decide later whether **HRI/HRS** land in Phase 6 as a small dedicated lab
 - **Then (Phase 5):** **Primitive graduation** into `src/xr/interactions/`, then shared **A/B preset** UI and **feedback** primitives
 - **Then (Phase 6):** **MenuLab** and AR expansion labs once Phase 5 primitives are available where reuse matters
+- **In parallel (horizon):** tighten the **agentic harness** (`AGENTS.md`, `CLAUDE.md`, Claude Code skills) so agents can scaffold a new lab from a paper; track new input modalities (eye-gaze, EMG) as primitives, not bespoke labs
 - Keep [Overview](./overview.md) directory map in sync when adding new `src/` areas
 
 ---
