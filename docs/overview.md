@@ -4,13 +4,15 @@
 
 **Overview** is the stable reference for *what this project is* and *how it is shaped*: goals, product intent, stack and XR patterns, architecture, directory map, state conventions, agent rules, device testing, logging, and working principles. It changes when architecture or conventions change—not every sprint.
 
-**Related docs:** [Roadmap](./roadmap.md) (phases and what to build next), [Pitfalls](./pitfalls.md) (bugs and footguns we already hit), [Visual capture workflow](./visual-capture.md) (Playwright screenshots and 3D review angles), [Spatial polish plan](./spatial-polish-plan.md) and [style templates](./style-templates/README.md) (2D shell vs 3D XR specs), [README](../README.md) (quick start and repo entry).
+**Related docs:** [Vision](./vision.md) (why this exists, audience, long-horizon arc), [Roadmap](./roadmap.md) (phases and what to build next), [Pitfalls](./pitfalls.md) (bugs and footguns we already hit), [Visual capture workflow](./visual-capture.md) (Playwright screenshots and 3D review angles), [Spatial polish plan](./spatial-polish-plan.md) and [style templates](./style-templates/README.md) (2D shell vs 3D XR specs), [README](../README.md) (quick start and repo entry).
 
 ---
 
 ## Goal
 
-Build a cross-XR interaction-design playground that supports fast iteration in Cursor and reliable validation on Meta Quest 3 from macOS in both VR and AR.
+Give **researchers, designers, and developers** the lowest possible technical barrier to build and experiment with XR interaction primitives — with AI as a co-pilot. See [Vision](./vision.md) for the long-horizon framing; this document covers how the project is shaped today to deliver on it.
+
+**Developer goal:** support fast iteration in Cursor and reliable validation on Meta Quest 3 from macOS in both VR and AR, while staying portable to any WebXR-capable headset.
 
 The project should help answer questions like:
 
@@ -25,7 +27,7 @@ The project should help answer questions like:
 
 This codebase is not a single immersive app yet. It is a structured prototype playground made of small, isolated labs that can be explored independently.
 
-The playground is the product at this stage. Its purpose is to let us compare interaction patterns quickly, keep shared XR infrastructure in one place, and promote successful ideas into reusable primitives.
+The playground is the product at this stage. Its purpose is to let researchers, designers, and developers compare interaction patterns quickly, keep shared XR infrastructure in one place, and promote successful ideas into reusable primitives — so the field can converge on the interactions that feel truly natural and delightful instead of every team rediscovering the same lessons in isolation.
 
 Each lab should:
 
@@ -57,6 +59,7 @@ The playground consists of:
 - reusable interaction primitives
 - a debug and tuning surface for rapid comparison
 - a library of focused labs that test one interaction question at a time in `VR`, `AR`, or `cross-XR`
+- a mix-and-match layer so primitives that graduate out of one lab can be combined inside any other — turning the playground into a generator of new interaction combinations, not just a collection of demos
 
 In other words, the playground is the top-level experience, and the labs are the modules inside it.
 
@@ -307,7 +310,7 @@ Leva stays a **desktop** overlay (HTML). It is not replicated inside the headset
 
 ## AI-Agent Conventions
 
-The project is developed with AI coding agents as primary collaborators. The following conventions ensure agents can navigate, modify, and extend the codebase reliably.
+The project is developed with AI coding agents as primary collaborators. This is a deliberate strategy to lower the barrier to contribution — the more an agent can scaffold reliably (a new lab from a paper, a new variant of an existing primitive), the more time researchers and designers spend on the interaction question instead of the plumbing. The agentic harness (rules, skills, and prompts) is a long-term investment track in [Roadmap](./roadmap.md); the conventions below are its foundation.
 
 ### File conventions
 

@@ -2,6 +2,7 @@
 
 Read these first when you need project context:
 
+- `docs/vision.md` for the long-horizon "why" — audience, mix-and-match, agentic harness, future modalities
 - `docs/overview.md` for architecture and system behavior
 - `docs/roadmap.md` for current priorities and planned work
 - `docs/pitfalls.md` for bugs and footguns already encountered
