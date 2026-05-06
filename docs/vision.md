@@ -24,6 +24,18 @@ Three concentric circles around a single goal:
 
 This is the real differentiator. Not "for researchers" or "for designers" or "for developers" — for **anyone with an idea about how XR interaction should feel**, regardless of how much R3F or WebXR they already know. The web stack plus an AI-agent-friendly architecture is what makes that possible.
 
+## What we're solving
+
+Spatial computing doesn't have a shared interaction vocabulary yet — and the way the field is currently working makes sure it stays that way. Two fragmentations keep it stuck:
+
+**Platform fragmentation.** Meta has its SDK. Apple has visionOS. Android XR is rolling out with Galaxy XR and Xreal. New input modalities — EMG wristbands, eye-gaze — each arrive bundled with their own runtime. Cross-device prototyping is a slog before it even starts, and most teams pick one platform and stay there.
+
+**Research fragmentation.** Every paper at CHI, UIST, ISMAR ships its own GitHub repo, its own setup, its own one-off Unity / Unreal / web demo. The ideas inside those papers are extraordinary — DOF separation, gaze-and-pinch, novel selection mappings. But they don't talk to each other. They can't be compared, combined, or built on without a week of integration work each.
+
+Innovation happens when ideas collide. The field doesn't have a place for the collision.
+
+This playground is built to be that place — a shared substrate where techniques from different platforms, papers, and input modalities can sit side by side, get mixed and matched, and graduate into something the next person can build on.
+
 ## Why web, why Quest 3 as the primary target
 
 - **Web means lowest barrier.** No native build, no SDK, no store review. New collaborators are productive in minutes.
@@ -43,7 +55,7 @@ This makes the playground both:
 
 ## The bigger picture
 
-Spatial computing is at the same moment GUI design was in the early 80s — the conventions are not settled yet. Drag, click, scroll, and pinch-to-zoom all had to be invented and validated before they felt obvious. XR's equivalents — its grab, its select, its menu, its locomotion — are still being authored, right now, in scattered demos and research papers.
+Spatial computing is in a formative moment — the kind that GUI design went through decades ago, when the conventions hadn't yet settled. XR's equivalents — its grab, its select, its menu, its locomotion — are still being authored, right now, in scattered demos and research papers across incompatible platforms. The shared interaction vocabulary doesn't exist yet.
 
 This playground is a bet that if those experiments live in **one open, web-native, mix-and-match environment**, the field converges faster on the interactions that feel truly natural and delightful — and the people doing the inventing get to build on each other's work instead of starting from zero every time.
 
