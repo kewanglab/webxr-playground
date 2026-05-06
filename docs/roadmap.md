@@ -205,7 +205,7 @@ Two long-term investment tracks, run in parallel with the phased work above. See
 
 Concrete near-term harness work:
 
-- Audit and tighten `AGENTS.md` and `CLAUDE.md` so they describe the lab-scaffolding contract explicitly
+- Create `CLAUDE.md` and tighten `AGENTS.md` so they describe the lab-scaffolding contract explicitly
 - Add Claude Code skills for "scaffold a new lab from this paper" and "graduate this primitive into the shared library"
 - Capture the current lab patterns (LabHeading, leva conventions, session-logger integration) as agent-readable templates
 
@@ -220,7 +220,7 @@ Concrete near-term harness work:
 - **Alongside:** Optional Quest hardening passes on **ObjectManipulationLab** (docking + zen); decide later whether **HRI/HRS** land in Phase 6 as a small dedicated lab
 - **Then (Phase 5):** **Primitive graduation** into `src/xr/interactions/`, then shared **A/B preset** UI and **feedback** primitives
 - **Then (Phase 6):** **MenuLab** and AR expansion labs once Phase 5 primitives are available where reuse matters
-- **In parallel (horizon):** tighten the **agentic harness** (`AGENTS.md`, `CLAUDE.md`, Claude Code skills) so agents can scaffold a new lab from a paper; track new input modalities (eye-gaze, EMG) as primitives, not bespoke labs
+- **In parallel (horizon):** build out the **agentic harness** (`AGENTS.md`, a planned `CLAUDE.md`, Claude Code skills) so agents can scaffold a new lab from a paper; track new input modalities (eye-gaze, EMG) as primitives, not bespoke labs
 - Keep [Overview](./overview.md) directory map in sync when adding new `src/` areas
 
 ---
