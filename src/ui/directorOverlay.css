@@ -1,0 +1,62 @@
+/* Director caption lower-third. Sits above the canvas, never accepts pointer
+   events, fades whole container in/out via [data-visible], and crossfades each
+   caption via the React `key` swap on `.director-overlay__caption`. */
+.director-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 51;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 24px 72px;
+  opacity: 0;
+  transition: opacity 320ms ease;
+}
+
+/* Full-screen dip-to-black panel. Opacity is driven per-frame from the director
+   timeline so we leave transitions OFF here — letting the timeline own the
+   curve avoids dueling easings. Sits below the caption so captions can still
+   be drawn on top during partial fades. */
+.director-overlay__fade {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0;
+}
+
+.director-overlay[data-visible='true'] {
+  opacity: 1;
+}
+
+.director-overlay__caption {
+  font-family: var(--pg-font-display, system-ui, -apple-system, 'Segoe UI', sans-serif);
+  font-size: clamp(20px, 2.6vw, 36px);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--pg-shell-text-inverse, #fff7ef);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 18px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(
+    180deg,
+    rgba(58, 40, 32, 0.0) 0%,
+    rgba(58, 40, 32, 0.35) 60%,
+    rgba(58, 40, 32, 0.55) 100%
+  );
+  padding: 14px 26px;
+  border-radius: 6px;
+  border-bottom: 2px solid var(--pg-shell-accent-primary, #b9564e);
+  animation: director-caption-fade 360ms ease both;
+}
+
+@keyframes director-caption-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
