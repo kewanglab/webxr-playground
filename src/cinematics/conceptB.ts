@@ -228,6 +228,42 @@ const STD_ARCH_Z = -2.5
 const LOCOMOTION_ARCH_Z = -12.2
 const LOCOMOTION_CAM_Z_OFFSET = LOCOMOTION_ARCH_Z - STD_ARCH_Z // -9.7
 
+/**
+ * Establishing-pull-back camera positions are defined as offsets from each
+ * lab's arch, not in absolute world Z. That keeps the framing identical
+ * across labs — every pull-back starts behind the arch by the same amount,
+ * ends in front of it by the same amount, so the arch lands at the same
+ * screen position in the same shot composition for every establishing cut.
+ *   - deep   = arch_z + ESTABLISHING_DEEP_OFFSET   (1.5 m past arch)
+ *   - end    = arch_z + ESTABLISHING_END_OFFSET    (2.65 m on user side)
+ * For the standard arch at z = -2.5 this resolves to deep -4.0 / end 0.15
+ * (the user origin); for locomotion's arch at z = -12.2 it resolves to
+ * deep -13.7 / end -9.55 (mirrored framing centred on the goal arch).
+ * Distance is constant across all three: 4.15 m, hence equal duration
+ * under the shared `DOLLY_SPEED_M_PER_MS`.
+ */
+const ESTABLISHING_DEEP_OFFSET = -1.5
+const ESTABLISHING_END_OFFSET = 2.65
+
+function establishingPullback(
+  lab: 'selection' | 'placement' | 'locomotion',
+  archZ: number,
+  caption?: string,
+  themePresetId?: 'default' | 'cloud-park',
+  /** Selection (the reel opener) overrides this to BOOKEND_FADE_MS. */
+  fadeInMs: number = SCENE_FADE_MS,
+): Keyframe[] {
+  return pullbackPair(
+    lab,
+    archZ + ESTABLISHING_DEEP_OFFSET,
+    archZ + ESTABLISHING_END_OFFSET,
+    caption,
+    SCENE_FADE_MS,
+    themePresetId,
+    fadeInMs,
+  )
+}
+
 /* Curve sample t-values. Two intermediate points in the manipulation-default
  * portion (t=0.25, 0.5) so the camera traces the bend instead of cutting
  * across it as a chord. The lab cycle samples (0.625, 0.75, 0.875, 1.0)
@@ -252,30 +288,32 @@ const FINALE_HOLD_MS = 2000
 export const conceptB: Keyframe[] = [
   // ───────── Establishing pull-backs ─────────
 
-  // Selection — first lab + title card. Same dolly speed as the other
-  // establishing pull-backs; `themePresetId: 'default'` resets the theme on
-  // cold start (the playground store mirrors theme to localStorage). The
-  // title caption rides this pull-back and auto-suppresses during the fade
-  // dips at either end. `BOOKEND_FADE_MS` is used for the fadeIn here so
-  // the very first reveal from black takes longer than the inter-lab dips.
-  ...pullbackPair(
+  // Selection — first lab + title card. Pull-back is anchored to the
+  // proscenium arch (`STD_ARCH_Z`), shared with placement; the
+  // `establishingPullback` helper applies the same arch-relative deep + end
+  // offsets to every establishing lab so the arch lands at the same screen
+  // position in the same shot composition for every cut. `themePresetId:
+  // 'default'` resets the theme on cold start (the playground store mirrors
+  // theme to localStorage); `BOOKEND_FADE_MS` makes the very first reveal
+  // from black slightly more deliberate than the mid-reel dips.
+  ...establishingPullback(
     'selection',
-    -4.0,
-    DEFAULT_POS_Z,
+    STD_ARCH_Z,
     'WebXR Interaction Playground',
-    SCENE_FADE_MS,
     'default',
     BOOKEND_FADE_MS,
   ),
 
-  // Placement — target ring at z ≈ -1.05.
-  ...pullbackPair('placement', -3.5),
+  // Placement — same arch position, same offsets → same camera path.
+  ...establishingPullback('placement', STD_ARCH_Z),
 
-  // Locomotion — deeper start to give the corridor a journey, ends
-  // mid-corridor at z = -5 so the camera doesn't retreat all the way to
-  // user origin. Travels longer because the distance is longer, but the
-  // dolly speed matches the other two labs.
-  ...pullbackPair('locomotion', -10.0, -5.0),
+  // Locomotion — anchored to the locomotion goal arch (z = -12.2) instead
+  // of the standard proscenium. Same arch-relative deep + end offsets as
+  // the other two, so the camera traces an identical path in arch-frame
+  // space — just translated 9.7 m deeper into world Z to centre on the
+  // locomotion arch. The arch lands at the same screen position with the
+  // same framing as selection / placement.
+  ...establishingPullback('locomotion', LOCOMOTION_ARCH_Z),
 
   // ───────── Manipulation: straight pull-back, then curve into the hero ─────────
 
