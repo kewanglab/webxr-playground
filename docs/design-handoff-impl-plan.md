@@ -2,7 +2,7 @@
 
 **Status:** Phase 7 complete · Phase 8 next
 **Working branch:** `claude/3d-handoff-spec` (single branch — spec + impl + living plan all live here)
-**Spec snapshot tag:** `design-handoff-v0.2` → commit [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1)
+**Spec snapshot tag:** `design-handoff-v0.2` → commit [`72388a1`](https://github.com/kewanglab/webxr-playground/commit/72388a1)
 **Spec artifact:** [design-handoff/project/XR Themes Design.html](design-handoff/project/XR%20Themes%20Design.html) — open the Handoff tab
 **Last updated:** 2026-04-23
 
@@ -19,7 +19,7 @@ Apply the v0.2 design handoff spec (tokens, materials, transitions, 8 intentiona
 **Single branch with a tag for the spec snapshot** (decided 2026-04-23, reversed from earlier two-branch plan).
 
 - `claude/3d-handoff-spec` is the one working branch. Cherry-pick, all phases, plan updates, and progress log entries land here.
-- The **tag `design-handoff-v0.2`** (at [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1)) freezes the spec as-delivered. Diff against it at any point: `git diff design-handoff-v0.2 HEAD -- docs/design-handoff/`.
+- The **tag `design-handoff-v0.2`** (at [`72388a1`](https://github.com/kewanglab/webxr-playground/commit/72388a1)) freezes the spec as-delivered. Diff against it at any point: `git diff design-handoff-v0.2 HEAD -- docs/design-handoff/`.
 - No separate `claude/impl-design-spec` branch. That was earlier thinking — rejected because it forced a plan-doc sync dance between branches and bought only what a tag already gives us.
 
 **Why this base:**
@@ -31,7 +31,7 @@ Apply the v0.2 design handoff spec (tokens, materials, transitions, 8 intentiona
 
 ## Phase 0 · Pre-impl setup ✅
 
-- [x] Cherry-pick `9aacc18` onto `claude/3d-handoff-spec` (this working branch): `git cherry-pick 9aacc18` → landed as [`e07b1f8`](https://github.com/kewanglab/webxr-playground/commit/e07b1f8)
+- [x] Cherry-pick `9aacc18` onto `claude/3d-handoff-spec` (this working branch): `git cherry-pick 9aacc18` → landed as [`1783f07`](https://github.com/kewanglab/webxr-playground/commit/1783f07)
 - [x] Conflicts resolved:
   - `src/app/store.ts` → merged both sides (kept `readInitialLabId` URL-param support from cloud-park + 9aacc18's `DEFAULT_ORIGIN_POSITION` reset on lab switch).
   - `src/labs/cross-xr/SelectionLab.tsx` → **skipped 9aacc18's changes to this file** (kept HEAD's cloud-park version). Reason: 7 conflict hunks between 9aacc18's `carpet`/`backdrop`/`faceUser`/`pierScale` polish and the cloud-park theme branching; Phase 2 rewrites this file per spec anyway.
@@ -255,7 +255,7 @@ Tags mark frozen reference points. Diff any of them against `HEAD` to see what h
 
 | Tag | Commit | What it freezes |
 |---|---|---|
-| `design-handoff-v0.2` | [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1) | Spec as delivered to engineering: tokens, materials, transitions, 8 spatial overrides |
+| `design-handoff-v0.2` | [`72388a1`](https://github.com/kewanglab/webxr-playground/commit/72388a1) | Spec as delivered to engineering: tokens, materials, transitions, 8 spatial overrides |
 
 Add future tags here as milestones land (e.g. `impl-phase-2-selection`, `impl-complete-v1`).
 
@@ -263,14 +263,14 @@ Add future tags here as milestones land (e.g. `impl-phase-2-selection`, `impl-co
 
 | Date | Phase | Commit | Notes |
 |---|---|---|---|
-| 2026-04-23 | — | [`690e3a1`](https://github.com/kewanglab/webxr-playground/commit/690e3a1) | Spec v0.2 committed. Tagged `design-handoff-v0.2`. |
-| 2026-04-23 | — | [`4a91f36`](https://github.com/kewanglab/webxr-playground/commit/4a91f36) | Plan authored. |
-| 2026-04-23 | — | [`89b8b4a`](https://github.com/kewanglab/webxr-playground/commit/89b8b4a) | Switched from two-branch to single-branch + tag strategy. Plan Phase 0 wording corrected. |
-| 2026-04-23 | 0 | [`e07b1f8`](https://github.com/kewanglab/webxr-playground/commit/e07b1f8) | Phase 0 complete. Cherry-picked `9aacc18` with SelectionLab.tsx skipped (7 conflicts deferred to Phase 2 rewrite). Baseline app verified green. |
-| 2026-04-23 | 1 | [`9b91dbd`](https://github.com/kewanglab/webxr-playground/commit/9b91dbd) | Phase 1 complete. Added `orb` / `affordance` / `glow` fields to `XrTheme` (both presets populated) + top-level `TYPOGRAPHY` / `HUD_DIMS` exports. No existing callers touched. |
-| 2026-04-23 | 2 | [`46e9677`](https://github.com/kewanglab/webxr-playground/commit/46e9677) | Phase 2 complete. Selection Lab targets: cubes → tri-state spheres (`idle`/`targeted`/`confirmed`). New `StateOrb` + `AffordanceGlyph` components; positions from new `selectionTargetPositions` const. 1.2 Hz pulse, halo-expand choreography, auto-revert. Scenery kept. |
-| 2026-04-24 | 3 | [`724a0b0`](https://github.com/kewanglab/webxr-playground/commit/724a0b0) | Phase 3 complete. Placement Lab crystals: themed pods → `CrystalPrism` (octahedron-based diamond prism, h=`objectSize`, w=`objectSize*0.5`). New `SurfaceReticle` (controller) + `PinchHalo` (hand) source-conditional affordances; ghost wireframe approximates hatched/dashed feel. Desktop showcase simplified to solid+ghost preview pair. |
-| 2026-04-24 | 4 | [`5764c15`](https://github.com/kewanglab/webxr-playground/commit/5764c15) · cleanup [`930d0d8`](https://github.com/kewanglab/webxr-playground/commit/930d0d8) · ring tweaks [`d53ab92`](https://github.com/kewanglab/webxr-playground/commit/d53ab92) [`5eb4ac4`](https://github.com/kewanglab/webxr-playground/commit/5eb4ac4) | Phase 4 complete. Manipulation · Docking grabbed-object + ghost: themed pods → `KeyCrystal` (shaft + notched pentagonal head + UP indicator). New `ProximityRing` (hand-proximity hint). New `snapToleranceM` / `snapToleranceDeg` fields (0.04 m + 10°) with auto-snap on release + 30 ms haptic success burst. Zen Garden mode unaffected. |
-| 2026-04-24 | 5 | [`d494d3c`](https://github.com/kewanglab/webxr-playground/commit/d494d3c) | Phase 5 complete. Locomotion Lab: 3 static comfort rings → numbered teleport waypoint sequence (1 → 2 → 3-as-flagged-destination) with dashed quadratic arcs origin → W1 → W2 → W3. New `NumberedWaypoint`, `DestinationFlag`, `quadArcPoints` helpers. Snap-turn kept at 45° per design review. |
-| 2026-04-24 | 6 | [`8d0a0e1`](https://github.com/kewanglab/webxr-playground/commit/8d0a0e1) | Phase 6 complete. New shared VR scenery: `SharedArch` (2.4×1.6 m half-torus + legs) and `StagePlatform` (1.6×0.35 m oval) in `src/xr/visual/SharedScenery.tsx`, themed CP/WN. Wired into `VRScene` at origin behind a `showSharedScenery` Leva toggle. Default flipped OFF after design review (visual quality + position need Phase 8 rework). |
+| 2026-04-23 | — | [`72388a1`](https://github.com/kewanglab/webxr-playground/commit/72388a1) | Spec v0.2 committed. Tagged `design-handoff-v0.2`. |
+| 2026-04-23 | — | [`77f920d`](https://github.com/kewanglab/webxr-playground/commit/77f920d) | Plan authored. |
+| 2026-04-23 | — | [`b57f828`](https://github.com/kewanglab/webxr-playground/commit/b57f828) | Switched from two-branch to single-branch + tag strategy. Plan Phase 0 wording corrected. |
+| 2026-04-23 | 0 | [`1783f07`](https://github.com/kewanglab/webxr-playground/commit/1783f07) | Phase 0 complete. Cherry-picked `9aacc18` with SelectionLab.tsx skipped (7 conflicts deferred to Phase 2 rewrite). Baseline app verified green. |
+| 2026-04-23 | 1 | [`f7623e5`](https://github.com/kewanglab/webxr-playground/commit/f7623e5) | Phase 1 complete. Added `orb` / `affordance` / `glow` fields to `XrTheme` (both presets populated) + top-level `TYPOGRAPHY` / `HUD_DIMS` exports. No existing callers touched. |
+| 2026-04-23 | 2 | [`dfe8ce2`](https://github.com/kewanglab/webxr-playground/commit/dfe8ce2) | Phase 2 complete. Selection Lab targets: cubes → tri-state spheres (`idle`/`targeted`/`confirmed`). New `StateOrb` + `AffordanceGlyph` components; positions from new `selectionTargetPositions` const. 1.2 Hz pulse, halo-expand choreography, auto-revert. Scenery kept. |
+| 2026-04-24 | 3 | [`2a69241`](https://github.com/kewanglab/webxr-playground/commit/2a69241) | Phase 3 complete. Placement Lab crystals: themed pods → `CrystalPrism` (octahedron-based diamond prism, h=`objectSize`, w=`objectSize*0.5`). New `SurfaceReticle` (controller) + `PinchHalo` (hand) source-conditional affordances; ghost wireframe approximates hatched/dashed feel. Desktop showcase simplified to solid+ghost preview pair. |
+| 2026-04-24 | 4 | [`a5407ab`](https://github.com/kewanglab/webxr-playground/commit/a5407ab) · cleanup [`0f40f74`](https://github.com/kewanglab/webxr-playground/commit/0f40f74) · ring tweaks [`d89f36e`](https://github.com/kewanglab/webxr-playground/commit/d89f36e) [`0fa8ffd`](https://github.com/kewanglab/webxr-playground/commit/0fa8ffd) | Phase 4 complete. Manipulation · Docking grabbed-object + ghost: themed pods → `KeyCrystal` (shaft + notched pentagonal head + UP indicator). New `ProximityRing` (hand-proximity hint). New `snapToleranceM` / `snapToleranceDeg` fields (0.04 m + 10°) with auto-snap on release + 30 ms haptic success burst. Zen Garden mode unaffected. |
+| 2026-04-24 | 5 | [`b6b7c7b`](https://github.com/kewanglab/webxr-playground/commit/b6b7c7b) | Phase 5 complete. Locomotion Lab: 3 static comfort rings → numbered teleport waypoint sequence (1 → 2 → 3-as-flagged-destination) with dashed quadratic arcs origin → W1 → W2 → W3. New `NumberedWaypoint`, `DestinationFlag`, `quadArcPoints` helpers. Snap-turn kept at 45° per design review. |
+| 2026-04-24 | 6 | [`c7e7d71`](https://github.com/kewanglab/webxr-playground/commit/c7e7d71) | Phase 6 complete. New shared VR scenery: `SharedArch` (2.4×1.6 m half-torus + legs) and `StagePlatform` (1.6×0.35 m oval) in `src/xr/visual/SharedScenery.tsx`, themed CP/WN. Wired into `VRScene` at origin behind a `showSharedScenery` Leva toggle. Default flipped OFF after design review (visual quality + position need Phase 8 rework). |
 | 2026-04-24 | 7 | (this commit) | Phase 7 complete. HUD: single FPS card → tap-to-expand pill/panel widget per spec HUD_DIMS. Rounded-rect borders (theme accent), self-contained `HUDPanel` with `useFpsLabel` hook. `InXRStats.tsx` deleted (folded in). Trial counter / metrics / method label are static placeholders; wiring them to runtime state is a Phase 8 follow-up. |
