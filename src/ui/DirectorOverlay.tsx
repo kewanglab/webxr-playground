@@ -11,10 +11,15 @@ import './directorOverlay.css'
  */
 export function DirectorOverlay() {
   const caption = useDirectorStore((s) => s.caption)
+  const captionPersistent = useDirectorStore((s) => s.captionPersistent)
   const fadeOpacity = useDirectorStore((s) => s.fadeOpacity)
-  // Captions hide while the screen is mostly dark — otherwise text reading
-  // through a half-faded scene jitters and reads as a glitch instead of a cut.
-  const captionVisible = caption != null && fadeOpacity < 0.4
+  // Captions normally hide while the screen is mostly dark — otherwise text
+  // reading through a half-faded scene jitters and reads as a glitch instead
+  // of a cut. `captionPersistent` opts out of that auto-suppress so a title
+  // can sit on top of inter-scene blackouts (visible the whole time, even
+  // when the canvas behind is fully black).
+  const captionVisible =
+    caption != null && (captionPersistent || fadeOpacity < 0.4)
   return (
     <>
       <div

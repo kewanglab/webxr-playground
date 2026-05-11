@@ -45,7 +45,7 @@ export function readDirectorPresetId(): string | null {
 /**
  * Optional `?seek=<index>` debug param that snaps the director timeline to a
  * specific keyframe at mount instead of starting from 0. Useful for previewing
- * a single shot (e.g. `?director=concept-a&seek=7`) and for headless visual
+ * a single shot (e.g. `?director=concept-b&seek=7`) and for headless visual
  * regression captures of individual keyframes.
  */
 export function readDirectorSeek(): number | null {

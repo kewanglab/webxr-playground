@@ -43,6 +43,14 @@ export type Keyframe = {
   ease?: Easing
   caption?: string
   /**
+   * When true, the caption ignores the fade-overlay's auto-suppress (which
+   * normally hides the caption while the dip-to-black is mostly opaque).
+   * Used for captions that should sit on top of inter-scene blackouts —
+   * e.g. a title that persists across multiple establishing shots while
+   * the screen dips between them.
+   */
+  captionPersistent?: boolean
+  /**
    * When > 0, the screen starts black at the start of this keyframe and fades
    * to clear over `fadeInMs`. Runs concurrently with any incoming tween so the
    * camera can already be moving while the dip-to-black resolves — that
@@ -86,6 +94,7 @@ export type ResolvedKeyframe = {
   holdMs: number
   ease: Easing
   caption: string | null
+  captionPersistent: boolean
   fadeInMs: number
   fadeOutMs: number
   themePresetId: PlaygroundPresetId | null
