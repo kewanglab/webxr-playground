@@ -33,10 +33,13 @@ const DEFAULT_PITCH = -8
 const DEFAULT_FOV = 100
 const DEFAULT_POS_Z = 0.15
 
-const SCENE_FADE_MS = 300
-const DEEP_HOLD_MS = 150
+const SCENE_FADE_MS = 225
+const DEEP_HOLD_MS = 110
+
+const TITLE_CAPTION = 'WebXR Interaction Playground'
+const URL_CAPTION = 'github.com/kewanglab/webxr-playground'
 /** Slower, more deliberate fade at the very start (reveal from black) and very end (fade to black). */
-const BOOKEND_FADE_MS = 800
+const BOOKEND_FADE_MS = 600
 
 /**
  * Establishing pull-back dolly speed in metres per millisecond. All three
@@ -48,7 +51,7 @@ const BOOKEND_FADE_MS = 800
  * 2 m/s reads as a confident establishing-shot dolly: fast enough to feel
  * intentional, slow enough that the lab content stays legible.
  */
-const DOLLY_SPEED_M_PER_MS = 0.002
+const DOLLY_SPEED_M_PER_MS = 0.00267
 
 /**
  * Build a "deep snap" + "pull-back" pair for an establishing lab.
@@ -97,6 +100,14 @@ function pullbackPair(
       fov: DEFAULT_FOV,
       tweenMs: 0,
       holdMs: DEEP_HOLD_MS,
+      // Caption is set on the deep-snap too so it persists through the
+      // inter-lab blackout — when the next pull-back's fadeIn reveals the
+      // scene, the caption is already in place rather than re-mounting.
+      // `captionPersistent: true` keeps the title rendered ON TOP of the
+      // black overlay during fade transitions, so it reads as a single
+      // continuous title across all three establishing labs.
+      caption,
+      captionPersistent: caption != null,
     },
     {
       shot: `${lab}-pullback`,
@@ -113,6 +124,7 @@ function pullbackPair(
       fadeInMs,
       fadeOutMs,
       caption,
+      captionPersistent: caption != null,
     },
   ]
 }
@@ -234,15 +246,15 @@ const LOCOMOTION_CAM_Z_OFFSET = LOCOMOTION_ARCH_Z - STD_ARCH_Z // -9.7
  * across labs — every pull-back starts behind the arch by the same amount,
  * ends in front of it by the same amount, so the arch lands at the same
  * screen position in the same shot composition for every establishing cut.
- *   - deep   = arch_z + ESTABLISHING_DEEP_OFFSET   (1.5 m past arch)
+ *   - deep   = arch_z + ESTABLISHING_DEEP_OFFSET   (0.5 m past arch)
  *   - end    = arch_z + ESTABLISHING_END_OFFSET    (2.65 m on user side)
- * For the standard arch at z = -2.5 this resolves to deep -4.0 / end 0.15
+ * For the standard arch at z = -2.5 this resolves to deep -3.0 / end 0.15
  * (the user origin); for locomotion's arch at z = -12.2 it resolves to
- * deep -13.7 / end -9.55 (mirrored framing centred on the goal arch).
- * Distance is constant across all three: 4.15 m, hence equal duration
+ * deep -12.7 / end -9.55 (mirrored framing centred on the goal arch).
+ * Distance is constant across all three: 3.15 m, hence equal duration
  * under the shared `DOLLY_SPEED_M_PER_MS`.
  */
-const ESTABLISHING_DEEP_OFFSET = -1.5
+const ESTABLISHING_DEEP_OFFSET = -0.5
 const ESTABLISHING_END_OFFSET = 2.65
 
 function establishingPullback(
@@ -280,10 +292,10 @@ const T_HERO = 1.0
  *   - which gives LAB_QUARTER_MS = 1000 when STRAIGHT_MS = 2000 (Δz=1.5)
  *   - Δt=0.125 segments scale to 500 ms.
  * Total camera motion: 2000 + 1000*2 + 500*4 = 6000 ms. */
-const STRAIGHT_MS = 2000
-const CURVE_QUARTER_MS = 1000
-const LAB_SLICE_MS = 500
-const FINALE_HOLD_MS = 2000
+const STRAIGHT_MS = 1500
+const CURVE_QUARTER_MS = 750
+const LAB_SLICE_MS = 375
+const FINALE_HOLD_MS = 1500
 
 export const conceptB: Keyframe[] = [
   // ───────── Establishing pull-backs ─────────
@@ -295,17 +307,20 @@ export const conceptB: Keyframe[] = [
   // position in the same shot composition for every cut. `themePresetId:
   // 'default'` resets the theme on cold start (the playground store mirrors
   // theme to localStorage); `BOOKEND_FADE_MS` makes the very first reveal
-  // from black slightly more deliberate than the mid-reel dips.
+  // from black slightly more deliberate than the mid-reel dips. The title
+  // caption is shared by all three establishing labs (set on each
+  // keyframe — including the deep-snaps — so it stays mounted through the
+  // inter-lab blackouts and never re-animates).
   ...establishingPullback(
     'selection',
     STD_ARCH_Z,
-    'WebXR Interaction Playground',
+    TITLE_CAPTION,
     'default',
     BOOKEND_FADE_MS,
   ),
 
   // Placement — same arch position, same offsets → same camera path.
-  ...establishingPullback('placement', STD_ARCH_Z),
+  ...establishingPullback('placement', STD_ARCH_Z, TITLE_CAPTION),
 
   // Locomotion — anchored to the locomotion goal arch (z = -12.2) instead
   // of the standard proscenium. Same arch-relative deep + end offsets as
@@ -313,7 +328,7 @@ export const conceptB: Keyframe[] = [
   // space — just translated 9.7 m deeper into world Z to centre on the
   // locomotion arch. The arch lands at the same screen position with the
   // same framing as selection / placement.
-  ...establishingPullback('locomotion', LOCOMOTION_ARCH_Z),
+  ...establishingPullback('locomotion', LOCOMOTION_ARCH_Z, TITLE_CAPTION),
 
   // ───────── Manipulation: straight pull-back, then curve into the hero ─────────
 
@@ -362,7 +377,11 @@ export const conceptB: Keyframe[] = [
   },
 
   // Theme swaps to cloud-park at the curve's *midpoint* — the bright palette
-  // takes over while the camera is still arcing toward the hero pose.
+  // takes over while the camera is still arcing toward the hero pose. The
+  // GitHub URL caption appears here too: this keyframe is the start of the
+  // 4-lab cycle, and the URL stays on through every cycle slice + the
+  // closing hold (set on each subsequent keyframe so the caption never
+  // re-mounts and re-animates as labs / camera segments cut).
   {
     shot: 'manipulation-themed',
     lab: 'manipulation',
@@ -371,6 +390,7 @@ export const conceptB: Keyframe[] = [
     tweenMs: LAB_SLICE_MS,
     holdMs: 0,
     ease: 'linear',
+    caption: URL_CAPTION,
   },
 
   // Locomotion lab snap. Locomotion's arch sits at z = -12.2 vs z = -2.5 for
@@ -392,6 +412,7 @@ export const conceptB: Keyframe[] = [
     tweenMs: LAB_SLICE_MS,
     holdMs: 0,
     ease: 'linear',
+    caption: URL_CAPTION,
   },
 
   // Placement lab snap. `fromPos*` returns to standard arch space at the
@@ -409,6 +430,7 @@ export const conceptB: Keyframe[] = [
     tweenMs: LAB_SLICE_MS,
     holdMs: 0,
     ease: 'linear',
+    caption: URL_CAPTION,
   },
 
   // Selection lab snap. Camera lands at hero pose; the reel began on
@@ -420,12 +442,14 @@ export const conceptB: Keyframe[] = [
     tweenMs: LAB_SLICE_MS,
     holdMs: 0,
     ease: 'linear',
+    caption: URL_CAPTION,
   },
 
-  // Held hero pose — caption fades in via the overlay's CSS animation, then
-  // the screen fades to black over the last `BOOKEND_FADE_MS` of the hold so
-  // the reel ends on a clean blackout (the caption auto-suppresses once
-  // fadeOpacity > 0.4, so it disappears with the scene).
+  // Held hero pose. Caption was already mounted at the start of the lab
+  // cycle, so this keyframe just keeps it on screen during the closing
+  // hold. The screen fades to black over the last `BOOKEND_FADE_MS` of the
+  // hold; the caption auto-suppresses once fadeOpacity > 0.4 so it
+  // disappears with the scene.
   {
     shot: 'finale-hold',
     lab: 'selection',
@@ -433,6 +457,6 @@ export const conceptB: Keyframe[] = [
     tweenMs: 0,
     holdMs: FINALE_HOLD_MS,
     fadeOutMs: BOOKEND_FADE_MS,
-    caption: 'github.com/kewanglab/webxr-playground',
+    caption: URL_CAPTION,
   },
 ]

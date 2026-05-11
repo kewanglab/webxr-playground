@@ -7,7 +7,13 @@ import { create } from 'zustand'
  */
 export type DirectorRuntimeState = {
   caption: string | null
-  setCaption: (caption: string | null) => void
+  /**
+   * When true, the caption renders even while the fade overlay is mostly
+   * opaque — used for captions meant to sit on top of inter-scene
+   * blackouts (e.g. a title that persists across establishing shots).
+   */
+  captionPersistent: boolean
+  setCaption: (caption: string | null, persistent?: boolean) => void
   /** 0 = clear, 1 = fully black; drives the full-screen fade overlay. */
   fadeOpacity: number
   setFadeOpacity: (opacity: number) => void
@@ -15,7 +21,9 @@ export type DirectorRuntimeState = {
 
 export const useDirectorStore = create<DirectorRuntimeState>((set) => ({
   caption: null,
-  setCaption: (caption) => set({ caption }),
+  captionPersistent: false,
+  setCaption: (caption, persistent = false) =>
+    set({ caption, captionPersistent: persistent }),
   fadeOpacity: 0,
   setFadeOpacity: (fadeOpacity) => set({ fadeOpacity }),
 }))

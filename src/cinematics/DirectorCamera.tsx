@@ -68,6 +68,7 @@ function resolveKeyframe(
     holdMs: kf.holdMs,
     ease: kf.ease ?? 'easeInOutCubic',
     caption: kf.caption ?? null,
+    captionPersistent: kf.captionPersistent ?? false,
     fadeInMs: kf.fadeInMs ?? 0,
     fadeOutMs: kf.fadeOutMs ?? 0,
     themePresetId: kf.themePresetId ?? null,
@@ -181,7 +182,7 @@ export function DirectorCamera({ presetId }: { presetId: string }) {
       lastThemeRef.current = resolvedTheme
     }
     applyCameraState(camera as PerspectiveCamera, first)
-    setCaption(first.caption)
+    setCaption(first.caption, first.captionPersistent)
     lastCaptionRef.current = first.caption
     // Initial fade state:
     //  - Cold start (seek=0 or no seek) on a *fade-managed* timeline (any
@@ -306,7 +307,7 @@ export function DirectorCamera({ presetId }: { presetId: string }) {
 type EnterKeyframeDeps = {
   setLab: (lab: ResolvedKeyframe['lab']) => void
   setThemePresetId: (id: string) => void
-  setCaption: (c: string | null) => void
+  setCaption: (c: string | null, persistent?: boolean) => void
   lastLabRef: React.MutableRefObject<string | null>
   lastThemeRef: React.MutableRefObject<string | null>
   lastCaptionRef: React.MutableRefObject<string | null | undefined>
@@ -322,7 +323,7 @@ function enterKeyframe(kf: ResolvedKeyframe, deps: EnterKeyframeDeps) {
     deps.lastThemeRef.current = kf.themePresetId
   }
   if (kf.caption !== deps.lastCaptionRef.current) {
-    deps.setCaption(kf.caption)
+    deps.setCaption(kf.caption, kf.captionPersistent)
     deps.lastCaptionRef.current = kf.caption
   }
 }
