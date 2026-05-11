@@ -197,22 +197,19 @@ export function DirectorCamera({ presetId }: { presetId: string }) {
     //    (after fadeIn, before fadeOut) so the shot is reviewable without
     //    needing to wait for the fadeIn to play.
     const isColdStart = startIndex === 0
+    const isPausedReview = readDirectorPaused()
     const timelineHasFade = timeline.some(
       (kf) => kf.fadeInMs > 0 || kf.fadeOutMs > 0,
     )
     // Cold start on a fade-managed timeline → black; cold start on a
-    // hard-cut timeline → clear; seek (review) → always clear so the shot
-    // is visible regardless of where in the segment you've landed.
-    const initialOpacity = isColdStart && timelineHasFade ? 1 : 0
+    // hard-cut timeline → clear. Paused seek (any index, including 0) is
+    // review mode → always clear so the shot is visible regardless of
+    // where in the segment you've landed, and even if the first keyframe
+    // would normally start fully black.
+    const initialOpacity =
+      !isPausedReview && isColdStart && timelineHasFade ? 1 : 0
     fadeRef.current = initialOpacity
     setFadeOpacity(initialOpacity)
-    // Force-clear fade for paused seeks so we can review the destination
-    // pose unblocked by the segment's fadeOut window. The next play tick
-    // (when unpause / next seek) will recompute from scratch.
-    if (!isColdStart && readDirectorPaused()) {
-      fadeRef.current = 0
-      setFadeOpacity(0)
-    }
     // When seeking past keyframe 0, land at end-of-tween so the camera sits
     // at the keyframe's destination pose, and force fade clear so segments
     // whose fadeOut window overlaps the tween (i.e. `holdMs: 0`) still show
@@ -247,8 +244,13 @@ export function DirectorCamera({ presetId }: { presetId: string }) {
       current.fadeOutMs,
       fadeRef.current,
     )
-    fadeRef.current = opacity
-    setFadeOpacity(opacity)
+    // Only push to the store when the computed opacity actually changes —
+    // skips a no-op zustand set + DirectorOverlay re-render on the
+    // ~60 frames per second the fade overlay sits at a steady 0 or 1.
+    if (opacity !== fadeRef.current) {
+      fadeRef.current = opacity
+      setFadeOpacity(opacity)
+    }
 
     // First keyframe is a snap, only its hold counts.
     if (isFirst) {
@@ -354,6 +356,11 @@ function applyCameraState(camera: PerspectiveCamera, kf: ResolvedKeyframe) {
   camera.position.set(kf.posX, kf.posY, kf.posZ)
   camera.up.set(0, 1, 0)
   camera.fov = kf.fov
+  // The shared scene's skydome sits at radius 130 m — well beyond the App's
+  // default `far: 80`. Without bumping `far`, the back of the dome falls
+  // behind the far clipping plane and renders incorrectly (or not at all),
+  // which is most visible at deep keyframe positions like manipulation-deep
+  // at z = -3 looking forward. 300 m is a comfortable margin.
   camera.far = 300
   const yaw = (kf.yawDeg * Math.PI) / 180
   const pitch = (kf.pitchDeg * Math.PI) / 180
