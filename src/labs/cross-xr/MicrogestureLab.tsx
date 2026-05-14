@@ -1,8 +1,9 @@
-import { Text } from '@react-three/drei'
+import { Line, Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
+import { useGetXRSpaceMatrix, useXRInputSourceState } from '@react-three/xr'
 import { useControls } from 'leva'
-import { useCallback, useRef, useState } from 'react'
-import { Group, Vector3 } from 'three'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Group, Matrix4, Quaternion, Vector3 } from 'three'
 
 import { useHudReport } from '../../app/useHudReport'
 import { usePlaygroundStore } from '../../app/store'
@@ -16,61 +17,144 @@ import {
   type MicrogestureState,
 } from './microgesture/useMicrogesture'
 
-const ORB_POSITIONS: Array<[number, number, number]> = [
-  [-0.7, 1.45, -2.2],
-  [0, 1.6, -2.6],
-  [0.7, 1.45, -2.2],
-]
-
 const FORWARD = new Vector3(0, 0, -1)
 const UP = new Vector3(0, 1, 0)
-const ORB_FORWARD_SCRATCH = new Vector3()
 
-function Orb({
-  position,
-  hovered,
-  confirmed,
-  onPointerEnter,
-  onPointerLeave,
-}: {
-  position: [number, number, number]
-  hovered: boolean
-  confirmed: boolean
-  onPointerEnter: () => void
-  onPointerLeave: () => void
-}) {
-  const ref = useRef<Group>(null!)
-  useFrame((_, dt) => {
-    const target = confirmed ? 1.4 : hovered ? 1.15 : 1
-    const cur = ref.current.scale.x
-    const k = Math.min(1, dt * 8)
-    ref.current.scale.setScalar(cur + (target - cur) * k)
+type ArcState =
+  | { kind: 'idle' }
+  | { kind: 'aiming'; armedAtMs: number }
+
+/**
+ * Sample a quadratic Bézier from `from` to `to` with the control point raised
+ * `peakY` above the higher endpoint. Mirrors LocomotionLab's `quadArcPoints`,
+ * inlined here so the microgesture lab stays self-contained.
+ */
+function arcPoints(
+  from: Vector3,
+  to: Vector3,
+  peakY: number,
+  samples = 24,
+): [number, number, number][] {
+  const pts: [number, number, number][] = []
+  const mx = (from.x + to.x) * 0.5
+  const my = Math.max(from.y, to.y) + peakY
+  const mz = (from.z + to.z) * 0.5
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples
+    const u = 1 - t
+    const x = u * u * from.x + 2 * u * t * mx + t * t * to.x
+    const y = u * u * from.y + 2 * u * t * my + t * t * to.y
+    const z = u * u * from.z + 2 * u * t * mz + t * t * to.z
+    pts.push([x, y, z])
+  }
+  return pts
+}
+
+/**
+ * Project a ray (origin + forward direction) onto the floor plane y = 0 and
+ * return the landing point, clamped to `maxRangeM` from the origin. Returns
+ * null if the ray points away from the floor (dy >= 0).
+ */
+function projectToFloor(origin: Vector3, forward: Vector3, maxRangeM: number): Vector3 | null {
+  if (forward.y >= -0.05) return null
+  const t = -origin.y / forward.y
+  if (t <= 0) return null
+  const landing = origin.clone().addScaledVector(forward, t)
+  const dx = landing.x - origin.x
+  const dz = landing.z - origin.z
+  const horizontal = Math.hypot(dx, dz)
+  if (horizontal > maxRangeM) {
+    const scale = maxRangeM / horizontal
+    landing.x = origin.x + dx * scale
+    landing.z = origin.z + dz * scale
+  }
+  return landing
+}
+
+/**
+ * Reads the hand's forward direction either from the wrist quaternion
+ * (`hand-forward` axis = wrist · (0,0,-1)) or from the index finger's axial
+ * vector (proximal → tip), depending on the leva toggle. Returns null when
+ * tracking is lost.
+ */
+function useHandAim(
+  handedness: XRHandedness,
+  axis: 'hand-forward' | 'index-axial',
+): { origin: Vector3; forward: Vector3; ok: boolean } {
+  const hand = useXRInputSourceState('hand', handedness)?.inputSource.hand
+  const wristSpace = useMemo(() => hand?.get('wrist'), [hand])
+  const indexProxSpace = useMemo(() => hand?.get('index-finger-phalanx-proximal'), [hand])
+  const indexTipSpace = useMemo(() => hand?.get('index-finger-tip'), [hand])
+  const getWrist = useGetXRSpaceMatrix(wristSpace)
+  const getProx = useGetXRSpaceMatrix(indexProxSpace)
+  const getTip = useGetXRSpaceMatrix(indexTipSpace)
+
+  const tmp = useMemo(
+    () => ({
+      wrist: new Matrix4(),
+      prox: new Matrix4(),
+      tip: new Matrix4(),
+      wristQ: new Quaternion(),
+      scratchQ: new Quaternion(),
+      scratchScale: new Vector3(),
+      proxPos: new Vector3(),
+      tipPos: new Vector3(),
+    }),
+    [],
+  )
+
+  const result = useRef({ origin: new Vector3(), forward: new Vector3(0, 0, -1), ok: false })
+
+  useFrame((_, __, frame) => {
+    const ok =
+      (getWrist?.(tmp.wrist, frame) ?? false) &&
+      (getProx?.(tmp.prox, frame) ?? false) &&
+      (getTip?.(tmp.tip, frame) ?? false)
+    result.current.ok = ok
+    if (!ok) return
+    tmp.wrist.decompose(result.current.origin, tmp.wristQ, tmp.scratchScale)
+    if (axis === 'hand-forward') {
+      result.current.forward.copy(FORWARD).applyQuaternion(tmp.wristQ).normalize()
+    } else {
+      tmp.prox.decompose(tmp.proxPos, tmp.scratchQ, tmp.scratchScale)
+      tmp.tip.decompose(tmp.tipPos, tmp.scratchQ, tmp.scratchScale)
+      result.current.forward.copy(tmp.tipPos).sub(tmp.proxPos)
+      if (result.current.forward.lengthSq() < 1e-8) {
+        result.current.forward.copy(FORWARD).applyQuaternion(tmp.wristQ)
+      }
+      result.current.forward.normalize()
+    }
   })
-  const color = confirmed ? '#ffd166' : hovered ? '#06d6a0' : '#118ab2'
-  const emissive = confirmed ? 0.8 : hovered ? 0.45 : 0.15
+
+  return result.current
+}
+
+function TeleportArc({
+  from,
+  to,
+  peakY,
+  color,
+}: {
+  from: Vector3
+  to: Vector3
+  peakY: number
+  color: string
+}) {
+  const points = useMemo(() => arcPoints(from, to, peakY, 28), [from, to, peakY])
   return (
-    <group ref={ref} position={position}>
-      <mesh
-        pointerEventsType={{ allow: 'ray' }}
-        onPointerEnter={(e) => {
-          e.stopPropagation()
-          onPointerEnter()
-        }}
-        onPointerLeave={(e) => {
-          e.stopPropagation()
-          onPointerLeave()
-        }}
-      >
-        <sphereGeometry args={[0.12, 28, 28]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={emissive}
-          metalness={0.2}
-          roughness={0.4}
-        />
-      </mesh>
-    </group>
+    <>
+      <Line points={points} color={color} lineWidth={3.2} transparent opacity={0.95} />
+      <group position={[to.x, 0.02, to.z]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.18, 0.22, 40]} />
+          <meshBasicMaterial color={color} transparent opacity={0.9} depthWrite={false} />
+        </mesh>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]}>
+          <circleGeometry args={[0.18, 40]} />
+          <meshBasicMaterial color={color} transparent opacity={0.18} depthWrite={false} />
+        </mesh>
+      </group>
+    </>
   )
 }
 
@@ -95,9 +179,7 @@ function DebugLabel({ state }: { state: MicrogestureState }) {
       }`
     }
     if (eventRef.current) {
-      const ageMs = state.lastEventAt
-        ? performance.now() - state.lastEventAt
-        : Infinity
+      const ageMs = state.lastEventAt ? performance.now() - state.lastEventAt : Infinity
       eventRef.current.text =
         state.lastEvent && ageMs < 1500 ? state.lastEvent.toUpperCase() : ''
     }
@@ -134,6 +216,11 @@ function DebugLabel({ state }: { state: MicrogestureState }) {
 export function MicrogestureLab() {
   const controls = useControls('Microgesture', {
     handedness: { options: { Right: 'right', Left: 'left' }, value: 'right' },
+    aimAxis: {
+      options: { 'Hand forward': 'hand-forward', 'Index axial': 'index-axial' },
+      value: 'hand-forward',
+      label: 'Aim axis',
+    },
     contactThresholdM: { value: 0.022, min: 0.005, max: 0.08, step: 0.001 },
     releaseHysteresisM: { value: 0.008, min: 0, max: 0.05, step: 0.001 },
     tapMaxDurationMs: { value: 350, min: 80, max: 1000, step: 10 },
@@ -141,7 +228,16 @@ export function MicrogestureLab() {
     swipeMaxDurationMs: { value: 500, min: 100, max: 1500, step: 10 },
     lateralInvert: { value: false, label: 'Invert L/R' },
     snapTurnDeg: { value: 30, min: 5, max: 90, step: 1 },
-    stepDistanceM: { value: 0.5, min: 0.1, max: 2, step: 0.05 },
+    stepDistanceM: { value: 0.3, min: 0.05, max: 1.5, step: 0.05 },
+    armTimeoutMs: {
+      value: 4000,
+      min: 500,
+      max: 10000,
+      step: 100,
+      label: 'Arc arm timeout',
+    },
+    arcMaxRangeM: { value: 8, min: 1, max: 20, step: 0.5, label: 'Arc max range' },
+    arcPeakHeightM: { value: 0.9, min: 0.2, max: 2.5, step: 0.1, label: 'Arc peak height' },
     enableHaptics: true,
     enableTone: true,
     showDebugOverlay: { value: true, label: 'Debug overlay' },
@@ -152,30 +248,79 @@ export function MicrogestureLab() {
   const setOriginPosition = usePlaygroundStore((s) => s.setOriginPosition)
   const setOriginRotationY = usePlaygroundStore((s) => s.setOriginRotationY)
 
-  const [hoveredOrb, setHoveredOrb] = useState<number | null>(null)
-  const hoveredOrbRef = useRef<number | null>(null)
-  hoveredOrbRef.current = hoveredOrb
+  const aim = useHandAim(
+    controls.handedness as XRHandedness,
+    controls.aimAxis as 'hand-forward' | 'index-axial',
+  )
 
-  const [confirmedOrb, setConfirmedOrb] = useState<number | null>(null)
-  const confirmTimerRef = useRef<number | null>(null)
+  const [arcState, setArcState] = useState<ArcState>({ kind: 'idle' })
+  const arcStateRef = useRef<ArcState>(arcState)
+  arcStateRef.current = arcState
+
+  const [landing, setLanding] = useState<Vector3 | null>(null)
+  const landingRef = useRef<Vector3 | null>(null)
+  landingRef.current = landing
+
+  // Auto-cancel the arc if the user doesn't commit within armTimeoutMs.
+  useEffect(() => {
+    if (arcState.kind !== 'aiming') return
+    const timer = window.setTimeout(() => {
+      setArcState({ kind: 'idle' })
+      setLanding(null)
+    }, controls.armTimeoutMs)
+    return () => clearTimeout(timer)
+  }, [arcState, controls.armTimeoutMs])
+
+  // Update the landing point every frame while aiming so the arc follows the hand.
+  useFrame(() => {
+    if (arcStateRef.current.kind !== 'aiming') return
+    if (!aim.ok) return
+    const next = projectToFloor(aim.origin, aim.forward, controls.arcMaxRangeM)
+    if (!next) return
+    const prev = landingRef.current
+    if (
+      !prev ||
+      Math.abs(prev.x - next.x) > 0.01 ||
+      Math.abs(prev.z - next.z) > 0.01
+    ) {
+      setLanding(next)
+    }
+  })
 
   const handleTap = useCallback(() => {
     if (controls.enableTone) playTone(660, 90)
     if (controls.enableHaptics) {
       triggerHaptic(controls.handedness as 'left' | 'right', 0.6, 80)
     }
-    const idx = hoveredOrbRef.current
-    if (idx != null) {
-      setConfirmedOrb(idx)
-      if (confirmTimerRef.current != null) clearTimeout(confirmTimerRef.current)
-      confirmTimerRef.current = window.setTimeout(() => setConfirmedOrb(null), 600)
+    const cur = arcStateRef.current
+    if (cur.kind === 'idle') {
+      const next = aim.ok
+        ? projectToFloor(aim.origin, aim.forward, controls.arcMaxRangeM)
+        : null
+      setLanding(next)
+      setArcState({ kind: 'aiming', armedAtMs: performance.now() })
+    } else {
+      const target = landingRef.current
+      if (target) {
+        const store = usePlaygroundStore.getState()
+        const next = store.originPosition.clone()
+        next.x += target.x - store.originPosition.x
+        next.z += target.z - store.originPosition.z
+        setOriginPosition(next)
+        if (controls.enableTone) playTone(880, 110)
+      }
+      setArcState({ kind: 'idle' })
+      setLanding(null)
     }
   }, [
+    aim,
+    controls.arcMaxRangeM,
     controls.enableHaptics,
     controls.enableTone,
     controls.handedness,
     playTone,
     triggerHaptic,
+    setOriginPosition,
   ])
 
   const handleSwipe = useCallback(
@@ -189,12 +334,17 @@ export function MicrogestureLab() {
         const deltaRad = ((dir === 'right' ? -1 : 1) * controls.snapTurnDeg * Math.PI) / 180
         setOriginRotationY(store.originRotationY + deltaRad)
       } else {
-        const forward = ORB_FORWARD_SCRATCH.copy(FORWARD).applyAxisAngle(UP, store.originRotationY)
+        const forward = FORWARD.clone().applyAxisAngle(UP, store.originRotationY)
         const sign = dir === 'forward' ? 1 : -1
         const next = store.originPosition
           .clone()
           .addScaledVector(forward, sign * controls.stepDistanceM)
         setOriginPosition(next)
+      }
+      // Any swipe also cancels an armed arc — matches Meta's "swipe wins" precedence.
+      if (arcStateRef.current.kind !== 'idle') {
+        setArcState({ kind: 'idle' })
+        setLanding(null)
       }
     },
     [
@@ -236,6 +386,7 @@ export function MicrogestureLab() {
 
   const ageMs = state.lastEventAt ? performance.now() - state.lastEventAt : Infinity
   const lastLabel = state.lastEvent && ageMs < 1500 ? state.lastEvent : '—'
+  const armedLabel = arcState.kind === 'aiming' ? 'ARMED' : '—'
 
   useHudReport(
     {
@@ -245,38 +396,36 @@ export function MicrogestureLab() {
         { label: 'DIST', value: `${(state.contactDistanceM * 1000).toFixed(0)} mm` },
         { label: 'CONTACT', value: state.inContact ? 'ON' : '—' },
         { label: 'LAST', value: lastLabel.toUpperCase() },
-        { label: 'TRACK', value: state.isTracking ? 'OK' : '—' },
+        { label: 'ARC', value: armedLabel },
       ],
     },
     [
       state.contactDistanceM,
       state.inContact,
-      state.isTracking,
       lastLabel,
+      armedLabel,
       controls.handedness,
     ],
   )
+
+  const arcColor = arcState.kind === 'aiming' ? '#ffd166' : '#06d6a0'
 
   return (
     <group>
       <LabHeading
         title={getLabTitle('microgesture')}
-        subtitle={`${controls.handedness} hand · tap = select · swipe L/R = turn · swipe F/B = step`}
-        archPosition={[0, 0, -3.2]}
+        subtitle={`${controls.handedness} hand · tap→arm→tap=teleport · L/R swipe=turn · F/B swipe=step`}
+        archPosition={[0, 0, -4.0]}
       />
 
-      {ORB_POSITIONS.map((p, i) => (
-        <Orb
-          key={i}
-          position={p}
-          hovered={hoveredOrb === i}
-          confirmed={confirmedOrb === i}
-          onPointerEnter={() => setHoveredOrb(i)}
-          onPointerLeave={() =>
-            setHoveredOrb((curr) => (curr === i ? null : curr))
-          }
+      {arcState.kind === 'aiming' && landing && (
+        <TeleportArc
+          from={aim.origin}
+          to={landing}
+          peakY={controls.arcPeakHeightM}
+          color={arcColor}
         />
-      ))}
+      )}
 
       {controls.showDebugOverlay && <DebugLabel state={state} />}
     </group>
