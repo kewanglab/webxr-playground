@@ -3,6 +3,7 @@ import { SelectionLab } from '../labs/cross-xr/SelectionLab'
 import { PlacementLab } from '../labs/ar/PlacementLab'
 import { LocomotionLab } from '../labs/vr/LocomotionLab'
 import { ObjectManipulationLab } from '../labs/cross-xr/ObjectManipulationLab'
+import { MicrogestureLab } from '../labs/cross-xr/MicrogestureLab'
 
 export function LabContent() {
   const currentLab = usePlaygroundStore((s) => s.currentLab)
@@ -16,5 +17,7 @@ export function LabContent() {
       return <LocomotionLab />
     case 'manipulation':
       return <ObjectManipulationLab />
+    case 'microgesture':
+      return <MicrogestureLab />
   }
 }

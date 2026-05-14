@@ -134,4 +134,29 @@ export const LAB_CAMERA_VIEWS: Record<LabId, Record<CaptureViewId, CameraView>> 
       fov: 48,
     },
   },
+  microgesture: {
+    headset: HEADSET_VIEW,
+    hero: {
+      position: [0, 1.7, 4.4],
+      target: [0, 1.4, -2.2],
+      fov: 38,
+    },
+    side: {
+      position: [2.9, 1.65, 1.6],
+      target: [0, 1.45, -2.0],
+      fov: 42,
+    },
+    overhead: {
+      position: [0, 10, -2.1],
+      target: [0, 0, -2.1],
+      fov: 48,
+      rotation: [-Math.PI / 2, 0, 0],
+      orthographicZoom: 165,
+    },
+    wide: {
+      position: [0, 2.1, 5.8],
+      target: [0, 1.4, -2.2],
+      fov: 46,
+    },
+  },
 }

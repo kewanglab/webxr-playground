@@ -1,5 +1,10 @@
 export type XRMode = 'vr' | 'ar' | 'cross-xr'
-export type LabId = 'selection' | 'placement' | 'locomotion' | 'manipulation'
+export type LabId =
+  | 'selection'
+  | 'placement'
+  | 'locomotion'
+  | 'manipulation'
+  | 'microgesture'
 
 export type LabDefinition = {
   id: LabId
@@ -33,6 +38,13 @@ export const labs: LabDefinition[] = [
     mode: 'cross-xr',
     description:
       'DOF-Separation for 3D object manipulation — compare Virtual Hand and Hand Ray with integrated vs separated translation/rotation',
+  },
+  {
+    id: 'microgesture',
+    name: 'Microgesture Lab',
+    mode: 'cross-xr',
+    description:
+      'Meta-style hand microgestures — thumb tap on the middle of the index finger selects; side-of-index swipes turn and step the player.',
   },
 ]
 

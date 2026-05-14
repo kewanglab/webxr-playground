@@ -28,6 +28,7 @@ export const labHolos: Record<LabId, ComponentType> = {
   manipulation: ManipulationHolo,
   locomotion: LocomotionHolo,
   placement: PlacementHolo,
+  microgesture: MountainHolo,
 }
 
 /** Resolve the holo for a lab id, returning the default if none is registered. */

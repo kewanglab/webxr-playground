@@ -374,6 +374,7 @@ const defaultLabAccents: Record<LabId, LabAccentPair> = {
   placement: { primary: defaultXr.accent.cyan, secondary: defaultXr.accent.orange },
   locomotion: { primary: defaultXr.accent.cyan, secondary: defaultXr.accent.amber },
   manipulation: { primary: defaultXr.accent.orange, secondary: defaultXr.accent.mustard },
+  microgesture: { primary: defaultXr.accent.mustard, secondary: defaultXr.accent.cyan },
 }
 
 const cloudParkShell: ShellTheme = {
@@ -526,6 +527,7 @@ const cloudParkLabAccents: Record<LabId, LabAccentPair> = {
   placement: { primary: cloudParkXr.accent.cyan, secondary: cloudParkXr.accent.orange },
   locomotion: { primary: cloudParkXr.accent.cyan, secondary: cloudParkXr.accent.amber },
   manipulation: { primary: cloudParkXr.accent.orange, secondary: cloudParkXr.accent.mustard },
+  microgesture: { primary: cloudParkXr.accent.mustard, secondary: cloudParkXr.accent.cyan },
 }
 
 export const defaultPlaygroundPresetId = 'default'
