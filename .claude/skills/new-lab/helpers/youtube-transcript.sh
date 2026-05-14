@@ -7,8 +7,13 @@
 #
 # Exit codes:
 #   0  success — transcript on stdout
-#   1  bad usage or no captions found
+#   1  bad usage, network failure, or no captions found
 #   2  yt-dlp not installed (caller should fall back to asking the user)
+#
+# Env vars:
+#   INSECURE_TLS=1  pass --no-check-certificates to yt-dlp. Use this only when
+#                   you've confirmed the failure is a sandbox MITM cert (the
+#                   error mentions SSL/TLS/certificate). Off by default.
 
 set -euo pipefail
 
@@ -27,11 +32,20 @@ fi
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
+# When INSECURE_TLS=1, skip cert verification — needed when running inside a
+# sandbox whose egress proxy MITMs HTTPS with a self-signed CA (e.g. Claude
+# Code on the web). Caller opts in explicitly; the default is verify=on.
+tls_args=()
+if [ "${INSECURE_TLS:-0}" = "1" ]; then
+  tls_args+=(--no-check-certificates)
+fi
+
 # Pull only auto-generated English subs in VTT format. No video, no audio.
 yt-dlp \
   --quiet --no-warnings \
   --skip-download \
   --write-auto-sub --sub-lang en --sub-format vtt \
+  "${tls_args[@]}" \
   -o "$tmpdir/%(id)s.%(ext)s" \
   "$url" >&2
 

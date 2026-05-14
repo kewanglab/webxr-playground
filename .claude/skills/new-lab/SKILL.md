@@ -39,9 +39,11 @@ Collect from the user, asking via `AskUserQuestion` for anything missing:
 For each source provided:
 
 - Web pages / help-center articles / blog posts → `WebFetch`.
-- YouTube URLs → run `helpers/youtube-transcript.sh "<url>"` from the skill folder. The helper uses `yt-dlp` to pull auto-generated English captions and prints clean text to stdout. If it exits with status 2, yt-dlp is missing — fall back to asking the user to paste the transcript or summary.
+- YouTube URLs → run `helpers/youtube-transcript.sh "<url>"` from the skill folder. The helper uses `yt-dlp` to pull auto-generated English captions and prints clean text to stdout. If it exits with status 2, yt-dlp is missing — fall back to asking the user to paste the transcript or summary. If it exits with a non-zero status that mentions a TLS/SSL/certificate problem, re-run with `INSECURE_TLS=1 helpers/youtube-transcript.sh "<url>"`: this is the sandbox-with-MITM-proxy case, and the user has implicitly accepted it by running you in that environment.
 - PDFs → `Read`.
 - If sources are thin, `WebSearch` for the feature name and `WebFetch` up to 3 promising results.
+
+**WebFetch reliability note**: many vendor-owned domains (Meta, Apple, Google), large publishers, and influencer/blog sites return HTTP 403 to WebFetch. When that happens, do **not** stall the skill — fall back to: (a) the `WebSearch` summary itself, which is often enough for a v1 spec, (b) cached/mirror sources (Wayback, alternative coverage), or (c) explicitly ask the user to paste the relevant section. Document which sources were unreachable so the user sees the grounding gap.
 
 Quote the 2–4 source snippets that most concretely describe the activation gesture, sensory feedback, and selection model. These become the citations behind step 3.
 
@@ -57,6 +59,8 @@ Produce a short spec inline in chat (no extra file). Cover, at minimum:
 - **Sensory feedback**: visual cue, haptic, audio.
 - **Tunable parameters**: every threshold, distance, angle, duration, gain, target position — anything a designer would want to adjust without recompiling.
 - **Failure modes**: tracking loss, occluded fingers, false positives, chatter.
+
+**Cross-check against the source** before presenting the spec: quote 2–4 lines from your research that justify each design decision (activation condition, commit event, intended use). If the user's prompt language steers the spec in a direction the source material does not support, surface the conflict in your AskUserQuestion rather than silently going with the prompt. Common trap: the user describes a feature in their own words ("press to start the ray cast"), but the actual product behaves differently ("quick tap opens a teleport arc"). The spec must reflect the *product*, not the *prompt*.
 
 Confirm the spec with the user via `AskUserQuestion` before writing any code. Do not skip this gate.
 
@@ -74,13 +78,19 @@ Confirm the spec with the user via `AskUserQuestion` before writing any code. Do
    - Extend the `LabId` union.
    - Append an entry to `labs` with `id`, `name`, `mode`, `description`.
    - Add a preset block under `tuningPresets` if the lab has natural defaults worth co-locating with the other labs' presets.
-3. **Create** `src/labs/<mode>/<Name>Lab.tsx` following the patterns in `SelectionLab.tsx` and `ObjectManipulationLab.tsx`:
-   - `<LabHeading title={getLabTitle('<id>')} />` at the top of the scene.
+3. **Patch every `Record<LabId, …>` fan-out point.** Run `grep -rn "Record<LabId" src/` and add an entry for your new `LabId` in every match. As of writing the known fan-outs are:
+   - `src/config/playgroundTheme.ts` — two `Record<LabId, LabAccentPair>` maps (one per theme preset). Pick a `{ primary, secondary }` pair from the active theme's accent tokens.
+   - `src/xr/core/labCameraViews.ts` — `Record<LabId, Record<CaptureViewId, CameraView>>`. Provide `headset` (reuse `HEADSET_VIEW`), `hero`, `side`, `overhead`, `wide` framings.
+   - `src/xr/visual/holos/index.ts` — `Record<LabId, ComponentType>`. If you don't author a new glyph, set the entry to `MountainHolo` (the default fallback).
+   - Any other match the grep surfaces — patch them too. Skipping this step makes `npm run build` fail with `TS2741: Property '<id>' is missing in type` errors.
+4. **Create** `src/labs/<mode>/<Name>Lab.tsx` following the patterns in `SelectionLab.tsx` and `ObjectManipulationLab.tsx`:
+   - `<LabHeading title={getLabTitle('<id>')} subtitle="..." />` at the top of the scene (**both props are required**, not just title).
    - `useControls` from `leva` for tunables (see step 6).
-   - Hand tracking via `useHandJoints` or a new co-located hook in `src/labs/<mode>/<lab-slug>/` that follows its pattern.
-   - Feedback via `useHapticPulse` / `useConfirmTone`.
+   - Hand tracking: the existing `useHandJoints` only exposes wrist, thumb-tip, index-tip, and pinch. If you need other joints (any phalanx, MCP, other fingers), write a new co-located hook in `src/labs/<mode>/<lab-slug>/` that follows the same pattern (`useXRInputSourceState('hand', ...)` + `useGetXRSpaceMatrix` per joint, read per frame in `useFrame`). Don't extend `useHandJoints` for a single lab's needs.
+   - Feedback via `useHapticPulse` / `useConfirmTone`. **Note**: `useHapticPulse` is a *controller* haptic — it is a silent no-op when only hand tracking is active. Don't rely on it as the sole feedback channel for a hand-tracking lab; pair it with audio + visual.
+   - To move or rotate the player, set `originPosition` / `originRotationY` via `usePlaygroundStore` — these are wired to `<XROrigin>` in `src/xr/core/XRRoot.tsx` and that is the canonical way to teleport / snap-turn.
    - Use `IfInSessionMode` to gate VR-only vs AR-only branches inside a `cross-xr` lab.
-4. **Wire** into `src/app/LabContent.tsx` — add `import` and a `case '<id>'` arm to the switch.
+5. **Wire** into `src/app/LabContent.tsx` — add `import` and a `case '<id>'` arm to the switch.
 
 ### 6. Expose tunables for in-headset tuning (REQUIRED)
 
@@ -94,17 +104,19 @@ For each control:
 - Group under a leva folder named after the lab (use `useControls('<Lab Name>', { ... })`) so different labs' controls do not collide.
 - Mirror static-feeling values (e.g., target world positions) into leva too, unless they are scene-structural.
 
-**In-headset reach**: leva is a desktop overlay. Make those controls usable while the headset is on:
+**In-headset reach**: leva is a desktop overlay. Make those controls usable while the headset is on. Pick the right path based on where the dev server is running:
 
-- Check `src/xr/hud/` and `src/ui/` for an existing in-VR control / HUD pattern. If one exists, surface the same controls there (typically by mirroring the leva state into an in-VR panel via the same hook used by other labs). Reuse, don't re-invent.
-- If no in-VR control panel is available, fall back to the connected dev-machine workflow: the user runs `npm run quest` (`adb reverse tcp:5173 tcp:5173`) and tweaks leva on the connected Mac. Call this out in the wrap-up so the user knows how to tune.
-- Use `useHudReport` to expose live values (distances, angles, active flag) inside the in-VR HUD so the user can confirm a threshold change took effect without taking the headset off.
+- **Cloud / remote sandbox** (Claude Code on the web; `CLAUDE_CODE_REMOTE=true`): the dev server is in the sandbox, **not** on the user's Mac. The user reaches the playground through whatever preview URL the harness exposes — typically a tunnel or forwarded port. `adb reverse` is meaningless here. In the wrap-up, tell the user: "the dev server is running in the sandbox; open the cloud preview URL on the headset's browser, and tweak leva from the same URL on your laptop."
+- **Local Mac with Quest over USB**: the user runs `npm run quest` (`adb reverse tcp:5173 tcp:5173`) and tweaks leva on the connected Mac while wearing the headset. Standard repo workflow.
+- **In-VR control panel (preferred when authored)**: check `src/xr/hud/` and `src/ui/` for an existing in-VR control / HUD pattern. If one exists, surface the same controls there. Reuse, don't re-invent.
+
+Use `useHudReport` to expose live values (distances, angles, gesture state) inside the in-VR HUD so the user can confirm a threshold change took effect without taking the headset off.
 
 Audit your scaffold for magic numbers after step 5 and lift any you find into leva.
 
 ### 7. Validate
 
-- `npm run build` — must pass (this is the TS check + bundle in this repo). Fix any TS errors before continuing.
+- `npm run build` — must pass (this is the TS check + bundle in this repo). Fix any TS errors before continuing. **Expect `Record<LabId, …>` errors on the first attempt if step 5 was skipped** — go back and patch every fan-out the grep surfaced.
 - `npm run dev` — start the dev server on `:5173`. Confirm the new lab appears in the lab switcher and opens without runtime errors. Use the desktop emulator (default on `localhost`) to enter the session.
 - If hand tracking is involved, exercise both `handedness` values.
 - Sanity-check every leva control: toggle each one and confirm the lab's behavior responds live. Watch for chatter on numeric thresholds.
@@ -128,7 +140,10 @@ In your last message to the user, report:
   - ✅/‼️ `npm run dev` smoke test (lab opens, no console errors)
   - ✅/‼️ Each leva control verified live
   - ✅/‼️ (optional) `npm run capture:screenshots`
-- **In-headset tuning path**: state explicitly how the user adjusts the controls while wearing the headset (in-VR panel if present, otherwise `npm run quest` + leva on the Mac).
+- **In-headset tuning path**: state explicitly how the user adjusts the controls while wearing the headset. Pick the right one based on environment:
+  - If running in a cloud/remote sandbox: the user opens the harness's preview URL on the headset's browser, and tweaks leva from the same URL on their laptop. Do not tell them to run `npm run quest` in this case — they have no `adb` access to the cloud sandbox.
+  - If running locally: the user runs `npm run quest` (`adb reverse tcp:5173 tcp:5173`) and reaches the playground at `http://localhost:5173` from inside the Quest browser.
+  - Either way, the leva panel is on the desktop side; the in-VR HUD (via `useHudReport`) is what the user reads inside the headset.
 - **Next step**: tell the user the lab is ready for in-headset evaluation and how to enter it.
 
 ## Anti-patterns
