@@ -11,7 +11,11 @@ export function DebugPanel() {
       style={{
         flex: '0 1 auto',
         minHeight: 0,
-        overflow: 'visible',
+        // Leva disables its own scroll container when `fill` is set (see
+        // StyledWrapper compoundVariants in leva's source), so we scroll
+        // here instead and let flex shrink bound our height to the rail.
+        overflowY: 'auto',
+        overflowX: 'hidden',
         width: '100%',
         pointerEvents: 'auto',
       }}
