@@ -26,6 +26,27 @@ type ArcState =
   | { kind: 'idle' }
   | { kind: 'aiming'; armedAtMs: number }
 
+/**
+ * @react-three/xr v6's `useGetXRSpaceMatrix` returns joint poses relative to
+ * `xr.originReferenceSpace` — the fixed WebXR reference frame, **not** the
+ * world the user sees. The `<XROrigin>` component applies the player's
+ * position/rotation to its child camera, but lab content lives outside
+ * `<XROrigin>` in raw world coords. So when the player snap-turns or
+ * teleports, joint poses don't shift on their own and anything we render in
+ * world coords using them falls out of sync with the visible hand.
+ *
+ * This helper applies the playground store's origin transform to a local
+ * (origin-reference-space) position so it lands at the same world point the
+ * user sees the hand at.
+ */
+function applyOriginToLocalPos(out: Vector3, local: Vector3): Vector3 {
+  const { originPosition, originRotationY } = usePlaygroundStore.getState()
+  return out
+    .copy(local)
+    .applyAxisAngle(WORLD_UP, originRotationY)
+    .add(originPosition)
+}
+
 function arcPoints(
   from: Vector3,
   to: Vector3,
@@ -64,65 +85,56 @@ function projectToFloor(origin: Vector3, forward: Vector3, maxRangeM: number): V
 }
 
 /**
- * Reads the hand's forward direction either from the wrist quaternion or the
- * index proximal→tip vector. Returns null when tracking is lost.
+ * Returns the wrist's world position (origin transform applied) and the
+ * user's gaze direction in world coords. Used as `origin + direction` for the
+ * teleport arc: the arc visually springs from the gesturing hand, but flies
+ * wherever the user is looking. Hand-forward aim was unreliable for the
+ * microgesture pose (thumb-up, hand near-vertical) because the wrist's local
+ * -Z rarely points down enough at the floor.
  */
-function useHandAim(
-  handedness: XRHandedness,
-  axis: 'hand-forward' | 'index-axial',
-): { origin: Vector3; forward: Vector3; ok: boolean } {
+function useGazeAim(handedness: XRHandedness): {
+  origin: Vector3
+  forward: Vector3
+  ok: boolean
+} {
   const hand = useXRInputSourceState('hand', handedness)?.inputSource.hand
   const wristSpace = useMemo(() => hand?.get('wrist'), [hand])
-  const indexProxSpace = useMemo(() => hand?.get('index-finger-phalanx-proximal'), [hand])
-  const indexTipSpace = useMemo(() => hand?.get('index-finger-tip'), [hand])
   const getWrist = useGetXRSpaceMatrix(wristSpace)
-  const getProx = useGetXRSpaceMatrix(indexProxSpace)
-  const getTip = useGetXRSpaceMatrix(indexTipSpace)
+  const { camera } = useThree()
 
   const tmp = useMemo(
     () => ({
-      wrist: new Matrix4(),
-      prox: new Matrix4(),
-      tip: new Matrix4(),
-      wristQ: new Quaternion(),
+      mat: new Matrix4(),
+      localPos: new Vector3(),
+      worldQuat: new Quaternion(),
       scratchQ: new Quaternion(),
       scratchScale: new Vector3(),
-      proxPos: new Vector3(),
-      tipPos: new Vector3(),
     }),
     [],
   )
 
-  const result = useRef({ origin: new Vector3(), forward: new Vector3(0, 0, -1), ok: false })
+  const result = useRef({
+    origin: new Vector3(),
+    forward: new Vector3(0, 0, -1),
+    ok: false,
+  })
 
-  useFrame((_, __, frame) => {
-    const ok =
-      (getWrist?.(tmp.wrist, frame) ?? false) &&
-      (getProx?.(tmp.prox, frame) ?? false) &&
-      (getTip?.(tmp.tip, frame) ?? false)
+  useFrame((_, __, xrFrame) => {
+    const ok = getWrist?.(tmp.mat, xrFrame) ?? false
     result.current.ok = ok
     if (!ok) return
-    tmp.wrist.decompose(result.current.origin, tmp.wristQ, tmp.scratchScale)
-    if (axis === 'hand-forward') {
-      result.current.forward.copy(WORLD_FORWARD).applyQuaternion(tmp.wristQ).normalize()
-    } else {
-      tmp.prox.decompose(tmp.proxPos, tmp.scratchQ, tmp.scratchScale)
-      tmp.tip.decompose(tmp.tipPos, tmp.scratchQ, tmp.scratchScale)
-      result.current.forward.copy(tmp.tipPos).sub(tmp.proxPos)
-      if (result.current.forward.lengthSq() < 1e-8) {
-        result.current.forward.copy(WORLD_FORWARD).applyQuaternion(tmp.wristQ)
-      }
-      result.current.forward.normalize()
-    }
+    tmp.mat.decompose(tmp.localPos, tmp.scratchQ, tmp.scratchScale)
+    applyOriginToLocalPos(result.current.origin, tmp.localPos)
+    // Gaze direction = camera world forward. matrixWorld is already updated
+    // by r3f before useFrame callbacks, and it inherits the XROrigin
+    // transform via the camera being parented to the origin group.
+    camera.getWorldQuaternion(tmp.worldQuat)
+    result.current.forward.copy(WORLD_FORWARD).applyQuaternion(tmp.worldQuat).normalize()
   })
 
   return result.current
 }
 
-/**
- * Thin white Meta-style teleport arc + small ring reticle on the floor.
- * No filled landing disc; matches the screenshot reference.
- */
 function TeleportArc({
   from,
   to,
@@ -159,30 +171,26 @@ function TeleportArc({
   )
 }
 
-/**
- * Meta-style affordance pad anchored to the intermediate phalanx of the index
- * finger. Four direction arrows + a center contact ring. Position follows the
- * joint each frame; orientation is rebuilt every frame to match the user's
- * head pose so left/right always points to the user's actual left/right.
- *
- * The matching arrow flashes (scale + color) when the corresponding gesture
- * fires, fading over `EVENT_FLASH_MS`.
- */
 const EVENT_FLASH_MS = 600
 
 type ArrowRef = {
   group: Group | null
-  text: { color?: string; fillOpacity?: number; outlineOpacity?: number } | null
+  text: { color?: string } | null
 }
 
 function GestureAffordance({
   handedness,
   state,
-  userFrame,
+  userFrameWorld,
 }: {
   handedness: XRHandedness
   state: MicrogestureState
-  userFrame: MicrogestureUserFrame
+  /**
+   * User's forward (world coords, ground-projected) — used to orient the
+   * affordance group so left/right arrows align with the user's POV no matter
+   * how the hand is rotated.
+   */
+  userFrameWorld: { forward: Vector3 }
 }) {
   const hand = useXRInputSourceState('hand', handedness)?.inputSource.hand
   const jointSpace = useMemo(
@@ -195,15 +203,14 @@ function GestureAffordance({
   const contactRef = useRef<Group>(null)
   const leftArrow = useRef<ArrowRef>({ group: null, text: null })
   const rightArrow = useRef<ArrowRef>({ group: null, text: null })
-  const fwdArrow = useRef<ArrowRef>({ group: null, text: null })
-  const backArrow = useRef<ArrowRef>({ group: null, text: null })
 
   const tmp = useMemo(
     () => ({
       mat: new Matrix4(),
-      pos: new Vector3(),
-      quat: new Quaternion(),
-      scale: new Vector3(),
+      localPos: new Vector3(),
+      worldPos: new Vector3(),
+      scratchQ: new Quaternion(),
+      scratchScale: new Vector3(),
       lookTarget: new Vector3(),
     }),
     [],
@@ -221,27 +228,27 @@ function GestureAffordance({
       return
     }
     rootRef.current.visible = true
-    tmp.mat.decompose(tmp.pos, tmp.quat, tmp.scale)
-    // Hover ~2.5 cm above the joint origin in world-up direction. Looks "on
-    // top of" the finger from most natural poses without intersecting the
-    // mesh, and reads the same regardless of how the user rotates the hand.
-    rootRef.current.position.set(tmp.pos.x, tmp.pos.y + 0.025, tmp.pos.z)
-    // Orient so local -Z points along the user's world forward (projected to
-    // ground) and +X along the user's world right. Then placing the four
-    // arrows in local axes maps cleanly to user-frame swipe directions.
+
+    tmp.mat.decompose(tmp.localPos, tmp.scratchQ, tmp.scratchScale)
+    applyOriginToLocalPos(tmp.worldPos, tmp.localPos)
+    // Sit ~2.5 cm above the joint in world up so the pad reads "on top" of
+    // the finger from natural poses without intersecting the mesh.
+    rootRef.current.position.set(tmp.worldPos.x, tmp.worldPos.y + 0.025, tmp.worldPos.z)
+    // Orient local -Z along world (user) forward → local +X = user's right.
+    // (Three.js Object3D.lookAt aims local -Z at the target; combined with
+    // up=+Y the resulting +X axis points "left of forward". Negating the
+    // offset flips that to "right of forward" which is what we want.)
     rootRef.current.up.copy(WORLD_UP)
     tmp.lookTarget
       .copy(rootRef.current.position)
-      .addScaledVector(userFrame.forward, -1) // lookAt target = pos - forward,
-    // so the object's -Z ends up aligned to +forward.
+      .addScaledVector(userFrameWorld.forward, -1)
     rootRef.current.lookAt(tmp.lookTarget)
 
-    // Animate per-arrow flash on the most recent gesture event.
     const ageMs = state.lastEventAt ? performance.now() - state.lastEventAt : Infinity
     const fade = Math.max(0, 1 - ageMs / EVENT_FLASH_MS)
     const apply = (ref: React.MutableRefObject<ArrowRef>, active: boolean) => {
       const r = ref.current
-      const targetScale = active ? 1 + 0.5 * fade : 1
+      const targetScale = active ? 1 + 0.55 * fade : 1
       if (r.group) {
         const k = Math.min(1, dt * 18)
         const cur = r.group.scale.x
@@ -253,8 +260,6 @@ function GestureAffordance({
     }
     apply(leftArrow, state.lastEvent === 'left')
     apply(rightArrow, state.lastEvent === 'right')
-    apply(fwdArrow, state.lastEvent === 'forward')
-    apply(backArrow, state.lastEvent === 'back')
 
     if (contactRef.current) {
       const k = Math.min(1, dt * 14)
@@ -264,11 +269,6 @@ function GestureAffordance({
     }
   })
 
-  // After the lookAt above, local axes are:
-  //   -Z = user forward, +Z = user back, +X = user right, -X = user left,
-  //   +Y = world up. So we lay arrows out in the XZ plane (level with the
-  //   finger top) and let drei <Billboard> orient each glyph toward the
-  //   user's head so they always read clearly.
   return (
     <group ref={rootRef}>
       <group ref={contactRef} rotation={[-Math.PI / 2, 0, 0]}>
@@ -279,7 +279,7 @@ function GestureAffordance({
       </group>
 
       <group
-        position={[-0.032, 0, 0]}
+        position={[-0.034, 0, 0]}
         ref={(g) => {
           leftArrow.current.group = g
         }}
@@ -289,11 +289,11 @@ function GestureAffordance({
             ref={(t) => {
               leftArrow.current.text = t as unknown as ArrowRef['text']
             }}
-            fontSize={0.026}
+            fontSize={0.028}
             color="#ffffff"
             anchorX="center"
             anchorY="middle"
-            outlineWidth={0.0022}
+            outlineWidth={0.0024}
             outlineColor="#000000"
           >
             ←
@@ -302,7 +302,7 @@ function GestureAffordance({
       </group>
 
       <group
-        position={[0.032, 0, 0]}
+        position={[0.034, 0, 0]}
         ref={(g) => {
           rightArrow.current.group = g
         }}
@@ -312,60 +312,14 @@ function GestureAffordance({
             ref={(t) => {
               rightArrow.current.text = t as unknown as ArrowRef['text']
             }}
-            fontSize={0.026}
+            fontSize={0.028}
             color="#ffffff"
             anchorX="center"
             anchorY="middle"
-            outlineWidth={0.0022}
+            outlineWidth={0.0024}
             outlineColor="#000000"
           >
             →
-          </Text>
-        </Billboard>
-      </group>
-
-      <group
-        position={[0, 0, -0.032]}
-        ref={(g) => {
-          fwdArrow.current.group = g
-        }}
-      >
-        <Billboard>
-          <Text
-            ref={(t) => {
-              fwdArrow.current.text = t as unknown as ArrowRef['text']
-            }}
-            fontSize={0.024}
-            color="#ffffff"
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={0.002}
-            outlineColor="#000000"
-          >
-            ↑
-          </Text>
-        </Billboard>
-      </group>
-
-      <group
-        position={[0, 0, 0.032]}
-        ref={(g) => {
-          backArrow.current.group = g
-        }}
-      >
-        <Billboard>
-          <Text
-            ref={(t) => {
-              backArrow.current.text = t as unknown as ArrowRef['text']
-            }}
-            fontSize={0.024}
-            color="#ffffff"
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={0.002}
-            outlineColor="#000000"
-          >
-            ↓
           </Text>
         </Billboard>
       </group>
@@ -376,11 +330,6 @@ function GestureAffordance({
 export function MicrogestureLab() {
   const controls = useControls('Microgesture', {
     handedness: { options: { Right: 'right', Left: 'left' }, value: 'right' },
-    aimAxis: {
-      options: { 'Hand forward': 'hand-forward', 'Index axial': 'index-axial' },
-      value: 'hand-forward',
-      label: 'Aim axis',
-    },
     contactThresholdM: { value: 0.022, min: 0.005, max: 0.08, step: 0.001 },
     releaseHysteresisM: { value: 0.008, min: 0, max: 0.05, step: 0.001 },
     tapMaxDurationMs: { value: 350, min: 80, max: 1000, step: 10 },
@@ -409,38 +358,43 @@ export function MicrogestureLab() {
 
   const { camera } = useThree()
 
-  // Live user-frame axes (world coords, projected to ground plane). Mutated
-  // each frame from the camera; passed by reference into useMicrogesture so
-  // gesture classification reads the latest values.
-  const userFrame = useMemo<MicrogestureUserFrame>(
+  // Hook's classification works in originReferenceSpace (the same space the
+  // thumb positions are in), so userFrame must be expressed in that space too.
+  // We derive it each frame from camera world forward and un-rotate by the
+  // current origin rotation.
+  const userFrameLocal = useMemo<MicrogestureUserFrame>(
     () => ({ forward: new Vector3(0, 0, -1), right: new Vector3(1, 0, 0) }),
     [],
   )
-  const userFrameRef = useRef<MicrogestureUserFrame>(userFrame)
-  userFrameRef.current = userFrame
+  // World-frame forward kept separately for orienting the affordance pad.
+  const userFrameWorld = useMemo(() => ({ forward: new Vector3(0, 0, -1) }), [])
 
+  const tmpQ = useMemo(() => new Quaternion(), [])
   const tmpForward = useMemo(() => new Vector3(), [])
   const tmpRight = useMemo(() => new Vector3(), [])
 
   useFrame(() => {
-    tmpForward.copy(WORLD_FORWARD).applyQuaternion(camera.quaternion)
+    camera.getWorldQuaternion(tmpQ)
+    tmpForward.copy(WORLD_FORWARD).applyQuaternion(tmpQ)
     tmpForward.y = 0
     if (tmpForward.lengthSq() > 1e-6) {
       tmpForward.normalize()
-      userFrame.forward.copy(tmpForward)
+      userFrameWorld.forward.copy(tmpForward)
     }
-    tmpRight.copy(WORLD_RIGHT).applyQuaternion(camera.quaternion)
+    tmpRight.copy(WORLD_RIGHT).applyQuaternion(tmpQ)
     tmpRight.y = 0
     if (tmpRight.lengthSq() > 1e-6) {
       tmpRight.normalize()
-      userFrame.right.copy(tmpRight)
+    } else {
+      tmpRight.set(1, 0, 0)
     }
+    const originRotY = usePlaygroundStore.getState().originRotationY
+    // World → local (origin-reference-space) via inverse origin rotation.
+    userFrameLocal.forward.copy(tmpForward).applyAxisAngle(WORLD_UP, -originRotY)
+    userFrameLocal.right.copy(tmpRight).applyAxisAngle(WORLD_UP, -originRotY)
   })
 
-  const aim = useHandAim(
-    controls.handedness as XRHandedness,
-    controls.aimAxis as 'hand-forward' | 'index-axial',
-  )
+  const aim = useGazeAim(controls.handedness as XRHandedness)
 
   const [arcState, setArcState] = useState<ArcState>({ kind: 'idle' })
   const arcStateRef = useRef<ArcState>(arcState)
@@ -521,11 +475,11 @@ export function MicrogestureLab() {
         const deltaRad = ((dir === 'right' ? -1 : 1) * controls.snapTurnDeg * Math.PI) / 180
         setOriginRotationY(store.originRotationY + deltaRad)
       } else {
-        // Step along the *user's* forward (projected to ground), not the hand's.
         const sign = dir === 'forward' ? 1 : -1
+        // Step along the user's WORLD forward (the lab tracks this separately).
         const next = store.originPosition
           .clone()
-          .addScaledVector(userFrameRef.current.forward, sign * controls.stepDistanceM)
+          .addScaledVector(userFrameWorld.forward, sign * controls.stepDistanceM)
         setOriginPosition(next)
       }
       if (arcStateRef.current.kind !== 'idle') {
@@ -543,6 +497,7 @@ export function MicrogestureLab() {
       triggerHaptic,
       setOriginPosition,
       setOriginRotationY,
+      userFrameWorld,
     ],
   )
 
@@ -555,7 +510,7 @@ export function MicrogestureLab() {
       swipeMinDistanceM: controls.swipeMinDistanceM,
       swipeMaxDurationMs: controls.swipeMaxDurationMs,
     },
-    userFrame,
+    userFrameLocal,
     { onTap: handleTap, onSwipe: handleSwipe },
   )
 
@@ -614,10 +569,9 @@ export function MicrogestureLab() {
         <GestureAffordance
           handedness={controls.handedness as XRHandedness}
           state={state}
-          userFrame={userFrame}
+          userFrameWorld={userFrameWorld}
         />
       )}
     </group>
   )
 }
-
