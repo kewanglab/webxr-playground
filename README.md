@@ -59,7 +59,7 @@ Each lab is a focused interaction microscope, themed so the same primitive can b
 
 | | |
 |---|---|
-| <img src="docs/landing/live-tuning.gif" width="500" alt="Live tuning panel adjusted from inside the headset, with the change reflected instantly in the running lab"> | **Tune it live, in-headset.** Surface the leva panel as a browser window from inside the Quest headset, slide a threshold, and feel the change without ever taking the headset off. |
+| <img src="docs/landing/live-tuning.gif" width="350" alt="Live tuning panel adjusted from inside the headset, with the change reflected instantly in the running lab"> | **Tune it live, in-headset.** Surface the leva panel as a browser window from inside the Quest headset, slide a threshold, and feel the change without ever taking the headset off. |
 
 What ties the labs together:
 
