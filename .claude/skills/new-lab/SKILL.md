@@ -39,7 +39,7 @@ Collect from the user, asking via `AskUserQuestion` for anything missing:
 For each source provided:
 
 - Web pages / help-center articles / blog posts → `WebFetch`.
-- YouTube URLs → run `helpers/youtube-transcript.sh "<url>"` from the skill folder. The helper uses `yt-dlp` to pull auto-generated English captions and prints clean text to stdout. If it exits with status 2, yt-dlp is missing — fall back to asking the user to paste the transcript or summary. If it exits with a non-zero status that mentions a TLS/SSL/certificate problem, re-run with `INSECURE_TLS=1 helpers/youtube-transcript.sh "<url>"`: this is the sandbox-with-MITM-proxy case, and the user has implicitly accepted it by running you in that environment.
+- YouTube URLs → ask the user to paste the auto-generated transcript (or a written summary of the relevant section). Don't try to fetch the transcript yourself — YouTube's pages are not WebFetch-friendly, and shelling out to scrapers is brittle inside sandboxes with MITM TLS.
 - PDFs → `Read`.
 - If sources are thin, `WebSearch` for the feature name and `WebFetch` up to 3 promising results.
 
