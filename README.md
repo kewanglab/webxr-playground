@@ -4,7 +4,7 @@
 
 Headset plus URL. That's the install. Each lab isolates one interaction question — select, place, locomote, manipulate — and lets you tune it live and A/B against alternatives.
 
-![Playground shell with a Selection Lab — live tuning panel, in-XR stats HUD, and a row of selectable targets](docs/design-handoff/bundle-2026-04-19/ui_kits/playground/preview.png)
+![Playground shell — hero shot showing the lab in action](docs/landing/hero.png)
 
 ## What this is
 
@@ -44,12 +44,25 @@ On Quest 3 from macOS, the validated path is `adb reverse` to forward `localhost
 
 ## A look inside
 
-Each lab is a focused interaction microscope, themed so the same primitive can be felt in different worlds:
+Each lab is a focused interaction microscope, themed so the same primitive can be felt in different worlds.
 
-| | | |
-|---|---|---|
-| ![Selection Lab across Cloud Park and Warm Night themes](docs/design-handoff/project/scraps/vr-final.png) | ![Idle / Targeted / Confirmed states across ray, pinch, and direct-touch](docs/design-handoff/project/scraps/01-verify.png) | ![Lab staging vocabulary: Selection, Locomotion, Placement, Manipulation](docs/mockups/spatial-polish/05-lab-stages-overview.png) |
-| *Same lab, different worlds.* | *One question, many inputs.* | *A vocabulary of labs.* |
+**The four labs that ship today:**
+
+| | |
+|---|---|
+| ![Selection Lab](docs/landing/selection-lab.png) | ![Placement Lab](docs/landing/placement-lab.png) |
+| **Selection Lab** — ray, pinch, and direct touch compared in one place. | **Placement Lab** — surface-aware object placement in AR. |
+| ![Locomotion Lab](docs/landing/locomotion-lab.png) | ![Manipulation Lab](docs/landing/manipulation-lab.png) |
+| **Locomotion Lab** — teleport, smooth movement, and turning. | **Manipulation Lab** — grab, rotate, scale, and dock objects with hands or controllers. |
+
+**Live tuning from inside the headset:**
+
+| |
+|---|
+| ![Live tuning panel adjusted from inside the headset, with the change reflected instantly in the running lab](docs/landing/live-tuning.gif) |
+| **Tune it live, in-headset.** Surface the leva panel as a browser window from inside the Quest headset, slide a threshold, and feel the change without ever taking the headset off. |
+
+What ties the labs together:
 
 - **Same lab, different worlds.** Cloud Park (painterly, daylit) and Warm Night (low-light, contemplative) — themes are swappable so visuals never tangle the interaction study.
 - **One question, many inputs.** Ray, pinch, and direct touch each get idle → targeted → confirmed feedback so behaviors are honest to compare.
