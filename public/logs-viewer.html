@@ -97,42 +97,62 @@
     <script>
       let lastPayload = { entries: [], updatedAt: null, path: null }
 
+      // Build rows with DOM APIs (textContent) so any string the server returns
+      // is treated as text, never HTML. Previously this used innerHTML with raw
+      // template interpolation, which let an attacker who could write to
+      // /api/logs (eg. via CSRF) stage stored XSS that ran in the dev origin.
       function renderTable(entries) {
         const mount = document.getElementById('tableMount')
+        mount.replaceChildren()
+
         if (!entries.length) {
-          mount.innerHTML = '<div class="empty">No log entries yet. Use the in-app Session Logger to add notes.</div>'
+          const empty = document.createElement('div')
+          empty.className = 'empty'
+          empty.textContent = 'No log entries yet. Use the in-app Session Logger to add notes.'
+          mount.appendChild(empty)
           return
         }
-        const rows = entries
-          .slice()
-          .reverse()
-          .map((entry) => {
-            const note = (entry.note || '').replace(/</g, '&lt;')
-            return `
-              <tr>
-                <td><code>${entry.timestamp ?? ''}</code></td>
-                <td>${entry.labId ?? ''}</td>
-                <td>${entry.mode ?? ''}</td>
-                <td>${entry.inputSource ?? ''}</td>
-                <td>${note}</td>
-              </tr>
-            `
-          })
-          .join('')
-        mount.innerHTML = `
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 220px;">Timestamp</th>
-                <th style="width: 120px;">Lab</th>
-                <th style="width: 140px;">Mode</th>
-                <th style="width: 120px;">Input</th>
-                <th>Note</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-        `
+
+        const table = document.createElement('table')
+
+        const thead = document.createElement('thead')
+        const headRow = document.createElement('tr')
+        const headers = [
+          ['Timestamp', '220px'],
+          ['Lab', '120px'],
+          ['Mode', '140px'],
+          ['Input', '120px'],
+          ['Note', null],
+        ]
+        for (const [label, width] of headers) {
+          const th = document.createElement('th')
+          if (width) th.style.width = width
+          th.textContent = label
+          headRow.appendChild(th)
+        }
+        thead.appendChild(headRow)
+        table.appendChild(thead)
+
+        const tbody = document.createElement('tbody')
+        for (const entry of entries.slice().reverse()) {
+          const tr = document.createElement('tr')
+
+          const tsCell = document.createElement('td')
+          const tsCode = document.createElement('code')
+          tsCode.textContent = entry.timestamp ?? ''
+          tsCell.appendChild(tsCode)
+          tr.appendChild(tsCell)
+
+          for (const value of [entry.labId, entry.mode, entry.inputSource, entry.note]) {
+            const td = document.createElement('td')
+            td.textContent = value == null ? '' : String(value)
+            tr.appendChild(td)
+          }
+
+          tbody.appendChild(tr)
+        }
+        table.appendChild(tbody)
+        mount.appendChild(table)
       }
 
       async function refresh() {
@@ -144,10 +164,11 @@
           if (!res.ok || !json.ok) {
             throw new Error(json.error || `HTTP ${res.status}`)
           }
-          lastPayload = json
-          countPill.textContent = `Entries: ${json.entries.length}`
+          const entries = Array.isArray(json.entries) ? json.entries : []
+          lastPayload = { ...json, entries }
+          countPill.textContent = `Entries: ${entries.length}`
           meta.textContent = `Updated: ${json.updatedAt || '-'} | File: ${json.path || '-'}`
-          renderTable(json.entries)
+          renderTable(entries)
         } catch (err) {
           countPill.textContent = 'Entries: ?'
           meta.textContent = `Failed to load logs: ${err instanceof Error ? err.message : 'unknown error'}`
