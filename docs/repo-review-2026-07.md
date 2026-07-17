@@ -1,6 +1,6 @@
 # Repo review — July 2026
 
-A full-repo review pass: intended purpose vs. what ships, bugs found, and prioritized next steps toward making this a portfolio piece that designers, researchers, and builders can understand and use quickly. The companion plan for the "research paper → lab" skill lives in [paper-to-lab-skill-plan.md](./paper-to-lab-skill-plan.md).
+A full-repo review pass: intended purpose vs. what ships, bugs found, and prioritized next steps toward making this a portfolio piece that designers, researchers, and builders can understand and use quickly. The companion plan for the lab-scaffold skill (paper → lab, idea → lab) lives in [lab-scaffold-skill-plan.md](./lab-scaffold-skill-plan.md).
 
 ## Health check
 
@@ -86,4 +86,4 @@ Four tracks, ordered by leverage. Each item is sized S/M/L.
 9. **Researchers: data export** (M). Persist docking `TrialResult`s to the session log with technique/acquisition metadata; add CSV download to `logs-viewer.html`. This turns "playground" into "instrument" — the strongest differentiator vs. demo repos.
 10. **Designers: shareable state URLs** (M). `?lab=` and `?theme=` already exist; add technique/preset params so a felt configuration can be sent as a link.
 11. **Builders: CONTRIBUTING + worked lab tutorial** (M). A "build the Hover Lab in 3 files" walkthrough that doubles as the human-readable version of the paper-to-lab skill contract.
-12. **The paper-to-lab skill** (L) — see [paper-to-lab-skill-plan.md](./paper-to-lab-skill-plan.md). This is the flagship portfolio story: it demonstrates the repo's whole thesis (agent-scaffolded interaction research) rather than describing it.
+12. **The lab-scaffold skill** (L) — see [lab-scaffold-skill-plan.md](./lab-scaffold-skill-plan.md). This is the flagship portfolio story: it demonstrates the repo's whole thesis (agent-scaffolded interaction authoring, from papers *and* from ideas) rather than describing it.
