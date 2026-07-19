@@ -6,6 +6,25 @@ Execution plan for the remaining work from [repo-review-2026-07.md](./repo-revie
 
 **Working rhythm each day.** Morning: kick off the agent on the day's build block (paste the day's section as the prompt). Midday/evening: do your review/validation items and hand back notes; the agent folds them in. Each day ends with a pushed branch or merged PR.
 
+## Which model to use per block
+
+Rule of thumb: **Sonnet 5** is the default for well-specified implementation against existing patterns — it's fast, and most of this week is that. Reach for **Opus 4.8** when the task is irreversible, cross-cutting, judgment-heavy, or comprehension-heavy (history rewrite, refactors that define contracts, reading a research paper, flagship prose). **Haiku 4.5** only for trivial chores mid-conversation; switching sessions just to save on a small task isn't worth it. When Opus produces something risky, a Sonnet session is a fine second-opinion reviewer.
+
+| Block | Model | Why |
+|---|---|---|
+| Day 1 — feel-note tweaks, PR + merge | Sonnet 5 | Small diffs against fresh, well-documented fixes |
+| Day 2 — GLB compression pipeline, lazy loading | Sonnet 5 | Scripted tooling + mechanical refactor with visual check as the safety net |
+| Day 2 — license audit research | Sonnet 5 | Web research + summarization; the *decision* is yours |
+| Day 3 — CI workflow | Sonnet 5 (Haiku-viable) | Boilerplate with a known-good local command sequence |
+| Day 3 — CSV export | Sonnet 5 | Contained feature along an existing pipeline |
+| Day 3 — shareable URLs | Sonnet 5, Opus 4.8 if it stalls | Leva↔URL state sync has fiddly edge cases; escalate rather than loop |
+| Day 4 — **git history rewrite** | **Opus 4.8** | Irreversible, repo-wide, needs careful verification before force-push |
+| Day 4 — Pages deploy workflow | Sonnet 5 | Standard config |
+| Day 4 — README overhaul, CONTRIBUTING, tutorial | Opus 4.8 | Flagship prose and narrative judgment — the portfolio's front door |
+| Day 5 — `useTrialRunner` extraction + lab template | Opus 4.8 | Defines the contracts every future lab (and the skill) depends on |
+| Day 5 — skill authoring + paper calibration run | Opus 4.8 | Paper comprehension + designing the interview/spec flow is the hardest reasoning of the week |
+| Weekend — M2 runs (skill executing on paper/idea) | Opus 4.8 | The skill's own runs are comprehension + novel implementation |
+
 ---
 
 ## Day 1 (Mon) — Validate the bug fixes on hardware, merge
