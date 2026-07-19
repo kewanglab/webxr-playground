@@ -53,7 +53,7 @@ Each lab is a focused interaction microscope, themed so the same primitive can b
 | ![Selection Lab](docs/landing/selection-lab.png) | ![Placement Lab](docs/landing/placement-lab.png) |
 | **Selection Lab** — ray, pinch, and direct touch compared in one place. | **Placement Lab** — surface-aware object placement in AR. |
 | ![Locomotion Lab](docs/landing/locomotion-lab.png) | ![Manipulation Lab](docs/landing/manipulation-lab.png) |
-| **Locomotion Lab** — teleport, smooth movement, and turning. | **Manipulation Lab** — grab, rotate, scale, and dock objects with hands or controllers. |
+| **Locomotion Lab** — teleport, smooth movement, and turning. | **Manipulation Lab** — grab, rotate, and dock objects with hand tracking, comparing integrated vs separated DOF mappings (controller manipulation is planned). |
 
 **Live tuning from inside the headset:**
 

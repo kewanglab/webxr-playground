@@ -1,4 +1,4 @@
-import { Text } from '@react-three/drei'
+import { Text } from '../../../xr/visual/XRText'
 import { useCallback, useEffect, useMemo } from 'react'
 import {
   Color,
@@ -32,6 +32,7 @@ import {
 type ZenGardenModeProps = {
   acquisition: ManipulationAcquisition
   technique: ManipulationTechnique
+  hand: 'left' | 'right'
   objectSize: number
   grabDistance: number
   cdGain: number
@@ -381,6 +382,7 @@ function useSandTexture() {
 export function ZenGardenMode({
   acquisition,
   technique,
+  hand,
   objectSize,
   grabDistance,
   cdGain,
@@ -388,7 +390,7 @@ export function ZenGardenMode({
   const preset = usePlaygroundTheme()
   const zen = useMemo(() => buildZenPalette(preset), [preset])
   const isCloudPark = preset.id === 'cloud-park'
-  const joints = useHandJoints('right')
+  const joints = useHandJoints(hand)
   const addLogEntry = usePlaygroundStore((s) => s.addLogEntry)
   const currentLab = usePlaygroundStore((s) => s.currentLab)
   const sandTexture = useSandTexture()

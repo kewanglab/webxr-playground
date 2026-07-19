@@ -1,4 +1,5 @@
-import { Line, Text } from '@react-three/drei'
+import { Line } from '@react-three/drei'
+import { Text } from '../../xr/visual/XRText'
 import { useFrame, useThree } from '@react-three/fiber'
 import { IfInSessionMode, TeleportTarget, useXRInputSourceState } from '@react-three/xr'
 import { useControls } from 'leva'
@@ -17,6 +18,8 @@ import { SharedArch, StagePlatform } from '../../xr/visual/SharedScenery'
 
 // Scratch vectors reused inside useFrame to avoid per-frame allocations.
 const SCRATCH_FORWARD = new Vector3()
+const SCRATCH_HEAD = new Vector3()
+const SCRATCH_OFFSET = new Vector3()
 const FORWARD = new Vector3(0, 0, -1)
 const UP = new Vector3(0, 1, 0)
 
@@ -361,7 +364,18 @@ export function LocomotionLab() {
       setOriginPosition(nextPos)
     }
 
-    // Turning (thumbstick left/right)
+    // Turning (thumbstick left/right). Pivot around the wearer's head, not the
+    // origin anchor: rotating the origin in place sweeps an off-center user
+    // through a sideways arc (comfort bug). Keeping the head's world position
+    // fixed means O' = H + R(θ)·(O − H) alongside r' = r + θ.
+    const applyTurn = (deltaRad: number) => {
+      camera.getWorldPosition(SCRATCH_HEAD)
+      SCRATCH_OFFSET.copy(originPosition).sub(SCRATCH_HEAD)
+      SCRATCH_OFFSET.applyAxisAngle(UP, deltaRad)
+      setOriginPosition(SCRATCH_HEAD.clone().add(SCRATCH_OFFSET))
+      setOriginRotationY(originRotationY + deltaRad)
+    }
+
     const turnActive = Math.abs(xAxis) > turnDeadN
     const snapAngleRad = (snapDegN * Math.PI) / 180
     const smoothTurnSpeedRad = (smoothDegN * Math.PI) / 180
@@ -369,15 +383,14 @@ export function LocomotionLab() {
     if (turnMode === 'snap') {
       if (turnActive && !turnLatch.current) {
         // Positive xAxis = rotate right (clockwise when viewed from above).
-        const next = originRotationY + (xAxis > 0 ? snapAngleRad : -snapAngleRad)
-        setOriginRotationY(next)
+        applyTurn(xAxis > 0 ? snapAngleRad : -snapAngleRad)
         turnLatch.current = true
       } else if (!turnActive) {
         turnLatch.current = false
       }
     } else {
       if (turnActive) {
-        setOriginRotationY(originRotationY + xAxis * smoothTurnSpeedRad * delta)
+        applyTurn(xAxis * smoothTurnSpeedRad * delta)
       }
     }
   })
@@ -447,8 +460,13 @@ export function LocomotionLab() {
       <IfInSessionMode allow="immersive-vr">
         <TeleportTarget
           onTeleport={(pos) => {
-            // Teleport updates the user's XROrigin feet position.
-            setOriginPosition(pos.clone())
+            // Land the wearer on the target, not the origin anchor: offset by
+            // the head's horizontal displacement from the origin so a user
+            // standing off-center still arrives on the waypoint.
+            camera.getWorldPosition(SCRATCH_HEAD)
+            const next = pos.clone().add(originPosition).sub(SCRATCH_HEAD)
+            next.y = pos.y
+            setOriginPosition(next)
           }}
         >
           <mesh

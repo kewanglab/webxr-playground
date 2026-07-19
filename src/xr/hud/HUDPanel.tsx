@@ -1,4 +1,4 @@
-import { Text } from '@react-three/drei'
+import { Text } from '../visual/XRText'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { Group, Shape, Vector3 } from 'three'

@@ -1,4 +1,4 @@
-import { Text } from '@react-three/drei'
+import { Text } from '../../xr/visual/XRText'
 import {
   IfInSessionMode,
   XRHitTest,
@@ -605,16 +605,12 @@ function PlacementPreview({
     return () => session.removeEventListener('selectstart', onSelectStart)
   }, [activeSource, placeCurrentPreview, session])
 
+  // Placement is driven by the session-level `selectstart` listener above.
+  // Do NOT also add onPointerDown here: @pmndrs/xr fires ray-pointer down from
+  // the same WebXR select event, and the ghost sits exactly on the ray, so a
+  // pointer handler would place a second, stacked artifact per trigger pull.
   return (
-    <group
-      ref={previewRef}
-      visible={false}
-      pointerEventsType={{ allow: 'ray' }}
-      onPointerDown={(event) => {
-        event.stopPropagation()
-        placeCurrentPreview()
-      }}
-    >
+    <group ref={previewRef} visible={false}>
       {/* Ghost crystal at the anchor. */}
       <group>
         <CrystalPrism
