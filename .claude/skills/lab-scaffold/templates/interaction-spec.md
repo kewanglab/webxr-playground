@@ -39,10 +39,13 @@ Scope cuts: <what is deliberately not implemented, and why — unavailable sensi
 
 - <measure, unit, when it's captured> — or —
 - **none** (freeform feel lab)
+- Paper mode: include the paper's **time measures** (completion time, acquisition time) — the trial runner marks trial start, and acquisition callbacks exist; omitting them is the most common fidelity gap.
 
 ## Trial protocol (omit for freeform labs)
 
 - Conditions × repetitions: <e.g. 2 techniques × 6 targets = 12 trials>
+- Difficulty levels: <if the paper varies task difficulty, list every level — headline findings often live only in the hardest ones>
+- Target presentation: <how the goal is shown — static ghost / animated from start pose / …>
 - Reset rule: <what re-seeds between trials>
 - Trial advance: <on release / on confirm / timed>, feedback hold <n> ms
 

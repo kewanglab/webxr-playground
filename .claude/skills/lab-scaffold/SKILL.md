@@ -28,6 +28,11 @@ Create `docs/labs/<slug>-spec.md` from `templates/interaction-spec.md` (in this 
 
 **Paper mode:** read the paper fully before writing. Extract techniques, parameters (with the paper's values), measures, and protocol. Where the paper under-specifies a value, choose one and mark it `(assumed)` — never silently guess. Run every technique through the feasibility table in `references/reuse-map.md`; a technique that needs unavailable sensing (eye tracking, EMG, body tracking) is either **cut** (listed under Scope cuts, like the repo's HRI/HRS precedent) or **approximated** (e.g. head-gaze for eye-gaze) with the approximation named in the spec *and* in the lab's subtitle.
 
+Two lessons from the M1 calibration run (`docs/labs/dof-separation-spec.md`):
+
+- **Requirements over mechanisms.** When a paper describes an implementation detail (an offset, a compensation term, a specific joint), extract the *behavioral requirement* it serves ("object stays at pinch point absent rotation") and record the mechanism as one way to satisfy it. An implementation that meets the requirement by other means is faithful; judging fidelity by mechanism produces false diffs.
+- **Don't drop the time measures.** Papers almost always pair accuracy with speed (completion time, acquisition time). They cost little — the trial runner marks trial start and the lab has acquisition callbacks — and their absence is the most common gap between a demo and a research instrument.
+
 **Idea mode:** first draft the spec yourself from the idea sentence — propose the behavior domain, 1–3 conditions, a parameter table with plausible ranges, and measures — marking everything you chose as `(assumed)`. Then ask the user **at most 3–5 questions**, only for decisions that materially fork the build:
 
 - Which behavior domain is this? (select / grab / place / locomote / menu) — only if genuinely ambiguous

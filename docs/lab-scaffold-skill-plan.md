@@ -1,10 +1,15 @@
 # Plan: the lab-scaffold skill (paper → lab, idea → lab)
 
-> **Status (2026-07-19):** M0 landed (`useTrialRunner` + `logTrialResult` in
+> **Status (2026-07-20):** M0 landed (`useTrialRunner` + `logTrialResult` in
 > `src/xr/interactions/evaluation/`, DockingMode rewired through them,
-> `src/labs/_template/TemplateLab.tsx` as the reference contract) and the skill
-> is authored at `.claude/skills/lab-scaffold/`. Next: M1 calibration run
-> against the Mikkelsen DOF-separation PDF, then M2.
+> `src/labs/_template/TemplateLab.tsx` as the reference contract); the skill
+> is authored at `.claude/skills/lab-scaffold/`; **M1 calibration run
+> complete** — spec extracted from the Mikkelsen PDF and diffed against the
+> hand-built lab in `docs/labs/dof-separation-spec.md` (all six technique
+> mappings and task geometry recovered; four real fidelity gaps identified:
+> time measures, combined-task difficulty ladder, target animation, 1€
+> filter; two lessons folded back into the skill). Next: M2 — one new
+> paper-mode lab and one idea-mode lab, end to end.
 
 The agentic-harness milestone from [Roadmap](./roadmap.md) and [Vision](./vision.md): a Claude Code skill that takes **any interaction concept** — a research paper (PDF, arXiv/DOI link, citation) *or* a napkin idea described in a few sentences — and scaffolds a working lab: registry entry, component, Leva controls, measurement hooks, HUD report, session-logger integration. The human spends their time on the interaction question, not the plumbing.
 
