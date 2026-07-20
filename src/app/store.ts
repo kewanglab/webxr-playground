@@ -57,6 +57,11 @@ export type SessionLogEntry = {
   note: string
   /** True when the entry was created from the in-XR HUD (used to open the notes tab after exiting XR). */
   fromHeadset?: boolean
+  /**
+   * Optional machine-readable payload alongside the human-readable note —
+   * e.g. structured trial results (see `logTrialResult`) for CSV export.
+   */
+  data?: Record<string, unknown>
 }
 
 /** A single key/value cell rendered in the in-XR HUD's expanded metrics strip. */

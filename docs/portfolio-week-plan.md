@@ -86,18 +86,21 @@ Order matters today: history rewrite happens **after** all the big deletions (Da
 
 **Done when:** public URL live and verified on-headset; README tells the story with the video.
 
-## Day 5 (Fri) — Lab-scaffold skill: M0 + M1
+## Day 5 (Fri) — Lab-scaffold skill: M1 calibration
+
+> **Pulled forward:** M0 (`useTrialRunner`, `logTrialResult`, TemplateLab) and
+> the skill authoring were done ahead of schedule on the strongest available
+> model. Day 5 is now the calibration run plus follow-ups — lighter than
+> planned, absorb overflow from earlier days here.
 
 **Agent:**
-- Extract `useTrialRunner` + finalize `logTrialResult` (Day 3's export becomes the generic path); create the reference lab template.
-- Author `.claude/skills/lab-scaffold/` per the [skill plan](./lab-scaffold-skill-plan.md) — both entry modes.
-- Calibration run (M1): feed it the Mikkelsen DOF-separation PDF (you supply the file), generate the interaction spec, and diff the scaffold against the hand-built lab.
+- Calibration run (M1): feed the skill the Mikkelsen DOF-separation PDF (you supply the file), generate the interaction spec, and diff the scaffold against the hand-built lab. Fold findings back into the skill.
 
 **You (~45 min):**
 - Read the generated spec against your memory of the paper/lab: did it catch the techniques, parameters, measures? Mark anything it invented.
-- Read the skill's interview questions for idea mode — are they questions you'd tolerate answering? Trim any that feel like a requirements workshop.
+- Read the skill's interview questions for idea mode (`.claude/skills/lab-scaffold/SKILL.md`, Stage 0) — are they questions you'd tolerate answering? Trim any that feel like a requirements workshop.
 
-**Done when:** skill exists, calibration diff reviewed, follow-ups filed.
+**Done when:** calibration diff reviewed, follow-ups folded into the skill.
 
 ## Weekend / stretch — M2: first real runs
 

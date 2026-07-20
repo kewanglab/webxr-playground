@@ -1,5 +1,11 @@
 # Plan: the lab-scaffold skill (paper → lab, idea → lab)
 
+> **Status (2026-07-19):** M0 landed (`useTrialRunner` + `logTrialResult` in
+> `src/xr/interactions/evaluation/`, DockingMode rewired through them,
+> `src/labs/_template/TemplateLab.tsx` as the reference contract) and the skill
+> is authored at `.claude/skills/lab-scaffold/`. Next: M1 calibration run
+> against the Mikkelsen DOF-separation PDF, then M2.
+
 The agentic-harness milestone from [Roadmap](./roadmap.md) and [Vision](./vision.md): a Claude Code skill that takes **any interaction concept** — a research paper (PDF, arXiv/DOI link, citation) *or* a napkin idea described in a few sentences — and scaffolds a working lab: registry entry, component, Leva controls, measurement hooks, HUD report, session-logger integration. The human spends their time on the interaction question, not the plumbing.
 
 The existing `docs/design-handoff/skill.md` covers *visual* design inside the system; this skill covers *interaction scaffolding*. They are complementary and the lab skill should reference the design skill for staging/tokens.
