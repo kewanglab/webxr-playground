@@ -1,6 +1,10 @@
 node_modules
 dist
 *.local
+
+# Playwright output
+test-results
+playwright-report
 .DS_Store
 logs/*.json
 tsconfig.tsbuildinfo

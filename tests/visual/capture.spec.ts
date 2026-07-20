@@ -47,6 +47,9 @@ function screenshotPath(...parts: string[]) {
 
 async function expectCanvasHasSignal(page: Page) {
   const stats = await page.locator('canvas').evaluate((canvas) => {
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      return { averageLuminance: 0, nonZeroCoverage: 0 }
+    }
     const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl')
     if (!gl) return { averageLuminance: 0, nonZeroCoverage: 0 }
 

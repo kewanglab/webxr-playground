@@ -20,6 +20,11 @@ export default defineConfig({
     viewport: { width: 1440, height: 1000 },
     deviceScaleFactor: 1,
     trace: 'retain-on-failure',
+    // Sandboxed/remote environments ship a pinned Chromium build that may not
+    // match this @playwright/test version. Point at it instead of downloading.
+    ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
+      ? { launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } }
+      : {}),
   },
   projects: [
     {
