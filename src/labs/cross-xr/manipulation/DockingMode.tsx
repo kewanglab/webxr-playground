@@ -1,7 +1,7 @@
 import { Text } from '../../../xr/visual/XRText'
 import { useFrame } from '@react-three/fiber'
 import { button, useControls } from 'leva'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Euler, Quaternion, Shape, Vector3 } from 'three'
 import type { ManipulationAcquisition, ManipulationTechnique } from '../ObjectManipulationLab'
 import type { ManipulationResult } from './techniques'
@@ -40,6 +40,10 @@ type Trial = {
   type: TrialType
   targetPosition: Vector3
   targetQuaternion: Quaternion
+  /** Rotation magnitude for this trial (0 for pure translation) — the paper's difficulty ladder. */
+  rotationMagnitudeDeg: number
+  /** Axis combination the rotation is applied about, e.g. 'X', 'XY'; '—' when none. */
+  axes: string
 }
 
 /** Measured at the moment of release — kept honest even when the object auto-snaps. */
@@ -47,6 +51,10 @@ type DockingTrialResult = {
   technique: ManipulationTechnique
   positionalOffset: number
   rotationalOffsetDeg: number
+  /** Paper measure: object appears → pinch release. */
+  completionTimeS: number
+  /** Paper measure: object appears → pinch down. `null` when acquisition wasn't observed. */
+  acquisitionTimeS: number | null
   snapped: boolean
 }
 
@@ -359,61 +367,117 @@ function DockingStation({
   )
 }
 
-function generateTrials(): Trial[] {
+/**
+ * Combined-task difficulty ladder — Mikkelsen et al. §3.3: "±30 cm offset along
+ * the X axis with ±45, 90, 135° angular offsets along one or two axes. Each of
+ * the 18 combinations of angular offset and axes (X, Y, Z, XY, XZ, YZ) is
+ * tested, while the direction of both translation and rotation is chosen
+ * uniformly random."
+ *
+ * The paper's headline finding — separated beats integrated for Virtual Hand —
+ * appears only in these harder combined trials, so the full ladder is what makes
+ * the result reproducible here.
+ */
+const COMBINED_ANGLES_DEG = [45, 90, 135] as const
+const COMBINED_AXES: { key: string; mask: [number, number, number] }[] = [
+  { key: 'X', mask: [1, 0, 0] },
+  { key: 'Y', mask: [0, 1, 0] },
+  { key: 'Z', mask: [0, 0, 1] },
+  // Two-axis conditions apply the same angular offset about both axes.
+  { key: 'XY', mask: [1, 1, 0] },
+  { key: 'XZ', mask: [1, 0, 1] },
+  { key: 'YZ', mask: [0, 1, 1] },
+]
+
+export type TrialSet = 'paper' | 'quick'
+
+/** Uniformly random ±1, per the paper's randomized trial directions. */
+function randomSign(): number {
+  return Math.random() < 0.5 ? -1 : 1
+}
+
+/**
+ * `paper` reproduces the paper's per-technique block: 6 translation + 6 rotation
+ * + 18 combined = 30 trials (the paper runs 2 repetitions; one repetition here
+ * keeps a session to a sensible length). `quick` is a 6-trial demo subset.
+ */
+export function generateTrials(trialSet: TrialSet): Trial[] {
   const { translationOffsetM, rotationOffsetDeg } = DEFAULTS.docking
   const trials: Trial[] = []
-  const axes: [number, number, number][] = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+  const axes: { key: string; mask: [number, number, number] }[] = [
+    { key: 'X', mask: [1, 0, 0] },
+    { key: 'Y', mask: [0, 1, 0] },
+    { key: 'Z', mask: [0, 0, 1] },
+  ]
   const signs = [1, -1]
+  const eulerFor = (mask: [number, number, number], deg: number, sign: number) =>
+    new Euler(
+      ((mask[0] * deg * sign * Math.PI) / 180),
+      ((mask[1] * deg * sign * Math.PI) / 180),
+      ((mask[2] * deg * sign * Math.PI) / 180),
+    )
 
+  // Translation: ±offset along each of X, Y, Z (6 trials).
   for (const axis of axes) {
     for (const sign of signs) {
       trials.push({
         type: 'translation',
         targetPosition: new Vector3(
-          OBJECT_ORIGIN.x + axis[0] * translationOffsetM * sign,
-          OBJECT_ORIGIN.y + axis[1] * translationOffsetM * sign,
-          OBJECT_ORIGIN.z + axis[2] * translationOffsetM * sign,
+          OBJECT_ORIGIN.x + axis.mask[0] * translationOffsetM * sign,
+          OBJECT_ORIGIN.y + axis.mask[1] * translationOffsetM * sign,
+          OBJECT_ORIGIN.z + axis.mask[2] * translationOffsetM * sign,
         ),
         targetQuaternion: new Quaternion(),
+        rotationMagnitudeDeg: 0,
+        axes: '—',
       })
     }
   }
 
-  const rotRad = (rotationOffsetDeg * Math.PI) / 180
-  for (let i = 0; i < axes.length; i++) {
+  // Rotation: ±rotationOffset about each of X, Y, Z, position unchanged (6 trials).
+  for (const axis of axes) {
     for (const sign of signs) {
-      const euler = new Euler(
-        i === 0 ? rotRad * sign : 0,
-        i === 1 ? rotRad * sign : 0,
-        i === 2 ? rotRad * sign : 0,
-      )
       trials.push({
         type: 'rotation',
         targetPosition: OBJECT_ORIGIN.clone(),
-        targetQuaternion: new Quaternion().setFromEuler(euler),
+        targetQuaternion: new Quaternion().setFromEuler(
+          eulerFor(axis.mask, rotationOffsetDeg, sign),
+        ),
+        rotationMagnitudeDeg: rotationOffsetDeg,
+        axes: axis.key,
       })
     }
   }
 
-  for (const sign of signs) {
-    for (let i = 0; i < axes.length; i++) {
-      const euler = new Euler(
-        i === 0 ? rotRad * sign : 0,
-        i === 1 ? rotRad * sign : 0,
-        i === 2 ? rotRad * sign : 0,
-      )
+  // Combined: 3 angles × 6 axis combinations, directions uniformly random (18 trials).
+  for (const angle of COMBINED_ANGLES_DEG) {
+    for (const axis of COMBINED_AXES) {
       trials.push({
         type: 'combined',
         targetPosition: new Vector3(
-          OBJECT_ORIGIN.x + translationOffsetM * sign,
+          OBJECT_ORIGIN.x + translationOffsetM * randomSign(),
           OBJECT_ORIGIN.y,
           OBJECT_ORIGIN.z,
         ),
-        targetQuaternion: new Quaternion().setFromEuler(euler),
+        targetQuaternion: new Quaternion().setFromEuler(
+          eulerFor(axis.mask, angle, randomSign()),
+        ),
+        rotationMagnitudeDeg: angle,
+        axes: axis.key,
       })
     }
   }
 
+  if (trialSet === 'quick') {
+    // Two of each type, keeping one hard combined trial so the demo still shows
+    // the condition where DOF-separation matters.
+    return [
+      ...trials.filter((t) => t.type === 'translation').slice(0, 2),
+      ...trials.filter((t) => t.type === 'rotation').slice(0, 2),
+      ...trials.filter((t) => t.type === 'combined' && t.rotationMagnitudeDeg === 45).slice(0, 1),
+      ...trials.filter((t) => t.type === 'combined' && t.rotationMagnitudeDeg === 135).slice(0, 1),
+    ]
+  }
   return trials
 }
 
@@ -443,7 +507,12 @@ export function DockingMode({
   const [manualTableLiftY, setManualTableLiftY] = useState(0)
   const tableOffsetY = baseTableOffsetY + manualTableLiftY
 
-  const trials = useMemo(() => generateTrials(), [])
+  // `paper` runs the full 30-trial protocol (6 T + 6 R + 18 combined across the
+  // 45/90/135° ladder); `quick` is a 6-trial demo subset.
+  const { trialSet } = useControls('Manipulation', {
+    trialSet: { value: 'paper' as TrialSet, options: ['paper', 'quick'] },
+  })
+  const trials = useMemo(() => generateTrials(trialSet as TrialSet), [trialSet])
   // 650 ms hold shows the released (or snapped) pose before the next trial
   // re-seeds the object at the origin.
   const {
@@ -453,6 +522,7 @@ export function DockingMode({
     isComplete,
     records,
     lastRecord,
+    currentStartedAt,
     recordResult,
     restart: restartTrials,
   } = useTrialRunner<Trial, DockingTrialResult>({ trials, advanceDelayMs: 650 })
@@ -494,6 +564,18 @@ export function DockingMode({
     [currentTrial, tableOffsetY],
   )
 
+  // Acquisition timestamp for the current trial (paper measure: object appears →
+  // pinch down). Reset when the trial changes so a stale value can't leak across.
+  const acquiredAtRef = useRef<number | null>(null)
+  useEffect(() => {
+    acquiredAtRef.current = null
+  }, [currentStartedAt])
+
+  const onAcquire = useCallback((id: string) => {
+    if (id !== 'docking-object') return
+    if (acquiredAtRef.current == null) acquiredAtRef.current = performance.now()
+  }, [])
+
   const onRelease = useCallback(
     (id: string, result: ManipulationResult): ManipulationResult | void => {
       if (id !== 'docking-object') return
@@ -513,10 +595,18 @@ export function DockingMode({
       // The runner rejects results while a previous trial's advance hold is
       // pending (re-grab during the 650 ms feedback window) — skip all side
       // effects in that case.
+      const releasedAt = performance.now()
+      const completionTimeS = (releasedAt - currentStartedAt) / 1000
+      const acquisitionTimeS =
+        acquiredAtRef.current != null
+          ? (acquiredAtRef.current - currentStartedAt) / 1000
+          : null
       const accepted = recordResult({
         technique,
         positionalOffset,
         rotationalOffsetDeg,
+        completionTimeS,
+        acquisitionTimeS,
         snapped: withinSnap,
       })
       if (!accepted) return
@@ -524,10 +614,18 @@ export function DockingMode({
         evaluation: 'Docking',
         trialNumber: trialIndex + 1,
         trialsTotal,
-        condition: { type: currentTrial.type, technique, acquisition },
+        condition: {
+          type: currentTrial.type,
+          technique,
+          acquisition,
+          rotationDeg: String(currentTrial.rotationMagnitudeDeg),
+          axes: currentTrial.axes,
+        },
         measures: {
           positionalOffsetCm: positionalOffset * 100,
           rotationalOffsetDeg,
+          completionTimeS,
+          ...(acquisitionTimeS != null ? { acquisitionTimeS } : {}),
         },
         flags: { snapped: withinSnap },
         inputSource: 'hand',
@@ -545,6 +643,7 @@ export function DockingMode({
     },
     [
       acquisition,
+      currentStartedAt,
       currentTrial,
       hand,
       pulseHaptic,
@@ -562,6 +661,7 @@ export function DockingMode({
     joints,
     cdGain,
     grabDistance,
+    onAcquire,
     onRelease,
   })
 
@@ -598,29 +698,38 @@ export function DockingMode({
   })
 
   const trialType = currentTrial?.type ?? null
+  // In-headset cells report the paper's four measures from the last release
+  // rather than restating tuning values the user just set on desktop.
+  const last = lastRecord?.result ?? null
   useHudReport(
     {
       metrics: [
-        { label: 'OBJ SIZE', value: objectSize.toFixed(2) },
-        { label: 'GRAB DIST', value: grabDistance.toFixed(2) },
-        { label: 'CD GAIN', value: cdGain.toFixed(1) },
         { label: 'TECHNIQUE', value: technique === 'integrated' ? 'INT' : 'SEP' },
+        { label: 'POS', value: last ? `${(last.positionalOffset * 100).toFixed(1)}cm` : '—' },
+        { label: 'ROT', value: last ? `${last.rotationalOffsetDeg.toFixed(1)}°` : '—' },
+        { label: 'TIME', value: last ? `${last.completionTimeS.toFixed(1)}s` : '—' },
       ],
       methodLabel: `Manipulation · Docking · ${acquisition}`,
       trial:
-        trialType !== null
-          ? { current: trialIndex + 1, total: trialsTotal, subLabel: trialType }
+        trialType !== null && currentTrial !== null
+          ? {
+              current: trialIndex + 1,
+              total: trialsTotal,
+              subLabel:
+                currentTrial.rotationMagnitudeDeg > 0
+                  ? `${trialType} ${currentTrial.rotationMagnitudeDeg}° ${currentTrial.axes}`
+                  : trialType,
+            }
           : null,
     },
     [
-      objectSize,
-      grabDistance,
-      cdGain,
       technique,
       acquisition,
       trialIndex,
       trialsTotal,
       trialType,
+      currentTrial,
+      last,
     ],
   )
 
@@ -629,7 +738,18 @@ export function DockingMode({
       records.reduce((sum, r) => sum + r.result.positionalOffset, 0) / records.length
     const avgRot =
       records.reduce((sum, r) => sum + r.result.rotationalOffsetDeg, 0) / records.length
+    const avgTime =
+      records.reduce((sum, r) => sum + r.result.completionTimeS, 0) / records.length
     const snappedCount = records.filter((r) => r.result.snapped).length
+    // Combined trials at ≥90° are where the paper finds DOF-separation's benefit,
+    // so the summary breaks them out — that comparison is the lab's whole point.
+    const hardRecords = records.filter(
+      (r) => r.trial.type === 'combined' && r.trial.rotationMagnitudeDeg >= 90,
+    )
+    const hardAvgRot = hardRecords.length
+      ? hardRecords.reduce((sum, r) => sum + r.result.rotationalOffsetDeg, 0) /
+        hardRecords.length
+      : null
 
     return (
       <group>
@@ -649,8 +769,19 @@ export function DockingMode({
           anchorX="center"
           anchorY="middle"
         >
-          {`Avg position offset: ${(avgPos * 100).toFixed(1)}cm | Avg rotation offset: ${avgRot.toFixed(1)}° | Snapped ${snappedCount}/${records.length}`}
+          {`Avg position ${(avgPos * 100).toFixed(1)}cm · rotation ${avgRot.toFixed(1)}° · time ${avgTime.toFixed(1)}s · snapped ${snappedCount}/${records.length}`}
         </Text>
+        {hardAvgRot != null && (
+          <Text
+            position={[0, 1.16, -1]}
+            fontSize={0.055}
+            color={xr.hud.textMuted}
+            anchorX="center"
+            anchorY="middle"
+          >
+            {`Hard combined (≥90°): ${hardAvgRot.toFixed(1)}° avg rotation offset over ${hardRecords.length} trials — ${technique === 'integrated' ? 'integrated' : 'separated'}`}
+          </Text>
+        )}
         {/* In-scene restart so the sequence can rerun without leaving the
             headset (Leva's "restart trials" button covers the desktop). */}
         <group position={[0, 1.05, -1]}>
@@ -842,7 +973,7 @@ export function DockingMode({
           anchorX="center"
           anchorY="middle"
         >
-          {`Last: ${(lastRecord.result.positionalOffset * 100).toFixed(1)} cm · ${lastRecord.result.rotationalOffsetDeg.toFixed(1)}°${lastRecord.result.snapped ? ' · snapped' : ''}`}
+          {`Last: ${(lastRecord.result.positionalOffset * 100).toFixed(1)} cm · ${lastRecord.result.rotationalOffsetDeg.toFixed(1)}° · ${lastRecord.result.completionTimeS.toFixed(1)} s${lastRecord.result.snapped ? ' · snapped' : ''}`}
         </Text>
       )}
 

@@ -55,7 +55,7 @@ Scope cuts (current implementation): HRI/HRS deferred to a dedicated lab (roadma
 ## Measures (→ HUD cells + logTrialResult)
 
 - **positionalOffsetCm** — Euclidean distance object↔target centres at release
-- **rotationalOffsetDeg** — angular offset aggregated over 3 axes at release
+- **rotationalOffsetDeg** — angular offset at release. *Deviation:* the repo measures the geodesic (shortest-arc) quaternion angle; the paper states "aggregated along all 3 axes", i.e. a per-axis sum. Identical for single-axis trials, divergent for two-axis combined trials. Within-lab A/B comparisons are unaffected; absolute cross-study comparison to the paper's numbers is not valid without switching to the per-axis aggregate.
 - **trialCompletionTimeS** — object appearance → pinch release
 - **acquisitionTimeS** — object appearance → pinch down
 - (NASA-TLX / preference: out of scope for the lab; capture free-text via session logger)
@@ -65,6 +65,7 @@ Scope cuts (current implementation): HRI/HRS deferred to a dedicated lab (roadma
 - **Translation (6):** target offset ±`translationOffset` along one of X/Y/Z; orientation unchanged.
 - **Rotation (6):** target rotated ±`rotationOffset` about one of X/Y/Z; position unchanged (pivot at object centre).
 - **Combined (18):** ±`translationOffset` along X, plus ±45/90/135° about one of X, Y, Z, XY, XZ, YZ; directions uniform random.
+  - `(assumed)` For the two-axis conditions (XY, XZ, YZ) the paper's "45/90/135° along one or two axes" is read as *the offset is applied about each named axis*, so a 45° XY trial composes to ~63° of net rotation. The alternative reading (net angle held at 45° and split across two axes) is possible; this reading is consistent with the paper measuring rotational offset "aggregated along all 3 axes" — i.e. thinking per-axis rather than geodesically.
 - Per condition: fixed order T → R → C; paper runs 2 repetitions (12 T + 12 R + 36 C per technique). Lab default: 1 repetition `(assumed — session length)`.
 - **Target presentation:** object and target appear overlapping; target animates to its destination by linear interpolation (shows the optimal integral solution).
 - Reset rule: object re-seeds at spawn pose each trial. Trial advance: on pinch release, feedback hold 650 ms `(assumed — repo convention, paper advances immediately)`.
@@ -92,11 +93,11 @@ Scope cuts (current implementation): HRI/HRS deferred to a dedicated lab (roadma
 - Spawn at 0.7 m in front (desk staging) vs paper's 0.5 m — worth a Leva `spawnDistance` param to allow paper-faithful replication.
 - Acquisition variants (proximity pinch / framework hand ray) are a repo extension for targeting, not one of the paper's six techniques — correctly kept out of the technique axis.
 
-**True gaps (candidate follow-ups, in value order):**
-1. **Time measures missing** — the paper's two speed measures (trial completion, acquisition time) aren't captured; hooks exist (`onAcquire`, trial advance). Small change, large research value.
-2. **Combined-task difficulty ladder missing** — repo runs 6 combined trials at 45°/single-axis; the paper's 18 (45/90/135°, incl. two-axis) are precisely where VHS's benefit shows. Without them the lab can't reproduce the headline finding.
-3. **Target animation missing** — repo shows a static ghost; the paper animates target from overlap to destination to show the optimal solution.
-4. **No 1€ filter** — paper filters all hand tracking; repo uses raw joints.
+**Gaps — status:**
+1. ~~Time measures missing~~ **closed (2026-07-20).** `useTrialRunner` exposes `currentStartedAt`; docking captures completion time (stimulus → release) and acquisition time (stimulus → pinch down, via `onAcquire`), logs both, and shows completion time in the HUD and the release readout.
+2. ~~Combined-task difficulty ladder missing~~ **closed (2026-07-20).** `generateTrials('paper')` now produces the paper's 30-trial block: 6 translation + 6 rotation + 18 combined (3 angles × 6 axis combinations, uniformly random directions). Verified at runtime: 6/6/18 with an even 6/6/6 split across 45/90/135° and all of X, Y, Z, XY, XZ, YZ present. A `quick` 6-trial subset (retaining one 135° combined trial) exists for demos. The completion screen now breaks out mean rotational offset on ≥90° combined trials — the comparison where the paper's VHS benefit appears.
+3. **Target animation missing** — repo shows a static ghost; the paper animates target from overlap to destination to show the optimal solution. *Open.*
+4. **No 1€ filter** — paper filters all hand tracking; repo uses raw joints. *Open.*
 5. HRI/HRS and Gaze&Pinch — known scope cuts, unchanged.
 
 **Skill-calibration verdict:** extraction recovered every technique mapping, all task geometry, and both accuracy measures that the hand-built lab implements, plus four real gaps the lab review had not itemized (1–4 above). One systematic lesson fed back into the skill: distinguish a paper's *requirements* from its *mechanisms* when judging fidelity (the forward-offset case).

@@ -39,6 +39,10 @@ export function useTrialRunner<TTrial, TResult>({
   const [records, setRecords] = useState<TrialRecord<TTrial, TResult>[]>([])
   const [lastRecord, setLastRecord] = useState<TrialRecord<TTrial, TResult> | null>(null)
   const advanceTimerRef = useRef<number | null>(null)
+  // `performance.now()` at the moment the current trial became active — i.e.
+  // when its stimulus appears, which is the start point for completion-time
+  // and acquisition-time measures.
+  const [currentStartedAt, setCurrentStartedAt] = useState(() => performance.now())
 
   useEffect(
     () => () => {
@@ -60,6 +64,7 @@ export function useTrialRunner<TTrial, TResult>({
       const advance = () => {
         advanceTimerRef.current = null
         setIndex((prev) => prev + 1)
+        setCurrentStartedAt(performance.now())
       }
       if (advanceDelayMs > 0) {
         advanceTimerRef.current = window.setTimeout(advance, advanceDelayMs)
@@ -79,6 +84,7 @@ export function useTrialRunner<TTrial, TResult>({
     setIndex(0)
     setRecords([])
     setLastRecord(null)
+    setCurrentStartedAt(performance.now())
   }, [])
 
   return {
@@ -90,6 +96,8 @@ export function useTrialRunner<TTrial, TResult>({
     isComplete,
     records,
     lastRecord,
+    /** `performance.now()` when the current trial's stimulus appeared. */
+    currentStartedAt,
     recordResult,
     restart,
   }
