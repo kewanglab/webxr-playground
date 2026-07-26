@@ -10,3 +10,9 @@ tsconfig.tsbuildinfo
 !.cursor/rules/
 !.cursor/rules/**
 .cursor/plans/
+
+# Source asset packs — build-time inputs for `npm run build:xr-kit` only.
+# Keep local licensed copies here; they are never served at runtime.
+# See public/assets/README.md.
+public/assets/models/Modular SciFi MegaKit[Standard]/
+public/assets/models/Molten Maps SciFi Asset Pack/

@@ -35,6 +35,10 @@ const models = [
 function main() {
   if (!existsSync(mega)) {
     console.error('Missing MegaKit folder:', mega)
+    console.error(
+      'Source asset packs are not vendored in the repo (build-time inputs only).\n' +
+        'Drop your licensed copy at that path to rebuild — see public/assets/README.md.',
+    )
     process.exit(1)
   }
   mkdirSync(outDir, { recursive: true })
