@@ -2,8 +2,24 @@ import { createPlugin, useInputContext, Components, clamp, styled, useTh } from 
 
 const { Row, Label } = Components
 
+/** Public API for labs — unchanged: `stepperNumber({ value, min, max, step })`. */
 type StepperInput = {
   value?: number
+  min?: number
+  max?: number
+  step?: number
+}
+
+/**
+ * What we actually hand to Leva. The `value` key is deliberately renamed to
+ * `init`: Leva's `parseOptions` collapses a custom plugin's input down to just
+ * `input.value` whenever a `value` key is present, which would strip
+ * `min`/`max`/`step` before `normalize` ever sees them (leva 0.10.1,
+ * `vector-plugin-*.esm.js` — `if (customType && isObject(input) && 'value' in input)`).
+ * Without a `value` key Leva passes the whole object through untouched.
+ */
+type StepperPluginInput = {
+  init?: number
   min?: number
   max?: number
   step?: number
@@ -135,15 +151,19 @@ function StepperComponent() {
   )
 }
 
-export const stepperNumber = createPlugin<StepperInput, number, StepperSettings>({
+const stepperNumberPlugin = createPlugin<StepperPluginInput, number, StepperSettings>({
   component: StepperComponent,
   normalize: (input) => {
-    const min = input.min ?? 0
-    const max = input.max ?? 100
-    const step = input.step ?? 1
+    // Guard the shape: if Leva ever collapses this to a bare number again, fall
+    // back to treating it as the initial value rather than silently seeding the
+    // midpoint of a 0–100 range (which is what produced a deadzone of 50).
+    const raw: StepperPluginInput =
+      typeof input === 'number' ? { init: input } : (input ?? {})
+    const min = raw.min ?? 0
+    const max = raw.max ?? 100
+    const step = raw.step ?? 1
     const mid = min + (max - min) * 0.5
-    const resolved =
-      input.value !== undefined && input.value !== null ? input.value : mid
+    const resolved = raw.init !== undefined && raw.init !== null ? raw.init : mid
     return {
       value: resolved,
       settings: { min, max, step, seed: resolved },
@@ -155,3 +175,17 @@ export const stepperNumber = createPlugin<StepperInput, number, StepperSettings>
     return clamp(n, settings.min, settings.max)
   },
 })
+
+/**
+ * Lab-facing wrapper. Keeps the `{ value, min, max, step }` call signature the
+ * labs already use while handing Leva a `value`-free object (see
+ * `StepperPluginInput`), so the range settings survive into `normalize`.
+ */
+export function stepperNumber(input: StepperInput = {}) {
+  return stepperNumberPlugin({
+    init: input.value,
+    min: input.min,
+    max: input.max,
+    step: input.step,
+  })
+}
