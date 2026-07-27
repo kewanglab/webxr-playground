@@ -382,15 +382,19 @@ export function LocomotionLab() {
 
     if (turnMode === 'snap') {
       if (turnActive && !turnLatch.current) {
-        // Positive xAxis = rotate right (clockwise when viewed from above).
-        applyTurn(xAxis > 0 ? snapAngleRad : -snapAngleRad)
+        // Stick right (xAxis > 0) must turn the wearer right. Three.js is
+        // right-handed, so a *positive* rotation about +Y is counter-clockwise
+        // seen from above — i.e. a left turn. Hence the negation: turning right
+        // is a negative yaw delta.
+        applyTurn(xAxis > 0 ? -snapAngleRad : snapAngleRad)
         turnLatch.current = true
       } else if (!turnActive) {
         turnLatch.current = false
       }
     } else {
       if (turnActive) {
-        applyTurn(xAxis * smoothTurnSpeedRad * delta)
+        // Same handedness negation as the snap branch above.
+        applyTurn(-xAxis * smoothTurnSpeedRad * delta)
       }
     }
   })
