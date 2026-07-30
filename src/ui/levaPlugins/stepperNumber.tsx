@@ -1,4 +1,12 @@
-import { createPlugin, useInputContext, Components, clamp, styled, useTh } from 'leva/plugin'
+import {
+  createPlugin,
+  useInputContext,
+  Components,
+  clamp,
+  styled,
+  useTh,
+  type InputOptions,
+} from 'leva/plugin'
 
 const { Row, Label } = Components
 
@@ -180,12 +188,12 @@ const stepperNumberPlugin = createPlugin<StepperPluginInput, number, StepperSett
  * Lab-facing wrapper. Keeps the `{ value, min, max, step }` call signature the
  * labs already use while handing Leva a `value`-free object (see
  * `StepperPluginInput`), so the range settings survive into `normalize`.
+ *
+ * Everything other than `value` is forwarded untouched, which keeps Leva's own
+ * `InputOptions` (`label`, `render`, `onChange`, `optional`, …) available: they
+ * are destructured out of the custom-input object by `parseOptions` before the
+ * remainder reaches `normalize`, so they never collide with the settings above.
  */
-export function stepperNumber(input: StepperInput = {}) {
-  return stepperNumberPlugin({
-    init: input.value,
-    min: input.min,
-    max: input.max,
-    step: input.step,
-  })
+export function stepperNumber({ value, ...options }: StepperInput & InputOptions = {}) {
+  return stepperNumberPlugin({ init: value, ...options })
 }

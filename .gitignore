@@ -5,6 +5,8 @@ dist
 logs/*.json
 # Quarantined copies written by the dev log API when the store fails to parse.
 logs/*.corrupt-*
+# Half-written stores left behind if the dev server dies mid-write.
+logs/*.tmp
 tsconfig.tsbuildinfo
 
 # Cursor — keep shared rules, ignore local plans/metadata

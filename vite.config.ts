@@ -48,15 +48,20 @@ function desktopLogApiPlugin(): Plugin {
       // indistinguishable from a session that logged nothing — that silence
       // cost a full headset test cycle. Preserve the bad file and say so.
       const quarantine = `${logsFile}.corrupt-${Date.now()}`
+      let quarantined = false
       try {
         await rename(logsFile, quarantine)
+        quarantined = true
       } catch {
         // Best effort — still surface the parse failure below.
       }
+      const reason = error instanceof Error ? error.message : 'parse error'
       console.error(
-        `[desktop-log-api] ${logsFile} was not valid JSON (${
-          error instanceof Error ? error.message : 'parse error'
-        }). Moved to ${quarantine} and starting a fresh store.`,
+        quarantined
+          ? `[desktop-log-api] ${logsFile} was not valid JSON (${reason}). Moved to ${quarantine} and starting a fresh store.`
+          : // Don't claim a rescue that didn't happen: the bad file is still at
+            // logsFile and the next write renames straight over it.
+            `[desktop-log-api] ${logsFile} was not valid JSON (${reason}) and could not be moved aside. Starting a fresh store — the existing file will be overwritten by the next write. Copy it now if you need it.`,
       )
       return emptyStore()
     }
