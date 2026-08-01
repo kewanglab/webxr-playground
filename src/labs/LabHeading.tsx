@@ -1,4 +1,4 @@
-import { Text } from '@react-three/drei'
+import { Text } from '../xr/visual/XRText'
 import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import { usePlaygroundTheme } from '../xr/theme/PlaygroundThemeContext'

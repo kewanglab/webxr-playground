@@ -58,7 +58,12 @@ export type UseManipulationOptions = {
   cdGain: number
   grabDistance: number
   onAcquire?: (id: string) => void
-  onRelease?: (id: string, result: ManipulationResult) => void
+  /**
+   * Called with the object's pose at release. May return a corrected pose
+   * (e.g. docking auto-snap) which is applied to the entry and its Object3D —
+   * mutating the passed `result` has no effect, it is a clone.
+   */
+  onRelease?: (id: string, result: ManipulationResult) => ManipulationResult | void
 }
 
 /**
@@ -106,10 +111,18 @@ export function useManipulation(options: UseManipulationOptions) {
     const activeId = activeIdRef.current
     const entry = registryRef.current.get(activeId)
     if (entry) {
-      onRelease?.(activeId, {
+      const corrected = onRelease?.(activeId, {
         position: entry.position.clone(),
         quaternion: entry.quaternion.clone(),
       })
+      if (corrected) {
+        entry.position.copy(corrected.position)
+        entry.quaternion.copy(corrected.quaternion)
+        if (entry.objectRef.current) {
+          entry.objectRef.current.position.copy(corrected.position)
+          entry.objectRef.current.quaternion.copy(corrected.quaternion)
+        }
+      }
     }
     snapRef.current = null
     activeIdRef.current = null

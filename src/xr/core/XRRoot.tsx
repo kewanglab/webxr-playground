@@ -9,7 +9,6 @@ import { LabContent } from '../../app/LabContent'
 import { usePlaygroundStore } from '../../app/store'
 import { HUDPanel } from '../hud/HUDPanel'
 import { TagAlongHUD } from '../hud/TagAlongHUD'
-import { preloadXrKitModels } from '../visual/useKitModel'
 import { DesktopPreviewCamera } from './DesktopPreviewCamera'
 
 function XRScene() {
@@ -33,10 +32,8 @@ function XRScene() {
 export function XRRoot() {
   const fpsHudVisible = usePlaygroundStore((s) => s.fpsHudVisible)
 
-  useEffect(() => {
-    preloadXrKitModels()
-  }, [])
-
+  // Kit models load on demand via `KitInstance` (each has its own Suspense
+  // boundary) — no app-mount preload, so a lab only pays for what it draws.
   return (
     <XR store={xrStore}>
       <Suspense fallback={null}>

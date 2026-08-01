@@ -1,4 +1,4 @@
-import { Text } from '@react-three/drei'
+import { Text } from '../../xr/visual/XRText'
 import { useFrame } from '@react-three/fiber'
 import { IfInSessionMode } from '@react-three/xr'
 import { useEffect, useRef, useState } from 'react'
@@ -128,6 +128,7 @@ function StateOrb({
   variant,
   position,
   size,
+  confirmBoost,
   pointerType,
   label,
   sublabel,
@@ -137,6 +138,8 @@ function StateOrb({
   variant: OrbVariant
   position: [number, number, number]
   size: number
+  /** Peak scale gain of the confirm pulse (Leva "confirmScaleBoost"). */
+  confirmBoost: number
   pointerType: 'ray' | 'touch' | 'grab'
   label: string
   sublabel: string
@@ -214,11 +217,11 @@ function StateOrb({
       if (outerRingMatRef.current) outerRingMatRef.current.opacity = 0
     }
 
-    // Scale pulse on confirmed entry: 1 → 1.08 → 1 over 220ms.
+    // Scale pulse on confirmed entry: 1 → 1+confirmBoost → 1 over 220ms.
     if (groupRef.current) {
       if (state === 'confirmed' && elapsed < CONFIRM_SCALE_PULSE_S) {
         const phase = elapsed / CONFIRM_SCALE_PULSE_S
-        const s = 1 + 0.08 * Math.sin(phase * Math.PI)
+        const s = 1 + confirmBoost * Math.sin(phase * Math.PI)
         groupRef.current.scale.setScalar(s)
       } else {
         groupRef.current.scale.setScalar(1)
@@ -425,6 +428,7 @@ export function SelectionLab() {
           variant="ray"
           position={selectionTargetPositions.ray}
           size={size}
+          confirmBoost={boost}
           pointerType="ray"
           label="RAY"
           sublabel="far · controller"
@@ -435,6 +439,7 @@ export function SelectionLab() {
           variant="pinch"
           position={selectionTargetPositions.pinch}
           size={size}
+          confirmBoost={boost}
           pointerType="grab"
           label="PINCH"
           sublabel="near · hand"
@@ -445,6 +450,7 @@ export function SelectionLab() {
           variant="touch"
           position={selectionTargetPositions.touch}
           size={size}
+          confirmBoost={boost}
           pointerType="touch"
           label="TOUCH"
           sublabel="near · finger"

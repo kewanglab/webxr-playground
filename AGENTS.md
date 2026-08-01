@@ -9,6 +9,9 @@ Read these first when you need project context:
 - `docs/style-templates/` for 2D shell vs 3D XR visual specs (tokens, components, lighting budget)
 - `src/config/labs.ts` for the lab registry and routing
 - `src/labs/LabHeading.tsx` + `getLabTitle()` for consistent in-scene lab titles (name) and subtitles (configuration)
+- `src/labs/_template/TemplateLab.tsx` for the reference lab contract (typechecked, not registered)
+- `.claude/skills/lab-scaffold/` to scaffold a new lab from a paper or an idea — spec first, then the three-file contract
+- `src/xr/interactions/evaluation/` for trial sequencing (`useTrialRunner`) and structured result logging (`logTrialResult`)
 
 Working norms:
 

@@ -33,10 +33,13 @@ const labModeLabels: Record<'docking' | 'zen', string> = {
 export function ObjectManipulationLab() {
   const defaults = tuningPresets.manipulation
 
-  const { labMode, acquisition, technique, objectSize, grabDistance, cdGain } = useControls(
+  const { labMode, acquisition, technique, dominantHand, objectSize, grabDistance, cdGain } = useControls(
     'Manipulation',
     {
       labMode: { value: 'docking' as 'docking' | 'zen', options: ['docking', 'zen'] },
+      // Short-term left-hand support: manipulation tracks one hand's joints, so
+      // let the user pick which. (Controller-driven manipulation is future work.)
+      dominantHand: { value: 'right' as 'left' | 'right', options: ['left', 'right'] },
       acquisition: {
         value: 'proximity' as ManipulationAcquisition,
         options: {
@@ -85,6 +88,7 @@ export function ObjectManipulationLab() {
         <DockingMode
           acquisition={acquisition as ManipulationAcquisition}
           technique={technique as ManipulationTechnique}
+          hand={dominantHand as 'left' | 'right'}
           objectSize={objectSize}
           grabDistance={grabDistance}
           cdGain={cdGain}
@@ -93,6 +97,7 @@ export function ObjectManipulationLab() {
         <ZenGardenMode
           acquisition={acquisition as ManipulationAcquisition}
           technique={technique as ManipulationTechnique}
+          hand={dominantHand as 'left' | 'right'}
           objectSize={objectSize}
           grabDistance={grabDistance}
           cdGain={cdGain}

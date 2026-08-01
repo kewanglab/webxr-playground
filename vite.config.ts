@@ -11,6 +11,8 @@ type SessionLogEntry = {
   inputSource: 'controller' | 'hand' | 'mixed'
   note: string
   fromHeadset?: boolean
+  /** Structured payload mirrored from the app's SessionLogEntry (trial results etc.). */
+  data?: Record<string, unknown>
 }
 
 type LogStore = {

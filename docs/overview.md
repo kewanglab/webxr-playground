@@ -184,6 +184,7 @@ Organization:
 - `src/labs/vr/` — VR-only experiments
 - `src/labs/ar/` — AR-only experiments
 - `src/labs/cross-xr/` — experiments that should be compared across both modes
+- `src/labs/_template/` — reference `TemplateLab` demonstrating the full lab contract; typechecked but never registered. Copied by the lab-scaffold skill and by human contributors.
 
 Recommended first labs:
 
@@ -249,6 +250,7 @@ Not needed in Phase 1. Create when custom rig behavior is required.
 
 Reusable interaction primitives organized by behavior, not by input source. v6's pointer event system handles the input routing — these primitives define what objects *do* when interacted with.
 
+- `evaluation/` — **exists**: `useTrialRunner` (trial sequencing, feedback hold, restart) and `logTrialResult` (structured session-log results), graduated from DockingMode
 - `select/` — making things selectable and targetable, hover/confirm behavior
 - `grab/` — making things grabbable, near and far, release and throw tuning
 - `placement/` — placing objects on surfaces, snapping, preview ghosts
