@@ -3,7 +3,17 @@ dist
 *.local
 .DS_Store
 logs/*.json
+# Quarantined copies written by the dev log API when the store fails to parse.
+logs/*.corrupt-*
+# Half-written stores left behind if the dev server dies mid-write.
+logs/*.tmp
 tsconfig.tsbuildinfo
+
+# Playwright run output — traces and error context written on failure, plus the
+# HTML report if anyone runs with `--reporter=html`. Authored screenshots go to
+# docs/mockups/captures/ instead and stay tracked.
+test-results/
+playwright-report/
 
 # Cursor — keep shared rules, ignore local plans/metadata
 .cursor/*
