@@ -45,6 +45,8 @@ There is no incremental route. R3F's reconciler and IWSDK's `World` both want to
 
 **Estimate: 8–14 weeks**, single developer. Roadmap Phase 4 (spatial polish, in progress) and Phase 5 (interaction platform) are blocked or discarded for the duration.
 
+> **Estimate basis differs from the companion brief.** This figure is solo human developer work. [Path B](./agent-harness-brief.md) has since been re-estimated for agent-driven implementation (~1.5–2 agent-days). Path A would compress under the same treatment — a large share of it is mechanical porting — but proportionally *less*, because its residual cost is concentrated in things agents don't shorten: architectural decisions in an unfamiliar paradigm, judgment calls when porting research-load-bearing manipulation code, and Quest re-validation of every ported lab. A rough guess is 3–6 weeks rather than 8–14, but that number has not had a real pass and should not be quoted as one. If Path A is seriously considered, re-estimate it properly first — the comparison below is directionally right either way, since the gap is orders of magnitude, not percentages.
+
 ### The collateral nobody counts
 
 A rewrite of `src/` is not the whole bill. These also lose validity:
@@ -60,7 +62,7 @@ A rewrite of `src/` is not the whole bill. These also lose validity:
 
 The audience argument compounds this. Vision names researchers and designers alongside developers, and bets on the web stack because collaborators are "productive in minutes." An imperative ECS is a materially higher barrier than declarative R3F for the non-developer half of that audience.
 
-**The cost/benefit is lopsided.** Path B delivers the interaction-driving capability — the actual gap — in ~1.5 weeks with zero changes to `src/labs/**`. Path A additionally delivers 8 more tools and an engine, for a multi-month rewrite that stops roadmap progress. Framed bluntly: **we would be trading the project's thesis for 8 debugging tools and an engine we have mostly already built.**
+**The cost/benefit is lopsided.** Path B delivers the interaction-driving capability — the actual gap — in ~1.5–2 agent-days with zero changes to `src/labs/**`. Path A additionally delivers 8 more tools and an engine, for a multi-month rewrite that stops roadmap progress. Framed bluntly: **we would be trading the project's thesis for 8 debugging tools and an engine we have mostly already built.**
 
 **The timing is wrong.** Phase 4 is mid-flight with Quest validation outstanding. Phase 3's manipulation work — the repo's most valuable research output — would be the hardest thing to port and the easiest to regress.
 

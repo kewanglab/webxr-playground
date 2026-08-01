@@ -46,15 +46,33 @@ So we take the 19 free, shim what's worth shimming, and skip the rest.
 
 ### In scope
 
-| Phase | Work | Effort |
-|---|---|---|
-| **0** | **Vite 8 spike.** Plugin peer-declares `vite ^7.0.0`; repo is on `^8.0.2`. Verify on a throwaway branch before anything else. | 0.5 d |
-| **1** | Add `iwsdkDev({ ai: { mode: 'agent', tools: ['claude'] } })`. Set `emulate: false` in `xrStore.ts` so the plugin's IWER owns emulation deterministically. Re-evaluate the DevUI hack in `App.tsx:58-105`. | 1 d |
-| **2** | `FRAMEWORK_MCP_RUNTIME` shim (~150 lines): `scene_get_hierarchy` + `scene_get_object_transform` from the R3F `Object3D` graph; `ecs_pause`/`resume`/`step` via `frameloop="never"` + `advance()`; partial `ecs_query_entity`/`set_component` mapped onto the zustand stores and Leva params. | 1–1.5 d |
-| **3** | First real interaction tests — one per lab. Grab-move-release in Manipulation, teleport in Locomotion, ray-vs-touch in Selection, hit-test confirm in Placement. | 2–3 d |
-| **4** | Deconflict Playwright lifecycles (plugin's managed browser vs. `playwright.config.ts` on port 5175). Decide whether interaction tests run in CI. | 1–2 d |
+Estimates assume the implementation is driven by an agent (Opus 5) with a human reviewing at phase boundaries. **Agent** is active working time; **human** is review and decision time that cannot be delegated. See [what compresses](#what-compresses-and-what-does-not) below for why the two columns diverge so sharply.
 
-**Total: ~1–1.5 weeks**, with Phases 0–2 (≈3 days) delivering most of the value.
+| Phase | Work | Agent | Human |
+|---|---|---|---|
+| **0** | **Vite 8 spike.** Plugin peer-declares `vite ^7.0.0`; repo is on `^8.0.2`. Verify on a throwaway branch before anything else. | ~1 h *(fat tail — see risks)* | — |
+| **1** | Add `iwsdkDev({ ai: { mode: 'agent', tools: ['claude'] } })`. Set `emulate: false` in `xrStore.ts` so the plugin's IWER owns emulation deterministically. Re-evaluate the DevUI hack in `App.tsx:58-105`. | 1–2 h | ~15 min |
+| **2** | `FRAMEWORK_MCP_RUNTIME` shim (~150 lines): `scene_get_hierarchy` + `scene_get_object_transform` from the R3F `Object3D` graph; `ecs_pause`/`resume`/`step` via `frameloop="never"` + `advance()`; partial `ecs_query_entity`/`set_component` mapped onto the zustand stores and Leva params. | 2–3 h | ~30 min |
+| **3** | First real interaction tests — one per lab. Grab-move-release in Manipulation, teleport in Locomotion, ray-vs-touch in Selection, hit-test confirm in Placement. | 4–8 h | ~1 h |
+| **4** | Deconflict Playwright lifecycles (plugin's managed browser vs. `playwright.config.ts` on port 5175). Decide whether interaction tests run in CI. | 2–4 h | decision, not code |
+
+**Total: ~1.5–2 agent-days of active work plus ~2 hours of human review**, spread across 2–4 calendar days once checkpoints are accounted for. Phases 0–2 — roughly half a day — still deliver most of the value.
+
+For comparison, the same plan estimated as solo human developer work is ~1–1.5 weeks. The compression is real but closer to **3–4×, not 10×**, because the binding constraint moves off typing and onto verification.
+
+### What compresses, and what does not
+
+**Compresses hard.** Phase 2 is the most agent-favorable work in the plan: self-contained, well-specified, and testable without a headset. Traversing an `Object3D` graph into JSON and wiring `frameloop="never"` + `advance()` are mechanical once the contract is fixed. Phases 0–1 are small diffs whose cost is mostly `npm install` wall-clock and error-reading.
+
+**Compresses weakly.** Phase 3 is the honest exception. Writing the test code is fast; *discovering the input choreography* is not. Finding the exact sequence of `xr_set_transform` and `xr_set_select_value` that actually triggers a grab in `useManipulation.ts` is empirical, and each iteration costs a page load plus R3F settle time (`capture.spec.ts` already budgets an 850 ms breath) plus session entry. Flakiness only surfaces serially. An agent iterates faster than a human but is bounded by cycle time, not typing speed.
+
+**Does not compress at all.**
+
+- **Wall-clock** — installs, dev-server boots, Playwright runs.
+- **Human judgment calls** — whether the DevUI hack is still needed, whether an emulated grab is a *faithful* grab, whether interaction tests belong in CI. An agent can produce evidence for each; it should not close them alone.
+- **Quest validation.** Unchanged and uncompressible. Emulation is a rung on the test pyramid, not the top one.
+
+**Consequence for the risk profile.** Total risk doesn't drop, but the fixed tails — the Vite 8 unknown, headless WebGL in CI, Quest validation — stay the same size while everything around them shrinks. They therefore become a *larger share* of the project. Phase 0 gating matters more here, not less: if the plugin genuinely breaks on Vite 8, the research to work around it (patch, fork, or pin Vite 7) could exceed the entire rest of the plan.
 
 ### Out of scope
 
@@ -108,10 +126,10 @@ Node is fine: engines want `>=20.19 <21 \|\| >=22.12 <23 \|\| >=24`; we're on v2
 
 Path B preserves the thesis. [Vision](./vision.md) bets on "no SDK installs, no platform lock-in," reaching Vision Pro / Pico / Android XR from one codebase. Path B adds a **dev dependency** that vanishes at build time; Path A adopts a Meta-authored, Quest-shaped runtime as the engine.
 
-We get the tooling either way. Path B costs ~1.5 weeks and no interaction-code changes. Path A costs a multi-month rewrite of ~10k lines. See the [companion brief](./iwsdk-migration-brief.md) for the full accounting of what Path A would additionally buy.
+We get the tooling either way. Path B costs ~1.5–2 agent-days and no interaction-code changes. Path A costs a rewrite of ~10k lines. See the [companion brief](./iwsdk-migration-brief.md) for the full accounting of what Path A would additionally buy — note that its estimate is still expressed in human-weeks and has not had an equivalent agent-assisted pass.
 
 ## Open questions
 
 - Does the plugin actually run on Vite 8? **Phase 0 answers this and gates the rest.**
 - Do interaction tests belong in CI, or stay a local/agent-invoked tool? (Headless WebGL in CI is its own project.)
-- Is the partial zustand/Leva shim worth building in Phase 2, or should it wait until Phase 3 shows what an agent actually reaches for?
+- ~~Is the partial zustand/Leva shim worth building in Phase 2, or should it wait until Phase 3 shows what an agent actually reaches for?~~ **Resolved by the agent-time estimate:** it is roughly an hour of the Phase 2 budget. Build it speculatively and delete what goes unused, rather than sequencing around the question.
