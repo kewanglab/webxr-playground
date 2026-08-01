@@ -311,10 +311,14 @@ export function LocomotionLab() {
 
   const { camera } = useThree()
 
-  const originPosition = usePlaygroundStore((s) => s.originPosition)
-  const originRotationY = usePlaygroundStore((s) => s.originRotationY)
-  const setOriginPosition = usePlaygroundStore((s) => s.setOriginPosition)
-  const setOriginRotationY = usePlaygroundStore((s) => s.setOriginRotationY)
+  // The origin transform is read via `usePlaygroundStore.getState()` at each
+  // point of use rather than through a selector. Every consumer below is a
+  // read-modify-write, and a selector hands them the value from the last
+  // *committed* render: if React does not commit between two rAF frames, the
+  // second frame recomputes from the same base and the first frame's delta is
+  // silently lost — movement speed and turn rate degrade under render pressure.
+  // Not subscribing also stops this component re-rendering on every frame that
+  // moves the origin.
 
   const turnLatch = useRef(false)
 
@@ -356,10 +360,11 @@ export function LocomotionLab() {
 
     // Head-relative movement with explicit origin-rotation compensation.
     // This keeps movement direction aligned after synthetic controller turning.
-    yawForward.applyAxisAngle(UP, originRotationY)
+    yawForward.applyAxisAngle(UP, usePlaygroundStore.getState().originRotationY)
 
     // Smooth move (thumbstick forward/back). Forward stick is usually negative y.
     if (Math.abs(yAxis) > moveDeadN) {
+      const { originPosition, setOriginPosition } = usePlaygroundStore.getState()
       const nextPos = originPosition.clone().addScaledVector(
         yawForward,
         -yAxis * moveSpeedN * delta,
@@ -372,6 +377,8 @@ export function LocomotionLab() {
     // through a sideways arc (comfort bug). Keeping the head's world position
     // fixed means O' = H + R(θ)·(O − H) alongside r' = r + θ.
     const applyTurn = (deltaRad: number) => {
+      const { originPosition, originRotationY, setOriginPosition, setOriginRotationY } =
+        usePlaygroundStore.getState()
       camera.getWorldPosition(SCRATCH_HEAD)
       SCRATCH_OFFSET.copy(originPosition).sub(SCRATCH_HEAD)
       SCRATCH_OFFSET.applyAxisAngle(UP, deltaRad)
@@ -470,6 +477,7 @@ export function LocomotionLab() {
             // Land the wearer on the target, not the origin anchor: offset by
             // the head's horizontal displacement from the origin so a user
             // standing off-center still arrives on the waypoint.
+            const { originPosition, setOriginPosition } = usePlaygroundStore.getState()
             camera.getWorldPosition(SCRATCH_HEAD)
             const next = pos.clone().add(originPosition).sub(SCRATCH_HEAD)
             next.y = pos.y
