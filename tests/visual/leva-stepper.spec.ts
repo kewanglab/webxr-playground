@@ -36,6 +36,10 @@ const LAB_STEPPERS = {
     { name: 'objectSize', value: 0.12, min: 0.05, max: 0.3, step: 0.01 },
     { name: 'previewOpacity', value: 0.4, min: 0, max: 1, step: 0.05 },
   ],
+  selection: [
+    { name: 'targetSize', value: 0.3, min: 0.1, max: 1, step: 0.05 },
+    { name: 'confirmScaleBoost', value: 0.15, min: 0.05, max: 0.35, step: 0.01 },
+  ],
 } satisfies Record<string, StepperSpec[]>
 
 type LabId = keyof typeof LAB_STEPPERS

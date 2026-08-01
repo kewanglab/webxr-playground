@@ -63,7 +63,10 @@ export const selectionTargetPositions: Record<
 export const tuningPresets = {
   controller: {
     selection: {
-      targetSize: 0.28,
+      // Kept on the control's step grid (min 0.1, step 0.05). An off-grid
+      // default renders the slider thumb snapped to the nearest valid stop
+      // while the number field shows the raw value — 0.28 drew at 0.30.
+      targetSize: 0.3,
       confirmScaleBoost: 0.15,
       enableHaptics: true,
       enableAudio: false,

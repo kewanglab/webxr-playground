@@ -62,7 +62,7 @@ Replaced themed per-variant tokens (kite/cylinder/capsule on pedestals) with spe
 **What landed:**
 - New `selectionTargetPositions` const in [src/config/labs.ts](../src/config/labs.ts) — ray (0, 1.60, −2.20), pinch (−0.30, 1.35, −0.55), touch (+0.30, 1.35, −0.55).
 - New `StateOrb` component in [src/labs/cross-xr/SelectionLab.tsx](../src/labs/cross-xr/SelectionLab.tsx):
-  - Sphere geometry, diameter = code `targetSize` (0.28 m default, Leva 0.1–1.0 m unchanged).
+  - Sphere geometry, diameter = code `targetSize` (0.30 m default, Leva 0.1–1.0 m unchanged).
   - State machine: `idle` → `targeted` on pointer enter → `confirmed` on pointer down → auto-revert to `idle` after ~2 s.
   - Materials pull from new `xr.orb.{idle,targeted,confirmed}` tokens (Phase 1).
   - Targeted state: two concentric rings at visual r+25 mm / r+45 mm, pulsing at 1.2 Hz (sine, amp ±15% opacity). Emissive pulse 1.6 ↔ 1.9.
