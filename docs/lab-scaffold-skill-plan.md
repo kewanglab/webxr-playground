@@ -68,7 +68,7 @@ Both modes produce `docs/labs/<slug>-spec.md`:
 ### Stage 1 — Scaffold (the three-file contract, plus)
 
 1. Registry entry in `src/config/labs.ts` (ID, name, mode, ≤9-word description in the house style).
-2. Component under `src/labs/<vr|ar|cross-xr>/` from the template: LabHeading, theme accents, Leva controls from the parameter table (respecting `pitfalls.md` — plain sliders for size-like values), `useHudReport` cells from the measures.
+2. Component under `src/labs/<vr|ar|cross-xr>/` from the template: LabHeading, theme accents, Leva controls from the parameter table (respecting `pitfalls.md` — `stepperNumber` rows with defaults on their step grid), `useHudReport` cells from the measures.
 3. Import in `src/app/LabContent.tsx`.
 4. Defaults added to `tuningPresets` in `src/config/labs.ts`.
 5. If the spec has a trial protocol: wire `useTrialRunner` + `logTrialResult` from it.

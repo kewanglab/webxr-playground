@@ -42,7 +42,15 @@ In `normalize`, patterns like `value: input.value ?? 0` or a controlled input th
 - Default missing values to something in-range (e.g. midpoint `(min + max) / 2`) and/or a stable `seed` in plugin settings.
 - In labs, defensively clamp: e.g. `Math.max(MIN_EDGE, coercedSize)` and helpers like `readControlNumber(unknown, fallback)`.
 
-**Selection Lab** uses plain Leva sliders for target size (not the stepper) to keep sizing predictable.
+**Selection Lab** used plain Leva sliders for target size for exactly this reason — but the underlying defect is fixed and the folder now uses `stepperNumber` like every other lab. Leva was stripping `min`/`max`/`step` from custom-plugin input, so `normalize` fell back to a 0–100 range and seeded the midpoint: every stepper read 50, and a size control that reads 50 m is what "could collapse" actually meant. Do not reintroduce the workaround.
+
+### Leva: keep default values on the control's step grid
+
+A `stepperNumber` renders a native `input[type=range]`, and browsers snap those to `min + n × step`. A default that is not a reachable stop draws the **slider thumb at the nearest valid value while the number field shows the raw one** — `targetSize` defaulted to `0.28` on a `min 0.1 / step 0.05` grid and drew at `0.30`. The `−`/`+` buttons then walk an off-grid sequence (`0.28`, `0.33`, …).
+
+Leva's own slider is a `<div>` positioned continuously, so this never shows until a control moves to the stepper.
+
+**Do instead:** pick defaults satisfying `(default − min) / step` ∈ ℤ, or choose a `step` that divides the default. All nine current call sites are on grid; `tests/visual/leva-stepper.spec.ts` asserts the rendered slider value, so a regression fails there.
 
 ### R3F / drei: `Text` must not be a child of `mesh`
 
@@ -66,7 +74,8 @@ Apply hover/selection scale on the `group` if both should move together.
 ### Related project files
 
 - `src/ui/levaPlugins/stepperNumber.tsx` — custom numeric UI without `Components.Number`
-- `src/labs/cross-xr/SelectionLab.tsx` — group + mesh + Text; plain sliders for size
+- `src/labs/cross-xr/SelectionLab.tsx` — group + mesh + Text; `stepperNumber` rows like the other labs
+- `tests/visual/leva-stepper.spec.ts` — asserts every stepper's rendered range, step and value
 - `src/app/App.tsx` — `<Canvas>` + desktop-only Leva
 
 ---

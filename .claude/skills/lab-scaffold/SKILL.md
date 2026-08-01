@@ -47,7 +47,7 @@ Do not run a requirements workshop. The user edits your draft; they don't fill a
 ## Stage 1 — Scaffold the three-file contract
 
 1. `src/config/labs.ts` — add the `LabId` union member and registry entry: name in title case ending "Lab", mode (`vr` | `ar` | `cross-xr`), description ≤9 words, present tense, parallel to existing entries. Add the spec's parameter defaults to `tuningPresets`.
-2. Copy `src/labs/_template/TemplateLab.tsx` to `src/labs/<vr|ar|cross-xr>/<Name>Lab.tsx` and fill it from the spec: Leva schema from the parameter table verbatim (folder name = lab name; plain sliders for size-like values — see pitfalls), `useHudReport` cells from the measures (≤4), `LabHeading` subtitle showing the live configuration including any approximation label.
+2. Copy `src/labs/_template/TemplateLab.tsx` to `src/labs/<vr|ar|cross-xr>/<Name>Lab.tsx` and fill it from the spec: Leva schema from the parameter table verbatim (folder name = lab name; `stepperNumber` for numeric rows, with each default on its own `min + n × step` grid — see pitfalls), `useHudReport` cells from the measures (≤4), `LabHeading` subtitle showing the live configuration including any approximation label.
 3. `src/app/LabContent.tsx` — add the case.
 
 If the spec has a trial protocol: build the `TrialSpec[]` from it and wire `useTrialRunner` + `logTrialResult` (see `src/xr/interactions/evaluation/` and DockingMode as the worked example). If not: omit both entirely.

@@ -306,7 +306,7 @@ When cross-lab A/B presets land (Phase 5), they work by loading a config object 
 Desktop ergonomics:
 
 - `src/ui/DebugPanel.tsx` widens the pane, rows, and fonts so controls are easier to read and hit on a monitor.
-- Most numeric lab parameters use the custom `stepperNumber` plugin in `src/ui/levaPlugins/stepperNumber.tsx`: **−** / **+** buttons, a number field, and a **range** slider. **Selection Lab** uses plain Leva number sliders only (avoids fragile size values for the targets).
+- Numeric lab parameters use the custom `stepperNumber` plugin in `src/ui/levaPlugins/stepperNumber.tsx`: **−** / **+** buttons, a number field, and a **range** slider. All nine call sites across Selection, Placement and Locomotion use it; defaults must sit on the control's step grid (see [Pitfalls](./pitfalls.md)).
 
 Leva stays a **desktop** overlay (HTML). It is not replicated inside the headset; see **In-headset HUD** under Device Testing Workflow for VR/AR FPS feedback.
 
