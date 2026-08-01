@@ -396,7 +396,9 @@ export function SelectionLab() {
     enableAudio: defaults.enableAudio,
   })
 
-  const size = Math.max(0.12, readLevaNumber(targetSize, defaults.targetSize))
+  // Floor matches the control's own `min` — a higher floor would silently
+  // ignore the bottom of the slider's advertised range.
+  const size = Math.max(0.1, readLevaNumber(targetSize, defaults.targetSize))
   const boost = readLevaNumber(confirmScaleBoost, defaults.confirmScaleBoost)
   const stageOffsetY = useInitialEyeLevelOffset({
     referenceY: SELECTION_FOCUS_Y,
