@@ -7,6 +7,7 @@ import { DoubleSide, Group, MeshBasicMaterial, MeshStandardMaterial } from 'thre
 import { useHudReport } from '../../app/useHudReport'
 import { getLabTitle, selectionTargetPositions, tuningPresets } from '../../config/labs'
 import { readLevaNumber } from '../../ui/levaPlugins/readLevaNumber'
+import { stepperNumber } from '../../ui/levaPlugins/stepperNumber'
 import { useHapticPulse } from '../../xr/feedback/haptics/useHapticPulse'
 import { useConfirmTone } from '../../xr/feedback/audio/useConfirmTone'
 import type { Tinted } from '../../config/playgroundTheme'
@@ -384,9 +385,13 @@ export function SelectionLab() {
   const isCloudPark = preset.id === 'cloud-park'
   const defaults = tuningPresets.controller.selection
   const { targetSize, confirmScaleBoost, enableHaptics, enableAudio } = useControls('Selection', {
-    // Plain sliders here — Leva's custom stepper plugin was unreliable for this folder (size could collapse).
-    targetSize: { value: defaults.targetSize, min: 0.1, max: 1, step: 0.05 },
-    confirmScaleBoost: { value: defaults.confirmScaleBoost, min: 0.05, max: 0.35, step: 0.01 },
+    targetSize: stepperNumber({ value: defaults.targetSize, min: 0.1, max: 1, step: 0.05 }),
+    confirmScaleBoost: stepperNumber({
+      value: defaults.confirmScaleBoost,
+      min: 0.05,
+      max: 0.35,
+      step: 0.01,
+    }),
     enableHaptics: defaults.enableHaptics,
     enableAudio: defaults.enableAudio,
   })
