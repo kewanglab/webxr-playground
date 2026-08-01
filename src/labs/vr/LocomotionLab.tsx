@@ -287,7 +287,10 @@ export function LocomotionLab() {
       max: 0.95,
       step: 0.05,
     }),
-    turnMode: { value: defaults.turnMode as 'snap' | 'smooth' },
+    turnMode: {
+      value: defaults.turnMode as 'snap' | 'smooth',
+      options: ['snap', 'smooth'],
+    },
     snapTurnAngleDeg: stepperNumber({
       value: defaults.snapTurnAngleDeg,
       min: 15,
