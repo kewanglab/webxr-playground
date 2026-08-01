@@ -9,6 +9,12 @@ logs/*.corrupt-*
 logs/*.tmp
 tsconfig.tsbuildinfo
 
+# Playwright run output — traces and error context written on failure, plus the
+# HTML report if anyone runs with `--reporter=html`. Authored screenshots go to
+# docs/mockups/captures/ instead and stay tracked.
+test-results/
+playwright-report/
+
 # Cursor — keep shared rules, ignore local plans/metadata
 .cursor/*
 !.cursor/rules/
