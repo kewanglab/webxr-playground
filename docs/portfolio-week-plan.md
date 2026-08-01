@@ -60,8 +60,31 @@ The seven fixes are code-verified (typecheck, build, headless render of all four
 
 **Agent:**
 - GitHub Actions CI: `tsc -b`, `vite build`, headless canvas-has-signal smoke on PRs.
+- Add vitest + jsdom, and port `tests/visual/leva-stepper.spec.ts` to a component test (see below).
 - Data export: structured docking trial records (already logged as notes) get a machine-readable shape, and `logs-viewer.html` gains a **Download CSV** button.
 - Shareable URLs: extend `?lab=`/`?theme=` with technique/preset params (e.g. `?lab=manipulation&technique=separated`) so a felt configuration is a pasteable link.
+
+### Note on testing the `stepperNumber` regression
+
+The obvious unit test does **not** catch this bug. `normalize` was never broken —
+calling `normalize({ init: 1.8, min: 0.2, max: 4, step: 0.1 })` against the *pre-fix*
+plugin still returns `settings: { min: 0.2, max: 4, step: 0.1 }`, so the assertion
+passes on the broken code. The defect was upstream, in leva's `parseOptions`, which
+collapsed the input object to the bare number `1.8` before `normalize` ever ran. Any
+test that calls `normalize` directly hands it the well-formed object the real pipeline
+never delivered.
+
+A useful test has to cross the leva boundary. The right shape is a **component test**:
+mount `useControls({ x: stepperNumber({ value: 1.8, min: 0.2, max: 4, step: 0.1 }) })`
+plus `<Leva />` in jsdom and assert the rendered `input[type=range]` attributes.
+Milliseconds, and no vite/WebGL/3D scene in the way.
+
+`tests/visual/leva-stepper.spec.ts` is the interim stand-in — it crosses the same
+boundary, but end-to-end through the full app (~35 s) because the repo had no unit
+runner when it was written. It also sits in `tests/visual/` only because
+`playwright.config.ts` pins `testDir` there; it is a DOM contract test, not a
+screenshot test. Once the component test exists, drop the Playwright version — it
+stops earning its runtime.
 
 **You (~30 min):**
 - Run one docking session, download the CSV, open it — is this the spreadsheet you'd want after a study session? Note missing columns.
