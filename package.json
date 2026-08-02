@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:agent": "vite --mode agent",
     "build": "tsc -b && vite build",
     "capture:screenshots": "playwright test tests/visual/capture.spec.ts --project=chromium",
     "test:visual": "playwright test",
@@ -23,11 +24,17 @@
   },
   "devDependencies": {
     "@gltf-transform/cli": "^4.3.0",
+    "@iwsdk/vite-plugin-dev": "^0.5.1",
     "@playwright/test": "^1.59.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "typescript": "^6.0.2",
     "vite": "^8.0.2"
+  },
+  "overrides": {
+    "@iwsdk/vite-plugin-dev": {
+      "vite": "$vite"
+    }
   }
 }
