@@ -1,0 +1,100 @@
+name: CI
+
+# Verification gate for pull requests. This catches the mechanical class of
+# failure only — types, bundling, and the one DOM contract that a dependency
+# can silently break. Interaction behaviour in an immersive session (turn
+# direction, deadzones, docking snap) is NOT covered here and still needs a
+# headset; see docs/pitfalls.md and the agent-harness work in
+# docs/phase-1-2-execution-plan.md, which is what eventually makes that
+# layer assertable.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A new push supersedes an in-flight run on the same ref.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck · build · size · steppers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No .nvmrc or engines field in the repo; pinned to match the version
+      # local development runs on. Vite 8 needs >= 20.19 / 22.12 regardless.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Split rather than `npm run build` so a red run names the failing stage.
+      - name: Typecheck
+        run: npx tsc -b
+
+      - name: Build
+        run: npx vite build
+
+      - name: Bundle size budget
+        run: node scripts/check-bundle-size.mjs
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # The stepper contract test: pure DOM assertions, deterministic, and the
+      # guard against leva reshaping custom-plugin input on a future bump.
+      - name: Stepper contract tests
+        run: npx playwright test tests/visual/leva-stepper.spec.ts --project=chromium
+
+      - name: Upload failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  smoke:
+    name: canvas smoke (non-blocking)
+    runs-on: ubuntu-latest
+    # WebGL under a software rasteriser is the one thing here likely to be
+    # flaky, and a flaky required check trains people to ignore red. Left
+    # advisory until it has proven stable enough to promote.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Asserts all four labs actually rasterise something, in both themes —
+      # a black canvas from a crashed R3F subtree is invisible to tsc and vite.
+      - name: Canvas has signal
+        run: npx playwright test tests/visual/capture.spec.ts --project=chromium
+
+      - name: Upload captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: canvas-captures
+          path: |
+            docs/mockups/captures/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
