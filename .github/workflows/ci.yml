@@ -1,39 +1,40 @@
 name: CI
 
 # Verification gate for pull requests. This catches the mechanical class of
-# failure only — types, bundling, and the one DOM contract that a dependency
-# can silently break. Interaction behaviour in an immersive session (turn
-# direction, deadzones, docking snap) is NOT covered here and still needs a
-# headset; see docs/pitfalls.md and the agent-harness work in
-# docs/phase-1-2-execution-plan.md, which is what eventually makes that
-# layer assertable.
+# failure only — types, bundling, payload size, and the one DOM contract that
+# a dependency can silently break. Interaction behaviour in an immersive
+# session (turn direction, deadzones, docking snap) is NOT covered here and
+# still needs a headset; see docs/pitfalls.md and the agent-harness work in
+# docs/phase-1-2-execution-plan.md, which is what eventually makes that layer
+# assertable.
 #
 # Install uses `npm install`, not `npm ci`. The committed lockfile was
 # generated on macOS and so never walked the Linux-only optional branch of
 # the dependency graph — it lacks the `@emnapi/*` entries that
 # `@rolldown/binding-*` needs on a Linux runner, and `npm ci` refuses a
-# lockfile it considers out of sync. Regenerating it from scratch is not a
-# free fix: it moves 12 of 15 direct dependencies (notably
-# @react-three/fiber 9.5 -> 9.7 and vite 8.0 -> 8.2) and doubles the entry
-# chunk from ~801 KiB to ~1721 KiB, which the size budget below rejects.
-# That trade belongs in its own PR with its own headset re-validation.
-# `npm install` honours the locked versions and fills in only what is
-# missing. Phase 1's Pages deploy job will hit the same wall.
+# lockfile it considers out of sync. `npm install` honours the locked
+# versions and fills in only what is missing. Regenerating the lockfile so
+# `npm ci` works is worth its own PR; Phase 1's Pages deploy will need it.
 
 on:
   pull_request:
   push:
     branches: [main]
 
+# Least privilege: neither job writes to the repo.
+permissions:
+  contents: read
+
 # A new push supersedes an in-flight run on the same ref.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   verify:
     name: typecheck · build · size · steppers
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -44,7 +45,6 @@ jobs:
           node-version: '24'
           cache: npm
 
-      # `npm install`, not `npm ci` — see the note at the top of this file.
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
@@ -57,6 +57,14 @@ jobs:
 
       - name: Bundle size budget
         run: node scripts/check-bundle-size.mjs
+
+      # ~285 MiB of browser payload per job otherwise. Keyed on the lockfile,
+      # so a Playwright version change invalidates it.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
@@ -76,12 +84,9 @@ jobs:
           if-no-files-found: ignore
 
   smoke:
-    name: canvas smoke (non-blocking)
+    name: canvas smoke (advisory)
     runs-on: ubuntu-latest
-    # WebGL under a software rasteriser is the one thing here likely to be
-    # flaky, and a flaky required check trains people to ignore red. Left
-    # advisory until it has proven stable enough to promote.
-    continue-on-error: true
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -90,17 +95,36 @@ jobs:
           node-version: '24'
           cache: npm
 
-      # `npm install`, not `npm ci` — see the note at the top of this file.
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      # Asserts all four labs actually rasterise something, in both themes —
-      # a black canvas from a crashed R3F subtree is invisible to tsc and vite.
+      # Asserts the four cloud-park lab scenes actually rasterise — a black
+      # canvas from a crashed R3F subtree is invisible to tsc and vite. The
+      # default-theme cases in this spec are UI captures and assert only that
+      # the shell heading renders, so scene coverage is cloud-park only.
+      #
+      # `continue-on-error` sits on the step, not the job: at job level GitHub
+      # reports the whole job as success, so a regression would show a green
+      # check and go unnoticed. This way the job stays non-blocking but a
+      # failure still annotates the PR.
       - name: Canvas has signal
+        id: smoke
+        continue-on-error: true
         run: npx playwright test tests/visual/capture.spec.ts --project=chromium
+
+      - name: Flag smoke failure
+        if: steps.smoke.outcome == 'failure'
+        run: |
+          echo "::warning::Canvas smoke failed — a lab may not be rasterising. Download the canvas-captures artifact to see what rendered."
 
       - name: Upload captures
         if: always()
