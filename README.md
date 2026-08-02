@@ -31,7 +31,32 @@ The interaction grammar of spatial computing is being authored right now, in sca
 
 ---
 
-## Try it in 60 seconds
+## Try it now
+
+### **https://kewanglab.github.io/webxr-playground/**
+
+Open that on your headset. That's the install — no clone, no build, no sideload. Quest Browser and desktop Chrome both work; on a headset, pick a lab and hit **Enter VR** or **Enter AR**.
+
+Nothing is written to a server: parameter tuning, session notes, and trial logs all stay in your browser.
+
+### Deep links
+
+Every lab and theme is addressable, so a specific configuration can be shared as a URL:
+
+```
+https://kewanglab.github.io/webxr-playground/?lab=manipulation&theme=cloud-park
+```
+
+| Parameter | Values | Default |
+|---|---|---|
+| `lab` | `selection` · `placement` · `locomotion` · `manipulation` | `selection` |
+| `theme` | `default` (Warm Night) · `cloud-park` | last used, else `default` |
+
+Both work identically on the hosted subpath and on a local dev server. An unrecognized value falls back to the default rather than erroring. Changing the theme in-app rewrites `?theme=` in the address bar, so the URL stays copy-pasteable. Per-parameter deep links (`?cdGain=…`) are not implemented yet.
+
+## Local development
+
+Clone it when you want to *change* something — edit a lab, add one, or run the capture tooling.
 
 ```bash
 git clone <this-repo> && cd webxr-playground
@@ -40,7 +65,24 @@ npm run dev
 # open the printed URL on desktop (emulator) or on your headset's browser
 ```
 
-On Quest 3 from macOS, the validated path is `adb reverse` to forward `localhost:5173` into the headset — see `docs/overview.md` for the full device-testing notes.
+On Quest 3 from macOS, the validated path is `adb reverse` to forward `localhost:5173` into the headset:
+
+```bash
+npm run quest   # adb reverse tcp:5173 tcp:5173
+```
+
+See `docs/overview.md` for the full device-testing notes.
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Dev server with hot reload and the session-log API |
+| `npm run build` | Typecheck (`tsc -b`) then production build |
+| `npm run capture:screenshots` | Playwright capture pass for shell and scene review angles |
+| `npm run test:visual` | Full Playwright suite |
+
+### Deploying
+
+`.github/workflows/deploy-pages.yml` publishes `main` to GitHub Pages. The deploy base path is passed as a CLI flag (`vite build --base=/webxr-playground/`) rather than set in `vite.config.ts`, so local dev and the Playwright suite keep serving from `/`. Runtime asset URLs are built from `import.meta.env.BASE_URL` so they resolve under either base.
 
 ## A look inside
 
@@ -136,8 +178,8 @@ Then:
 ## Session log workflow
 
 - Use the in-app Session Logger panel to record test notes while running labs.
-- Entries sync to desktop via `/api/logs` and persist in `logs/session-notes.json`.
-- Open `http://localhost:5173/logs-viewer.html` to review, filter, and export logs.
+- **On a dev server:** entries sync via `/api/logs` and persist in `logs/session-notes.json`. Open `http://localhost:5173/logs-viewer.html` to review, filter, and export them.
+- **On the hosted site:** `/api/logs` is dev-server middleware and does not exist, so the panel reports *local only — desktop sync unavailable* and keeps entries in the browser (they survive a reload; "Clear local log" resets them). Clone and run locally when you need notes on disk.
 
 ## Documentation
 
@@ -148,3 +190,9 @@ Then:
 | `docs/roadmap.md` | Phased deliverables and editable near-term focus. |
 | `docs/pitfalls.md` | Bugs and footguns we have already hit. |
 | `docs/visual-capture.md` | Playwright screenshot workflow for shell and 3D scene review angles. |
+
+## License
+
+Code is MIT — see [`LICENSE`](./LICENSE).
+
+Third-party assets keep their own terms and are **not** covered by it: the self-hosted DM Sans is SIL OFL 1.1 (`public/assets/fonts/OFL.txt`), and the `xr-kit` GLBs are derived from commercial asset packs whose redistribution terms are still unresolved — see [`public/assets/README.md`](./public/assets/README.md).

@@ -1,0 +1,70 @@
+name: Deploy to GitHub Pages
+
+# Publishes the built playground to https://kewanglab.github.io/webxr-playground/.
+# Requires Settings → Pages → Source: "GitHub Actions" (one-time, repo admin).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it — a half-deployed Pages
+# site is worse than a slightly stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The deploy base is passed as a CLI flag, deliberately, instead of being
+      # set in vite.config.ts: `npm run dev`, `npm run capture:screenshots`, and
+      # `npm run test:visual` all keep serving from `/`. It must match the
+      # repository name — Pages serves project sites under /<repo>/.
+      #
+      # `npm run build` is `tsc -b && vite build`, and npm appends these args to
+      # the end of that string, so this typechecks and then builds.
+      - name: Build
+        run: npm run build -- --base=/webxr-playground/
+
+      # Dev-only files that would ship as dead pages on a static host: the logs
+      # viewer talks to the `/api/logs` dev-server middleware, which does not
+      # exist here, and the asset README documents the repo, not the runtime.
+      - name: Prune dev-only files from the deploy artifact
+        run: |
+          rm -f dist/logs-viewer.html
+          rm -f dist/assets/README.md
+          du -sh dist
+
+      - uses: actions/configure-pages@v5
+
+      # No 404.html fallback is needed: deep links are query parameters
+      # (`?lab=…&theme=…`), so every URL resolves to the real index.html.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
