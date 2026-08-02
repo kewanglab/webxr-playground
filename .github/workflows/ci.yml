@@ -23,11 +23,11 @@ jobs:
     name: typecheck · build · size · steppers
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # No .nvmrc or engines field in the repo; pinned to match the version
       # local development runs on. Vite 8 needs >= 20.19 / 22.12 regardless.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
@@ -55,7 +55,7 @@ jobs:
 
       - name: Upload failure traces
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-traces
           path: test-results/
@@ -70,9 +70,9 @@ jobs:
     # advisory until it has proven stable enough to promote.
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
@@ -90,7 +90,7 @@ jobs:
 
       - name: Upload captures
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: canvas-captures
           path: |
