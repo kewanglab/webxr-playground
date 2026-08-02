@@ -3,7 +3,12 @@ import { useEffect, useRef, useState } from 'react'
 import { usePlaygroundStore, type SessionLogEntry } from '../app/store'
 import { labs } from '../config/labs'
 import { xrStore } from '../xr/core/xrStore'
-import { postLogEntriesToDesktop, postLogEntryToDesktop } from './sessionLogSync'
+import {
+  DesktopSyncUnavailableError,
+  isDesktopSyncUnavailable,
+  postLogEntriesToDesktop,
+  postLogEntryToDesktop,
+} from '../app/sessionLogSync'
 import { LoggerLevaTitleBar, loggerLevaPanelShell } from './loggerLevaChrome'
 
 const v = (name: string) => `var(${name})`
@@ -42,19 +47,28 @@ const inputBase: CSSProperties = {
 
 type LoggerTab = 'log' | 'notes'
 
+const LOCAL_ONLY_STATUS = 'local only — desktop sync unavailable'
+
 export function TestLoggerPanel() {
   const currentLab = usePlaygroundStore((s) => s.currentLab)
   const addLogEntry = usePlaygroundStore((s) => s.addLogEntry)
   const updateLogEntryNote = usePlaygroundStore((s) => s.updateLogEntryNote)
   const logEntries = usePlaygroundStore((s) => s.logEntries)
+  const clearLogEntries = usePlaygroundStore((s) => s.clearLogEntries)
 
   const [expanded, setExpanded] = useState(false)
   const [tab, setTab] = useState<LoggerTab>('log')
   const [inputSource, setInputSource] = useState<'controller' | 'hand' | 'mixed'>('controller')
   const [note, setNote] = useState('')
-  const [desktopStatus, setDesktopStatus] = useState<string>('not synced')
+  // A hosted build has no `/api/logs`; the panel says so rather than reporting
+  // a sync error the visitor can do nothing about.
+  const [localOnly, setLocalOnly] = useState(isDesktopSyncUnavailable)
+  const [desktopStatus, setDesktopStatus] = useState<string>(() =>
+    isDesktopSyncUnavailable() ? LOCAL_ONLY_STATUS : 'not synced',
+  )
   const [desktopPath, setDesktopPath] = useState<string>('logs/session-notes.json')
   const [isSyncing, setIsSyncing] = useState(false)
+  const [confirmingClear, setConfirmingClear] = useState(false)
 
   const prevXrModeRef = useRef(xrStore.getState().mode)
 
@@ -74,16 +88,28 @@ export function TestLoggerPanel() {
     return () => window.clearInterval(id)
   }, [])
 
+  /**
+   * "No API to talk to" is a supported mode, not a failure: switch the panel to
+   * local-only and keep the entry, which the store has already persisted.
+   */
+  function reportSyncError(error: unknown) {
+    if (error instanceof DesktopSyncUnavailableError) {
+      setLocalOnly(true)
+      setDesktopStatus(LOCAL_ONLY_STATUS)
+      return
+    }
+    setDesktopStatus(`sync failed: ${error instanceof Error ? error.message : 'unknown error'}`)
+  }
+
   async function persistEntryToDesktop(entry: SessionLogEntry) {
+    if (localOnly) return
     setIsSyncing(true)
     try {
       const payload = await postLogEntryToDesktop(entry)
       if (payload.path) setDesktopPath(payload.path)
       setDesktopStatus(`synced (${payload.count ?? 0})`)
     } catch (error) {
-      setDesktopStatus(
-        `sync failed: ${error instanceof Error ? error.message : 'unknown error'}`,
-      )
+      reportSyncError(error)
     } finally {
       setIsSyncing(false)
     }
@@ -97,12 +123,38 @@ export function TestLoggerPanel() {
       if (payload.path) setDesktopPath(payload.path)
       setDesktopStatus(`synced all (${payload.count ?? 0})`)
     } catch (error) {
-      setDesktopStatus(
-        `sync failed: ${error instanceof Error ? error.message : 'unknown error'}`,
-      )
+      reportSyncError(error)
     } finally {
       setIsSyncing(false)
     }
+  }
+
+  /**
+   * Two-tap confirm rather than `window.confirm`: a modal dialog is not
+   * dismissible from inside an immersive session, and this panel is reachable
+   * there. Arming lapses after a few seconds so it can't be tripped later.
+   */
+  const clearArmTimerRef = useRef<number | null>(null)
+  useEffect(
+    () => () => {
+      if (clearArmTimerRef.current != null) window.clearTimeout(clearArmTimerRef.current)
+    },
+    [],
+  )
+
+  const onClearClick = () => {
+    if (confirmingClear) {
+      if (clearArmTimerRef.current != null) window.clearTimeout(clearArmTimerRef.current)
+      clearArmTimerRef.current = null
+      setConfirmingClear(false)
+      clearLogEntries()
+      return
+    }
+    setConfirmingClear(true)
+    clearArmTimerRef.current = window.setTimeout(() => {
+      clearArmTimerRef.current = null
+      setConfirmingClear(false)
+    }, 4000)
   }
 
   const onSave = () => {
@@ -212,7 +264,7 @@ export function TestLoggerPanel() {
               >
                 Add an entry from the browser. This tab stays open after you click Log — switch to{' '}
                 <span style={{ color: v('--pg-shell-text-primary') }}>Session notes</span> to edit
-                headset logs or sync everything to disk.
+                headset logs{localOnly ? '' : ' or sync everything to disk'}.
               </div>
 
               <label
@@ -273,20 +325,61 @@ export function TestLoggerPanel() {
                 overflow: 'hidden',
               }}
             >
-              <button
-                type="button"
-                style={{
-                  ...panelButton,
-                  width: '100%',
-                  marginBottom: v('--pg-shell-space-sm'),
-                  flexShrink: 0,
-                  minHeight: 40,
-                }}
-                onClick={() => void syncAllToDesktop()}
-                disabled={!logEntries.length || isSyncing}
-              >
-                Sync to Desktop
-              </button>
+              {localOnly ? (
+                /* Deliberately not in the "Sync to Desktop" slot. When a dev
+                   session loses its server mid-run, `localOnly` flips and a
+                   button that meant "save my notes" would become "destroy my
+                   notes" in the same position, aimed at exactly the entries
+                   that just failed to sync. Different placement, destructive
+                   styling, and a confirm step. */
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    marginBottom: v('--pg-shell-space-sm'),
+                    flexShrink: 0,
+                  }}
+                >
+                  <button
+                    type="button"
+                    style={{
+                      ...panelButton,
+                      minHeight: 32,
+                      fontSize: 12,
+                      padding: `${v('--pg-shell-space-xs')} ${v('--pg-shell-space-md')}`,
+                      background: 'transparent',
+                      borderColor: confirmingClear
+                        ? v('--pg-shell-state-danger')
+                        : v('--pg-shell-border-subtle'),
+                      color: confirmingClear
+                        ? v('--pg-shell-state-danger')
+                        : v('--pg-shell-text-muted'),
+                      fontWeight: confirmingClear ? 600 : 400,
+                    }}
+                    onClick={onClearClick}
+                    disabled={!logEntries.length}
+                  >
+                    {confirmingClear
+                      ? `Delete all ${logEntries.length} — tap again`
+                      : 'Clear local log'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  style={{
+                    ...panelButton,
+                    width: '100%',
+                    marginBottom: v('--pg-shell-space-sm'),
+                    flexShrink: 0,
+                    minHeight: 40,
+                  }}
+                  onClick={() => void syncAllToDesktop()}
+                  disabled={!logEntries.length || isSyncing}
+                >
+                  Sync to Desktop
+                </button>
+              )}
 
               <div
                 style={{
@@ -296,11 +389,25 @@ export function TestLoggerPanel() {
                   lineHeight: 1.4,
                 }}
               >
-                Edit notes below, then Sync to Desktop to update{' '}
-                <code style={{ fontSize: 11, fontFamily: v('--pg-shell-font-mono') }}>
-                  logs/session-notes.json
-                </code>
-                . After you leave XR, this tab opens automatically if you logged anything from the
+                {localOnly ? (
+                  <>
+                    Entries stay in this browser — writing to{' '}
+                    <code style={{ fontSize: 11, fontFamily: v('--pg-shell-font-mono') }}>
+                      logs/session-notes.json
+                    </code>{' '}
+                    needs the local dev server. Edit notes below; they survive a reload on this
+                    device.
+                  </>
+                ) : (
+                  <>
+                    Edit notes below, then Sync to Desktop to update{' '}
+                    <code style={{ fontSize: 11, fontFamily: v('--pg-shell-font-mono') }}>
+                      logs/session-notes.json
+                    </code>
+                    .
+                  </>
+                )}{' '}
+                After you leave XR, this tab opens automatically if you logged anything from the
                 headset.
               </div>
 
@@ -410,10 +517,10 @@ export function TestLoggerPanel() {
                 fontSize: 11,
                 color: v('--pg-shell-text-muted'),
                 wordBreak: 'break-all',
-                fontFamily: v('--pg-shell-font-mono'),
+                fontFamily: localOnly ? v('--pg-shell-font-ui') : v('--pg-shell-font-mono'),
               }}
             >
-              {desktopPath}
+              {localOnly ? 'Kept in this browser (localStorage)' : desktopPath}
             </div>
           </div>
           </div>

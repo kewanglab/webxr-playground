@@ -7,8 +7,11 @@ import { forwardRef, type ComponentProps } from 'react'
  * and drei's `<Text>` suspends on that fetch — on a network-restricted device
  * the whole scene Suspense never resolves and the canvas stays black.
  * DM Sans matches the design system (docs/design-handoff/skill.md §3).
+ *
+ * `BASE_URL` keeps this correct under a subpath deploy base (GitHub Pages) as
+ * well as at the dev server's root.
  */
-export const XR_TEXT_FONT = '/assets/fonts/DMSans-Regular.ttf'
+export const XR_TEXT_FONT = `${import.meta.env.BASE_URL}assets/fonts/DMSans-Regular.ttf`
 
 /** Project `<Text>` — drei's Text with the self-hosted font applied. */
 export const Text = forwardRef<

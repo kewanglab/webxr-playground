@@ -32,8 +32,9 @@ function XRScene() {
 export function XRRoot() {
   const fpsHudVisible = usePlaygroundStore((s) => s.fpsHudVisible)
 
-  // Kit models load on demand via `KitInstance` (each has its own Suspense
-  // boundary) — no app-mount preload, so a lab only pays for what it draws.
+  // No model preload at app mount. Every lab currently draws from primitives;
+  // anything reintroducing `KitInstance` gets its own Suspense boundary so one
+  // prop's download can't blank the scene.
   return (
     <XR store={xrStore}>
       <Suspense fallback={null}>

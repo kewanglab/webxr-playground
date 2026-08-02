@@ -10,7 +10,14 @@ import {
 } from 'three'
 import type { GLTF } from 'three-stdlib'
 
-export const XR_KIT_BASE_PATH = '/assets/models/xr-kit/'
+/**
+ * Runtime URL prefix for the kit `.glb` files.
+ *
+ * `BASE_URL` (always slash-terminated) is `/` for `npm run dev` and the deploy
+ * base for a hosted build — a hardcoded `/assets/...` would 404 under the
+ * GitHub Pages subpath.
+ */
+export const XR_KIT_BASE_PATH = `${import.meta.env.BASE_URL}assets/models/xr-kit/`
 
 export type KitModelOptions = {
   color?: string

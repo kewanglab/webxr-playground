@@ -3,6 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Declared explicitly so the browser doesn't fall back to requesting
+         /favicon.ico at the origin root, which 404s under a subpath deploy. -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta
+      name="description"
+      content="A web-native playground for inventing, remixing, and comparing XR interaction techniques. Open it on a headset — that's the install."
+    />
     <title>WebXR Playground</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }

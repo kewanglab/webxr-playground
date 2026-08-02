@@ -7,21 +7,26 @@ What ships in the repo, where it came from, and what has to be fetched.
 | Path | Size | Source | License | Used by |
 |---|---|---|---|---|
 | `fonts/DMSans-Regular.ttf` | 78 KB | [DM Sans](https://github.com/googlefonts/dm-fonts) | SIL OFL 1.1 (`fonts/OFL.txt`) | all in-scene text via `src/xr/visual/XRText.tsx` — self-hosted so no CDN fetch happens at runtime (see `docs/pitfalls.md`) |
-| `models/xr-kit/*.glb` | ~2 MB total | derived — built from the MegaKit + Molten packs below by `npm run build:xr-kit` | inherits the source packs' terms | `KitInstance` (`src/xr/visual/useKitModel.tsx`) |
 
-The `xr-kit` GLBs are texture-optimized (1024 px max, WebP) — originally ~67 MB
-for the same nine models, essentially all of it 2048² PNG trim sheets on
-sub-500-vertex meshes. Mesh compression is deliberately *not* used: these meshes
-are tiny, and Draco would add a runtime decoder fetch for no benefit.
+The font is the only asset shipped in the repo. Nothing else is fetched at
+runtime — every lab draws from primitives.
 
-Regenerate after changing the source packs:
+## The xr-kit models are gone — and why
 
-```sh
-npm run build:xr-kit
-# then re-optimize:
-npx gltf-transform resize <in> <tmp> --width 1024 --height 1024
-npx gltf-transform webp <tmp> <out> --quality 82
-```
+The nine `models/xr-kit/*.glb` files were removed before the site went public.
+They were derivatives of the two commercial packs below, whose redistribution
+terms were never confirmed, and publishing to GitHub Pages would have
+redistributed them to every visitor.
+
+Eight of the nine were already referenced by no code at all. The ninth,
+`platform_simple.glb`, was one flat slab on the Manipulation Lab's docking desk
+in the Warm Night theme; it is now `DeckPlate` in
+`src/labs/cross-xr/manipulation/DockingMode.tsx`, built from two boxes.
+
+The loader (`src/xr/visual/useKitModel.tsx`) and the native-size table
+(`src/xr/visual/kitNative.ts`) are kept but unused, so a local rebuild still
+has something to call. `models/xr-kit/` is git-ignored: regenerating the kit
+on your machine will not put it back in the repo.
 
 ## Not in the repo — fetch locally to rebuild the kit
 
@@ -39,8 +44,20 @@ To rebuild the kit, drop your licensed copies back at those paths and run
 `npm run build:xr-kit`. Both paths are git-ignored, so a local copy will not be
 committed.
 
-> **Licensing — unresolved.** Confirm the redistribution terms of the MegaKit and
-> Molten packs before publishing any derived `xr-kit` GLB. If their licenses do
-> not permit redistribution of derivatives, the shipped `xr-kit` models must be
-> replaced with CC0 equivalents (e.g. [Kenney](https://kenney.nl) kits, which are
-> CC0 and were previously vendored here but unreferenced by any code).
+Regenerate with:
+
+```sh
+npm run build:xr-kit
+# then re-optimize (the kit was ~67 MB of 2048² PNG trim sheets before this):
+npx gltf-transform resize <in> <tmp> --width 1024 --height 1024
+npx gltf-transform webp <tmp> <out> --quality 82
+```
+
+Mesh compression is deliberately *not* used: these meshes are sub-500-vertex,
+and Draco would add a runtime decoder fetch for no benefit.
+
+> **Licensing — still unresolved, but no longer blocking.** Nothing derived
+> from these packs ships any more, so the public site is clear either way.
+> Confirm their terms before committing or deploying any derived GLB. If they
+> do not permit redistributing derivatives, use CC0 equivalents instead —
+> e.g. [Kenney](https://kenney.nl) kits.

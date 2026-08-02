@@ -26,3 +26,8 @@ playwright-report/
 # See public/assets/README.md.
 public/assets/models/Modular SciFi MegaKit[Standard]/
 public/assets/models/Molten Maps SciFi Asset Pack/
+
+# Derived kit GLBs. Untracked deliberately: they are derivatives of the packs
+# above, whose redistribution terms are unresolved, and the site is public.
+# `npm run build:xr-kit` regenerates them locally; nothing loads them today.
+public/assets/models/xr-kit/

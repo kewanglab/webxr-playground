@@ -2,7 +2,7 @@ import { Text } from '../../../xr/visual/XRText'
 import { useFrame } from '@react-three/fiber'
 import { button, useControls } from 'leva'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Euler, Quaternion, Shape, Vector3 } from 'three'
+import { Color, Euler, Quaternion, Shape, Vector3 } from 'three'
 import type { ManipulationAcquisition, ManipulationTechnique } from '../ObjectManipulationLab'
 import type { ManipulationResult } from './techniques'
 import { useHudReport } from '../../../app/useHudReport'
@@ -10,10 +10,6 @@ import { tuningPresets } from '../../../config/labs'
 import { logTrialResult, useTrialRunner } from '../../../xr/interactions/evaluation'
 import type { Tinted } from '../../../config/playgroundTheme'
 import { usePlaygroundTheme } from '../../../xr/theme/PlaygroundThemeContext'
-import {
-  scalePropComputerToHeight,
-} from '../../../xr/visual/kitNative'
-import { KitInstance } from '../../../xr/visual/useKitModel'
 import {
   CloudParkShadowBlob,
   CloudParkWorkbenchHandle,
@@ -241,6 +237,110 @@ function ProximityRing({
         depthWrite={false}
       />
     </mesh>
+  )
+}
+
+const DECK_PLATE_THICKNESS = 0.014
+/** Inset from the desk edge, per side, so the desk's own rim stays visible. */
+const DECK_PLATE_MARGIN = 0.045
+/** Inset of the inlaid inner panel from the plate edge, per side. */
+const DECK_PLATE_INSET = 0.055
+/** Height of the inlay, and how far it stands proud of the plate's top face. */
+const DECK_PLATE_INLAY_HEIGHT = 0.002
+
+/**
+ * Working surface laid over the desk in the Warm Night theme — the plate the
+ * docking target sits on, and the visual floor for the depth cue.
+ *
+ * Built from primitives rather than loaded from the xr-kit: it replaced a
+ * `platform_simple.glb` whose source pack's redistribution terms were never
+ * resolved, which was the last thing blocking a public deploy.
+ *
+ * Two things the GLB did for free have to be done explicitly here. Its baked
+ * trim-sheet darkened the surface well below `stone`, which is what let the
+ * stone-coloured cradles and supports read against it — hence the plate base
+ * being pulled halfway to `seal`, or the whole desk flattens into one tone from
+ * overhead. And its mesh sat inside its own footprint, leaving a lip of desk
+ * visible around it; `DECK_PLATE_MARGIN` reproduces that rim.
+ */
+function DeckPlate({
+  offsetY,
+  stone,
+  seal,
+  mustard,
+}: {
+  offsetY: number
+  stone: string
+  seal: string
+  mustard: string
+}) {
+  // Half-way between the desk's `stone` and the plinth's `seal` — the taupe the
+  // GLB's baked albedo landed on. `mustard` alone reads too warm here, and
+  // `stone` alone loses the furniture against the surface.
+  const plateColor = useMemo(
+    () => new Color(stone).lerp(new Color(seal), 0.5),
+    [stone, seal],
+  )
+  // Inlay lifts back toward `stone` so it reads as a change of finish rather
+  // than a second slab.
+  const innerColor = useMemo(
+    () => new Color(stone).lerp(new Color(seal), 0.38),
+    [stone, seal],
+  )
+  const plateWidth = DESK_PLATFORM_WIDTH - DECK_PLATE_MARGIN * 2
+  const plateDepth = DESK_PLATFORM_DEPTH - DECK_PLATE_MARGIN * 2
+
+  return (
+    <group>
+      <mesh
+        position={addYOffset(
+          [
+            OBJECT_ORIGIN.x,
+            DESK_SURFACE_Y + DECK_PLATE_THICKNESS / 2,
+            OBJECT_ORIGIN.z + 0.04,
+          ],
+          offsetY,
+        )}
+      >
+        <boxGeometry args={[plateWidth, DECK_PLATE_THICKNESS, plateDepth]} />
+        <meshStandardMaterial
+          color={plateColor}
+          emissive={mustard}
+          emissiveIntensity={0.03}
+          roughness={0.88}
+          metalness={0.04}
+        />
+      </mesh>
+      {/* Stacked on the plate's top face, not sunk into it: an earlier version
+          centred this 2 mm box 1 mm *below* the top, which put it entirely
+          inside the opaque plate and drew nothing. Sitting proud gives the
+          surface-finish break the GLB's trim-sheet used to provide. */}
+      <mesh
+        position={addYOffset(
+          [
+            OBJECT_ORIGIN.x,
+            DESK_SURFACE_Y + DECK_PLATE_THICKNESS + DECK_PLATE_INLAY_HEIGHT / 2,
+            OBJECT_ORIGIN.z + 0.04,
+          ],
+          offsetY,
+        )}
+      >
+        <boxGeometry
+          args={[
+            plateWidth - DECK_PLATE_INSET * 2,
+            DECK_PLATE_INLAY_HEIGHT,
+            plateDepth - DECK_PLATE_INSET * 2,
+          ]}
+        />
+        <meshStandardMaterial
+          color={innerColor}
+          emissive={mustard}
+          emissiveIntensity={0.05}
+          roughness={0.74}
+          metalness={0.1}
+        />
+      </mesh>
+    </group>
   )
 }
 
@@ -987,19 +1087,11 @@ export function DockingMode({
         isCloudPark={isCloudPark}
       />
       {!isCloudPark && (
-        <KitInstance
-          name="platform_simple"
-          position={addYOffset(
-            [OBJECT_ORIGIN.x, DESK_SURFACE_Y + 0.002, OBJECT_ORIGIN.z + 0.04],
-            tableOffsetY,
-          )}
-          scale={[DESK_PLATFORM_WIDTH / 4, 1, DESK_PLATFORM_DEPTH / 4]}
-          options={{
-            color: xr.accent.stone,
-            emissive: xr.accent.mustard,
-            emissiveIntensity: 0.04,
-            roughness: 0.88,
-          }}
+        <DeckPlate
+          offsetY={tableOffsetY}
+          stone={xr.accent.stone}
+          seal={xr.accent.seal}
+          mustard={xr.accent.mustard}
         />
       )}
     </group>

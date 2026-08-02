@@ -8,13 +8,12 @@ name: CI
 # docs/phase-1-2-execution-plan.md, which is what eventually makes that layer
 # assertable.
 #
-# Install uses `npm install`, not `npm ci`. The committed lockfile was
-# generated on macOS and so never walked the Linux-only optional branch of
-# the dependency graph — it lacks the `@emnapi/*` entries that
-# `@rolldown/binding-*` needs on a Linux runner, and `npm ci` refuses a
-# lockfile it considers out of sync. `npm install` honours the locked
-# versions and fills in only what is missing. Regenerating the lockfile so
-# `npm ci` works is worth its own PR; Phase 1's Pages deploy will need it.
+# Install uses `npm ci`, so a run installs exactly the locked tree and a
+# dependency cannot drift in underneath a green check. That needs the
+# lockfile to carry the Linux-only optional branch of the graph — the
+# `@emnapi/*` entries under `@rolldown/binding-wasm32-wasi` — which it now
+# does; see the Pages deploy commit for how they were added without moving
+# a single direct dependency.
 
 on:
   pull_request:
@@ -46,7 +45,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci
 
       # Split rather than `npm run build` so a red run names the failing stage.
       - name: Typecheck
@@ -83,6 +82,47 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  hosted:
+    name: subpath build (Pages parity)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Builds with the deploy base and serves it through `vite preview`, then
+      # fails on any 404 or console error. A root-absolute asset path builds and
+      # typechecks perfectly and only breaks under the Pages subpath, which is
+      # exactly the class of bug nothing else here would catch. Also pins the
+      # logger's local-only fallback, which is what every hosted visitor gets.
+      - name: Subpath build behaves like Pages
+        run: npm run test:hosted
+
+      - name: Upload failure traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hosted-traces
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
   smoke:
     name: canvas smoke (advisory)
     runs-on: ubuntu-latest
@@ -96,7 +136,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci
 
       - name: Cache Playwright browsers
         uses: actions/cache@v6

@@ -1,0 +1,95 @@
+name: Deploy to GitHub Pages
+
+# Publishes the built playground to https://kewanglab.github.io/webxr-playground/.
+# Requires Settings → Pages → Source: "GitHub Actions" (one-time, repo admin).
+#
+# This runs in PARALLEL with ci.yml on a push to main, not gated behind it, so
+# a merge whose CI goes red still publishes. That is a deliberate trade, not an
+# oversight. The build job below re-runs typecheck, build and the size budget
+# against the artifact it is about to upload, so nothing that fails to compile
+# or blows the payload ceiling can ship. What it does not re-run is the stepper
+# contract spec — a leva regression could reach the site and be caught only by
+# the red CI run on the same commit.
+#
+# Gating with `on: workflow_run` would close that gap at the cost of adding a
+# full CI cycle to every deploy and of `workflow_run` only ever executing the
+# copy of this file on the default branch, which makes it awkward to change.
+# Worth revisiting if a leva bump ever does reach production.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it — a half-deployed Pages
+# site is worse than a slightly stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      # Matches ci.yml so the deploy builds on the same runtime that verified
+      # the PR. The Pages-specific actions below stay on their current majors
+      # until someone confirms newer ones exist — a bad tag fails the deploy.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      # The deploy base is passed as a CLI flag, deliberately, instead of being
+      # set in vite.config.ts: `npm run dev`, `npm run capture:screenshots`, and
+      # `npm run test:visual` all keep serving from `/`. It must match the
+      # repository name — Pages serves project sites under /<repo>/.
+      #
+      # `npm run build` is `tsc -b && vite build`, and npm appends these args to
+      # the end of that string, so this typechecks and then builds.
+      - name: Build
+        run: npm run build -- --base=/webxr-playground/
+
+      # Dev-only files that would ship as dead pages on a static host: the logs
+      # viewer talks to the `/api/logs` dev-server middleware, which does not
+      # exist here, and the asset README documents the repo, not the runtime.
+      - name: Prune dev-only files from the deploy artifact
+        run: |
+          rm -f dist/logs-viewer.html
+          rm -f dist/assets/README.md
+
+      # Same budget CI enforces on PRs, run here against the pruned artifact —
+      # so the number checked is exactly what Pages publishes, and a direct
+      # push to main can't ship a bundle nobody measured. The script resolves
+      # `index.html` refs by basename precisely so a `--base=` build still
+      # works.
+      - name: Bundle size budget
+        run: node scripts/check-bundle-size.mjs
+
+      - uses: actions/configure-pages@v5
+
+      # No 404.html fallback is needed: deep links are query parameters
+      # (`?lab=…&theme=…`), so every URL resolves to the real index.html.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
