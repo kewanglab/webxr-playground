@@ -7,6 +7,18 @@ name: CI
 # headset; see docs/pitfalls.md and the agent-harness work in
 # docs/phase-1-2-execution-plan.md, which is what eventually makes that
 # layer assertable.
+#
+# Install uses `npm install`, not `npm ci`. The committed lockfile was
+# generated on macOS and so never walked the Linux-only optional branch of
+# the dependency graph — it lacks the `@emnapi/*` entries that
+# `@rolldown/binding-*` needs on a Linux runner, and `npm ci` refuses a
+# lockfile it considers out of sync. Regenerating it from scratch is not a
+# free fix: it moves 12 of 15 direct dependencies (notably
+# @react-three/fiber 9.5 -> 9.7 and vite 8.0 -> 8.2) and doubles the entry
+# chunk from ~801 KiB to ~1721 KiB, which the size budget below rejects.
+# That trade belongs in its own PR with its own headset re-validation.
+# `npm install` honours the locked versions and fills in only what is
+# missing. Phase 1's Pages deploy job will hit the same wall.
 
 on:
   pull_request:
@@ -32,8 +44,9 @@ jobs:
           node-version: '24'
           cache: npm
 
+      # `npm install`, not `npm ci` — see the note at the top of this file.
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       # Split rather than `npm run build` so a red run names the failing stage.
       - name: Typecheck
@@ -77,8 +90,9 @@ jobs:
           node-version: '24'
           cache: npm
 
+      # `npm install`, not `npm ci` — see the note at the top of this file.
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
