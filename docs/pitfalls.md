@@ -222,4 +222,22 @@ A practical rule of thumb on a 24-bit depth buffer: keep `far / near` under ~10,
 
 ---
 
+## An offline hand-model fetch takes the whole canvas down
+
+**Symptom.** Entering an XR session on a machine without egress to `cdn.jsdelivr.net` logs `Could not load .../@webxr-input-profiles/assets@1.0/dist/profiles/generic-hand/left.glb: Failed to fetch`, then `An error occurred in the <CanvasImpl> component`, then `THREE.WebGLRenderer: Context Lost.` Everything stops — including in-session screenshots and any harness driving the page.
+
+**Cause.** `@react-three/xr` renders hand and controller models from the `@webxr-input-profiles` CDN bundle. The loader rejection propagates out of the XR subtree, and nothing in the tree is an error boundary, so React unmounts up to `<Canvas>` and the WebGL context goes with it. The models are cosmetic — joint poses, pinch events and pointer rays all come from the runtime, not the glTF — so a purely decorative asset is load-bearing for the whole renderer.
+
+**Fix (workaround).** Turn the models off: `xrStore.setHand({ ...defaultXRHandConfig, model: false })`. Under the agent harness that is `ecs_set_component` on the `XRInput` pseudo-entity — but note `ObjectManipulationLab` re-applies `defaultXRHandConfig` on mount, so the override has to land *after* the lab mounts or it is silently clobbered.
+
+**Fix (proper, not yet done).** An error boundary around the XR subtree so an asset failure degrades to "no hand model" instead of "no renderer", and/or serving the input-profile assets locally so CI and offline machines never make the request. Both touch XR core; see `docs/agent-harness.md`.
+
+### Related project files
+
+- `src/xr/core/xrStore.ts` — `defaultXRHandConfig` / `defaultXRControllerConfig`, where `model` lives
+- `src/labs/cross-xr/ObjectManipulationLab.tsx` — re-applies the hand config on mount and on `acquisition` change
+- `src/dev/agentHarness.tsx` — `XRInput` pseudo-entity exposing `handModel` / `controllerModel`
+
+---
+
 <!-- Add new ## Section titles below for other domains (e.g. Quest browser, adb reverse). -->

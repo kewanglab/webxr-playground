@@ -12,6 +12,7 @@ Read these first when you need project context:
 - `src/labs/_template/TemplateLab.tsx` for the reference lab contract (typechecked, not registered)
 - `.claude/skills/lab-scaffold/` to scaffold a new lab from a paper or an idea — spec first, then the three-file contract
 - `src/xr/interactions/evaluation/` for trial sequencing (`useTrialRunner`) and structured result logging (`logTrialResult`)
+- `docs/agent-harness.md` to drive the app yourself — `npm run dev:agent` gives you an emulated headset, hands, screenshots and scene queries over `scripts/xr-agent.mjs`
 
 Working norms:
 
