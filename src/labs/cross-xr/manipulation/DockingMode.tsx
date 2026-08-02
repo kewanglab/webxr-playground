@@ -243,8 +243,10 @@ function ProximityRing({
 const DECK_PLATE_THICKNESS = 0.014
 /** Inset from the desk edge, per side, so the desk's own rim stays visible. */
 const DECK_PLATE_MARGIN = 0.045
-/** Inset of the recessed inner panel from the plate edge, per side. */
+/** Inset of the inlaid inner panel from the plate edge, per side. */
 const DECK_PLATE_INSET = 0.055
+/** Height of the inlay, and how far it stands proud of the plate's top face. */
+const DECK_PLATE_INLAY_HEIGHT = 0.002
 
 /**
  * Working surface laid over the desk in the Warm Night theme — the plate the
@@ -256,8 +258,8 @@ const DECK_PLATE_INSET = 0.055
  *
  * Two things the GLB did for free have to be done explicitly here. Its baked
  * trim-sheet darkened the surface well below `stone`, which is what let the
- * stone-coloured cradles and supports read against it — hence `mustard` as the
- * plate base rather than `stone`, or the whole desk flattens into one tone from
+ * stone-coloured cradles and supports read against it — hence the plate base
+ * being pulled halfway to `seal`, or the whole desk flattens into one tone from
  * overhead. And its mesh sat inside its own footprint, leaving a lip of desk
  * visible around it; `DECK_PLATE_MARGIN` reproduces that rim.
  */
@@ -279,8 +281,8 @@ function DeckPlate({
     () => new Color(stone).lerp(new Color(seal), 0.5),
     [stone, seal],
   )
-  // Inner panel lifts back toward `stone` so the recess reads as a change of
-  // finish rather than a second slab.
+  // Inlay lifts back toward `stone` so it reads as a change of finish rather
+  // than a second slab.
   const innerColor = useMemo(
     () => new Color(stone).lerp(new Color(seal), 0.38),
     [stone, seal],
@@ -309,13 +311,15 @@ function DeckPlate({
           metalness={0.04}
         />
       </mesh>
-      {/* Sits a hair below the plate's top face so the rim reads as a lip
-          rather than z-fighting with it. */}
+      {/* Stacked on the plate's top face, not sunk into it: an earlier version
+          centred this 2 mm box 1 mm *below* the top, which put it entirely
+          inside the opaque plate and drew nothing. Sitting proud gives the
+          surface-finish break the GLB's trim-sheet used to provide. */}
       <mesh
         position={addYOffset(
           [
             OBJECT_ORIGIN.x,
-            DESK_SURFACE_Y + DECK_PLATE_THICKNESS - 0.002,
+            DESK_SURFACE_Y + DECK_PLATE_THICKNESS + DECK_PLATE_INLAY_HEIGHT / 2,
             OBJECT_ORIGIN.z + 0.04,
           ],
           offsetY,
@@ -324,7 +328,7 @@ function DeckPlate({
         <boxGeometry
           args={[
             plateWidth - DECK_PLATE_INSET * 2,
-            0.002,
+            DECK_PLATE_INLAY_HEIGHT,
             plateDepth - DECK_PLATE_INSET * 2,
           ]}
         />

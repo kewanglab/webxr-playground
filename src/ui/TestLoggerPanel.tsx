@@ -8,7 +8,7 @@ import {
   isDesktopSyncUnavailable,
   postLogEntriesToDesktop,
   postLogEntryToDesktop,
-} from './sessionLogSync'
+} from '../app/sessionLogSync'
 import { LoggerLevaTitleBar, loggerLevaPanelShell } from './loggerLevaChrome'
 
 const v = (name: string) => `var(${name})`
@@ -68,6 +68,7 @@ export function TestLoggerPanel() {
   )
   const [desktopPath, setDesktopPath] = useState<string>('logs/session-notes.json')
   const [isSyncing, setIsSyncing] = useState(false)
+  const [confirmingClear, setConfirmingClear] = useState(false)
 
   const prevXrModeRef = useRef(xrStore.getState().mode)
 
@@ -126,6 +127,34 @@ export function TestLoggerPanel() {
     } finally {
       setIsSyncing(false)
     }
+  }
+
+  /**
+   * Two-tap confirm rather than `window.confirm`: a modal dialog is not
+   * dismissible from inside an immersive session, and this panel is reachable
+   * there. Arming lapses after a few seconds so it can't be tripped later.
+   */
+  const clearArmTimerRef = useRef<number | null>(null)
+  useEffect(
+    () => () => {
+      if (clearArmTimerRef.current != null) window.clearTimeout(clearArmTimerRef.current)
+    },
+    [],
+  )
+
+  const onClearClick = () => {
+    if (confirmingClear) {
+      if (clearArmTimerRef.current != null) window.clearTimeout(clearArmTimerRef.current)
+      clearArmTimerRef.current = null
+      setConfirmingClear(false)
+      clearLogEntries()
+      return
+    }
+    setConfirmingClear(true)
+    clearArmTimerRef.current = window.setTimeout(() => {
+      clearArmTimerRef.current = null
+      setConfirmingClear(false)
+    }, 4000)
   }
 
   const onSave = () => {
@@ -296,20 +325,61 @@ export function TestLoggerPanel() {
                 overflow: 'hidden',
               }}
             >
-              <button
-                type="button"
-                style={{
-                  ...panelButton,
-                  width: '100%',
-                  marginBottom: v('--pg-shell-space-sm'),
-                  flexShrink: 0,
-                  minHeight: 40,
-                }}
-                onClick={() => (localOnly ? clearLogEntries() : void syncAllToDesktop())}
-                disabled={!logEntries.length || isSyncing}
-              >
-                {localOnly ? 'Clear local log' : 'Sync to Desktop'}
-              </button>
+              {localOnly ? (
+                /* Deliberately not in the "Sync to Desktop" slot. When a dev
+                   session loses its server mid-run, `localOnly` flips and a
+                   button that meant "save my notes" would become "destroy my
+                   notes" in the same position, aimed at exactly the entries
+                   that just failed to sync. Different placement, destructive
+                   styling, and a confirm step. */
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    marginBottom: v('--pg-shell-space-sm'),
+                    flexShrink: 0,
+                  }}
+                >
+                  <button
+                    type="button"
+                    style={{
+                      ...panelButton,
+                      minHeight: 32,
+                      fontSize: 12,
+                      padding: `${v('--pg-shell-space-xs')} ${v('--pg-shell-space-md')}`,
+                      background: 'transparent',
+                      borderColor: confirmingClear
+                        ? v('--pg-shell-state-danger')
+                        : v('--pg-shell-border-subtle'),
+                      color: confirmingClear
+                        ? v('--pg-shell-state-danger')
+                        : v('--pg-shell-text-muted'),
+                      fontWeight: confirmingClear ? 600 : 400,
+                    }}
+                    onClick={onClearClick}
+                    disabled={!logEntries.length}
+                  >
+                    {confirmingClear
+                      ? `Delete all ${logEntries.length} — tap again`
+                      : 'Clear local log'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  style={{
+                    ...panelButton,
+                    width: '100%',
+                    marginBottom: v('--pg-shell-space-sm'),
+                    flexShrink: 0,
+                    minHeight: 40,
+                  }}
+                  onClick={() => void syncAllToDesktop()}
+                  disabled={!logEntries.length || isSyncing}
+                >
+                  Sync to Desktop
+                </button>
+              )}
 
               <div
                 style={{

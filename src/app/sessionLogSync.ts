@@ -1,4 +1,4 @@
-import type { SessionLogEntry } from '../app/store'
+import type { SessionLogEntry } from './store'
 
 export type LogApiPayload = {
   ok: boolean

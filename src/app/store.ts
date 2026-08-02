@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { Vector3 } from 'three'
-import { isDesktopSyncUnavailable } from '../ui/sessionLogSync'
+import { isDesktopSyncUnavailable } from './sessionLogSync'
 import { isValidLabId, type LabId } from '../config/labs'
 import {
   defaultPlaygroundPresetId,
@@ -13,6 +13,8 @@ const FPS_HUD_STORAGE_KEY = 'xr-playground-fps-hud-visible'
 const SESSION_LOG_STORAGE_KEY = 'xr-playground-session-log'
 /** Keeps a long hosted session from growing the quota-limited store without bound. */
 const MAX_PERSISTED_LOG_ENTRIES = 200
+/** Coalescing window for note edits — see `persistLogEntries`. */
+const PERSIST_DEBOUNCE_MS = 500
 const DEFAULT_ORIGIN_POSITION = new Vector3(0, 0, 0)
 const DEFAULT_ORIGIN_ROTATION_Y = 0
 
@@ -82,24 +84,31 @@ function readInitialLogEntries(): SessionLogEntry[] {
     if (!raw) return []
     const parsed = JSON.parse(raw) as unknown
     if (!Array.isArray(parsed)) return []
-    return parsed.filter(
-      (e): e is SessionLogEntry =>
-        typeof e === 'object' && e !== null && typeof (e as SessionLogEntry).id === 'string',
-    )
+    // Every field the UI reads unguarded has to be present, or a half-written
+    // entry surfaces as a React controlled-input warning and "Invalid Date"
+    // rather than as the corruption it is.
+    return parsed.filter(isRestorableEntry)
   } catch {
     /* ignore — a corrupt or unreadable store just means no history */
     return []
   }
 }
 
-/**
- * With no `/api/logs` to post to, localStorage is the only place a hosted
- * visitor's notes can survive a reload. In dev the desktop file is the record,
- * so nothing is written and the existing workflow is untouched.
- */
-function persistLogEntries(entries: SessionLogEntry[]): void {
-  if (typeof window === 'undefined') return
-  if (!isDesktopSyncUnavailable()) return
+function isRestorableEntry(value: unknown): value is SessionLogEntry {
+  if (typeof value !== 'object' || value === null) return false
+  const e = value as Partial<SessionLogEntry>
+  return (
+    typeof e.id === 'string' &&
+    typeof e.note === 'string' &&
+    typeof e.timestamp === 'string' &&
+    !Number.isNaN(Date.parse(e.timestamp)) &&
+    typeof e.labId === 'string' &&
+    isValidLabId(e.labId) &&
+    typeof e.inputSource === 'string'
+  )
+}
+
+function writeLogEntries(entries: SessionLogEntry[]): void {
   try {
     localStorage.setItem(
       SESSION_LOG_STORAGE_KEY,
@@ -108,6 +117,57 @@ function persistLogEntries(entries: SessionLogEntry[]): void {
   } catch {
     /* ignore — full or blocked storage must not break logging */
   }
+}
+
+let persistTimer: number | null = null
+let pendingEntries: SessionLogEntry[] | null = null
+
+function flushPendingLogEntries(): void {
+  if (persistTimer != null) {
+    window.clearTimeout(persistTimer)
+    persistTimer = null
+  }
+  if (pendingEntries == null) return
+  writeLogEntries(pendingEntries)
+  pendingEntries = null
+}
+
+/**
+ * With no `/api/logs` to post to, localStorage is the only place a hosted
+ * visitor's notes can survive a reload. In dev the desktop file is the record,
+ * so nothing is written and the existing workflow is untouched.
+ *
+ * Note edits arrive per keystroke, and a synchronous `setItem` of up to 200
+ * stringified entries on every one is a main-thread hitch inside a 90 fps XR
+ * session. Those coalesce; entries appearing or being cleared are structural
+ * and write straight through. A pending write is flushed on `pagehide` so the
+ * last few characters typed before a tab closes still land.
+ */
+function persistLogEntries(
+  entries: SessionLogEntry[],
+  { immediate = false }: { immediate?: boolean } = {},
+): void {
+  if (typeof window === 'undefined') return
+  if (!isDesktopSyncUnavailable()) return
+
+  if (immediate) {
+    pendingEntries = entries
+    flushPendingLogEntries()
+    return
+  }
+
+  pendingEntries = entries
+  if (persistTimer != null) window.clearTimeout(persistTimer)
+  persistTimer = window.setTimeout(() => {
+    persistTimer = null
+    flushPendingLogEntries()
+  }, PERSIST_DEBOUNCE_MS)
+}
+
+if (typeof window !== 'undefined') {
+  // `pagehide` rather than `beforeunload`: it fires on mobile/standalone
+  // browser teardown, where `beforeunload` is unreliable.
+  window.addEventListener('pagehide', flushPendingLogEntries)
 }
 
 /** A single key/value cell rendered in the in-XR HUD's expanded metrics strip. */
@@ -195,17 +255,18 @@ export const usePlaygroundStore = create<PlaygroundState>((set) => ({
   addLogEntry: (entry) =>
     set((state) => {
       const logEntries = [...state.logEntries, entry]
-      persistLogEntries(logEntries)
+      persistLogEntries(logEntries, { immediate: true })
       return { logEntries }
     }),
   updateLogEntryNote: (id, note) =>
     set((state) => {
       const logEntries = state.logEntries.map((e) => (e.id === id ? { ...e, note } : e))
+      // Debounced: this fires on every keystroke of the note textarea.
       persistLogEntries(logEntries)
       return { logEntries }
     }),
   clearLogEntries: () => {
-    persistLogEntries([])
+    persistLogEntries([], { immediate: true })
     set({ logEntries: [] })
   },
   hudReport: defaultHudReport,

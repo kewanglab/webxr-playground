@@ -17,7 +17,16 @@ These items are **complete** — do not redo them:
 - [x] `Skydome.tsx` — gradient sphere (24×16 segments, vertex colors, `BackSide`, `depthWrite: false`).
 - [x] Labs consume `usePlaygroundTheme()` for accent colors. Selection lab has a simple cylinder pedestal.
 
-**What is done for kit staging:** `src/xr/visual/useKitModel.tsx` (`useKitModel`, `KitInstance`, `preloadXrKitModels`), `public/assets/models/xr-kit/*.glb` (run `npm run build:xr-kit`), `Suspense` + preload in `XRRoot`, Selection / Locomotion / Docking staging per Tasks 2–4, Debug height capsule in `VRScene` (Task 6).
+> **Superseded — the kit no longer ships.** The `xr-kit/*.glb` files were
+> removed before the first public deploy: they were derivatives of the
+> commercial packs described below, whose redistribution terms are unconfirmed,
+> and the site is public. Every lab now draws from primitives, and no code loads
+> a kit model. `useKitModel.tsx` and `scripts/build-xr-kit-glb.mjs` are kept so a
+> local rebuild still works, but `public/assets/models/xr-kit/` is git-ignored.
+> See [`public/assets/README.md`](../public/assets/README.md) before following
+> anything below that references those files.
+
+**What was done for kit staging:** `src/xr/visual/useKitModel.tsx` (`useKitModel`, `KitInstance`, `preloadXrKitModels`), `public/assets/models/xr-kit/*.glb` (run `npm run build:xr-kit`), Selection / Locomotion / Docking staging per Tasks 2–4, Debug height capsule in `VRScene` (Task 6). The `XRRoot` preload was removed earlier, and the staging that used kit models has since been rebuilt from primitives.
 
 **Still optional / human:** Task 5 (Placement pedestal), Task 7 (Quest validation, tri/draw counts).
 
@@ -32,7 +41,7 @@ Use this section as the working status board for the enhancement pass. Update it
 | Phase | Scope | Status | Notes |
 |------|-------|--------|-------|
 | **A** | Theme core + shared XR foundations | **Done** | Theme tokens, scene lights, fog, floor, skydome, HUD panel baseline all landed. |
-| **B** | Asset pipeline + kit loading | **Done** | `xr-kit/*.glb`, build script, preload, and `useKitModel` landed. |
+| **B** | Asset pipeline + kit loading | **Reverted** | Landed, then removed before the public deploy — see the note above. The build script and loader remain for local use; no kit model ships or loads. |
 | **C** | Desktop preview framing | **Done** | Authored desktop camera views now frame labs outside XR. |
 | **D** | Selection recovery pass | **Done** | Stage, backdrop gesture, and stronger comparison composition landed; the scene now also captures initial eye height and lifts the whole stage together for better first-entry framing. |
 | **E** | Locomotion recovery pass | **Done** | Second pass expanded the teleport footprint, opened the corridor read, and added a real landing zone inside the destination space. |

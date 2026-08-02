@@ -82,6 +82,47 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  hosted:
+    name: subpath build (Pages parity)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Builds with the deploy base and serves it through `vite preview`, then
+      # fails on any 404 or console error. A root-absolute asset path builds and
+      # typechecks perfectly and only breaks under the Pages subpath, which is
+      # exactly the class of bug nothing else here would catch. Also pins the
+      # logger's local-only fallback, which is what every hosted visitor gets.
+      - name: Subpath build behaves like Pages
+        run: npm run test:hosted
+
+      - name: Upload failure traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hosted-traces
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
   smoke:
     name: canvas smoke (advisory)
     runs-on: ubuntu-latest
