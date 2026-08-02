@@ -203,6 +203,8 @@ Two long-term investment tracks, run in parallel with the phased work above. See
 
 **Agentic harness for scaffolding labs.** A growing layer of rules, skills, and agent prompts (`CLAUDE.md`, `AGENTS.md`, Claude Code skills, Cursor rules) that lets an AI agent take a research paper PDF or a napkin idea and scaffold a working lab — registry entry, component file, leva controls, measurement hooks, session-logger integration. The three-files-to-add-a-lab convention (config entry + component + LabContent import) is the seed; the harness compounds on top of it. Every convention added to [Overview](./overview.md) — naming, type placement, lab contracts — is also an investment in what an agent can do reliably.
 
+**Landed:** an agent can now drive the app itself — emulated Quest 3, headset and hand movement, pinch, in-session screenshots, and live scene queries, via `npm run dev:agent` and `scripts/xr-agent.mjs`. See [agent harness](./agent-harness.md) for the capability list and its three known limits. This is the input half of the harness; the scaffolding half below is still ahead.
+
 Concrete near-term harness work:
 
 - Create `CLAUDE.md` and tighten `AGENTS.md` so they describe the lab-scaffolding contract explicitly
@@ -220,7 +222,8 @@ Concrete near-term harness work:
 - **Alongside:** Optional Quest hardening passes on **ObjectManipulationLab** (docking + zen); decide later whether **HRI/HRS** land in Phase 6 as a small dedicated lab
 - **Then (Phase 5):** **Primitive graduation** into `src/xr/interactions/`, then shared **A/B preset** UI and **feedback** primitives
 - **Then (Phase 6):** **MenuLab** and AR expansion labs once Phase 5 primitives are available where reuse matters
-- **In parallel (horizon):** build out the **agentic harness** (`AGENTS.md`, a planned `CLAUDE.md`, Claude Code skills) so agents can scaffold a new lab from a paper; track new input modalities (eye-gaze, EMG) as primitives, not bespoke labs
+- **Bug to fix (found by the agent harness):** a failed hand-model fetch from `cdn.jsdelivr.net` unmounts the whole `<Canvas>` and loses the WebGL context, because nothing wraps the XR subtree in an error boundary. Affects any user on a flaky or restricted network. Fix = error boundary + locally-served input-profile assets; see [pitfalls](./pitfalls.md)
+- **In parallel (horizon):** the **input half** of the agentic harness has landed ([agent harness](./agent-harness.md)); next is the **scaffolding half** (`AGENTS.md`, a planned `CLAUDE.md`, Claude Code skills) so agents can scaffold a new lab from a paper; track new input modalities (eye-gaze, EMG) as primitives, not bespoke labs
 - Keep [Overview](./overview.md) directory map in sync when adding new `src/` areas
 
 ---

@@ -11,6 +11,7 @@ import { ShellRightRail } from '../ui/ShellRightRail'
 import { DirectorOverlay } from '../ui/DirectorOverlay'
 import { applyShellTheme } from './applyShellTheme'
 import { PlaygroundThemeProvider } from '../xr/theme/PlaygroundThemeContext'
+import { AgentHarnessBridge } from '../dev/agentHarness'
 import { usePlaygroundStore } from './store'
 import {
   readCaptureMode,
@@ -42,6 +43,10 @@ function ThemedCanvas({
         <XRRoot />
       </PlaygroundThemeProvider>
       {showStats ? <Stats /> : null}
+      {/* Agent harness. `import.meta.env.DEV` folds to `false` at build time,
+          so this element — and the module behind it — leave the production
+          graph entirely. */}
+      {import.meta.env.DEV ? <AgentHarnessBridge /> : null}
     </Canvas>
   )
 }
@@ -55,10 +60,21 @@ export function App() {
     applyShellTheme(themePresetId)
   }, [themePresetId])
 
-  // The Quest 3 emulator (`@react-three/xr` localhost auto-init via iwer)
-  // injects a floating "Enter XR" badge into a body-level shadow DOM host.
-  // Director-mode recordings need a clean canvas, so when director mode is
-  // active we observe body children and force-hide the iwer host on sight.
+  // The Quest 3 emulator injects a floating "Enter XR" badge into a
+  // body-level shadow DOM host. Director-mode recordings need a clean canvas,
+  // so when director mode is active we observe body children and force-hide
+  // the iwer host on sight.
+  //
+  // Phase 2 re-evaluated whether the agent harness makes this obsolete. It
+  // does not, and it now has two possible owners rather than one:
+  //   - `npm run dev`: `@react-three/xr` auto-installs iwer + DevUI on
+  //     hostname `localhost`.
+  //   - `npm run dev:agent`: `@iwsdk/vite-plugin-dev` installs it instead, and
+  //     suppresses the DevUI *only* on its own Playwright-managed page (it
+  //     gates on `window.__IWER_MCP_MANAGED`). A human pointed at the same
+  //     dev server still gets the badge.
+  // Both owners render the same `@iwer/devui` host, so the content-based
+  // detection below covers both without change. It stays.
   //
   // Detection is *content-based* — we check the shadow root for the iwer
   // badge's "XR" button text rather than matching on tag/no-id/no-class,

@@ -16,7 +16,7 @@ Costs follow the agent-harness brief's convention — **agent** is active workin
 | # | Phase | Value proposition | Cost (agent) | Cost (human) | Depends on |
 |---|-------|-------------------|-----|-------|------------|
 | 1 | **Ship the public URL** | Makes Commitment #1 true; every future feature becomes a shareable link | 1–2 days | ~1 h | — |
-| 2 | **Agent harness, core** (brief Phases 0–2) | Agent can drive XR input; foundation for all verification | 0.5–1 day | ~45 min | — (parallel with 1) |
+| 2 | **Agent harness, core** ✅ **done** | Agent can drive XR input; foundation for all verification | 0.5–1 day | ~45 min | — (parallel with 1) |
 | 3 | **Regression net + credibility floor** | Safety net before refactoring; instrument-grade trust | ~2 days | 1–2 h | 2 |
 | 4 | **Graduate the first primitive** | Proves the platform thesis — the binary milestone | 2–3 days | ~2 h | 3 |
 | 5 | **Operator console** | Makes Commitment #2 true, in a form no platform SDK offers | 3–4 days | ~2 h | 1 |
@@ -37,17 +37,28 @@ Static deploy (GitHub Pages or Vercel) with HTTPS; URL-addressable state (`?lab=
 
 *Done when:* someone with a Quest and no terminal can feel a tuned configuration from a URL you sent them.
 
-### Phase 2 — Agent harness core *(week 1, parallel — [brief](./agent-harness-brief.md) Phases 0–2)*
+### Phase 2 — Agent harness core ✅ *(landed — see [agent harness](./agent-harness.md))*
 
-Vite 8 spike, `@iwsdk/vite-plugin-dev` install, ~150-line `FRAMEWORK_MCP_RUNTIME` shim. Zero interaction-code changes.
+Vite 8 spike, `@iwsdk/vite-plugin-dev` install, `FRAMEWORK_MCP_RUNTIME` shim. Zero interaction-code changes.
 
 *Value:* the co-pilot gains hands. Cheapest force-multiplier in the plan; strictly enabling for Phases 3 and 7.
 
-*Done when:* an agent completes a grab-move-release in the Manipulation Lab and screenshots it in one turn.
+*Done when:* an agent completes a grab-move-release in the Manipulation Lab and screenshots it in one turn. — **Met.** Driven end to end over the MCP bridge; verified against the lab's own trial record, not the screenshot alone.
+
+*Outcomes worth carrying forward:*
+
+- The Vite 8 gate cleared. The plugin's `vite ^7` peer range is a declaration mismatch only; an `overrides` entry resolves it.
+- The harness is **opt-in** (`npm run dev:agent`), not always-on, so it cannot disturb the capture suite or reach a production build.
+- Release precision is bounded — see Phase 3's note below before writing driven tests.
+- It surfaced a real canvas-killing bug, now Phase 3 work.
 
 ### Phase 3 — Regression net + credibility floor *(week 2 — brief Phases 3–4, plus known gaps)*
 
 One driven interaction test per lab; golden unit tests for `techniques.ts` and the OBB math; CI running typecheck + unit tests (decide the headless-WebGL question now, not later); fix the per-frame allocations in the manipulation loop.
+
+**Carried in from Phase 2 — a CDN failure kills the whole renderer.** `@react-three/xr` loads hand and controller models from `cdn.jsdelivr.net` at session start. Nothing wraps the XR subtree in an error boundary, so a failed fetch propagates up, React unmounts to `<Canvas>`, and the WebGL context is lost. A decorative asset is load-bearing for the entire 3D view. This bites any user on a flaky connection or a restricted network, not just agents — the harness only found it because CI-like sandboxes have no CDN egress. Two fixes, ideally both: an error boundary around the XR subtree so an asset failure degrades to "no hand model", and locally-served input-profile assets so the request is never made. Symptom, cause and workaround are in [pitfalls](./pitfalls.md); the harness works around it today via `XRInput.handModel: false`.
+
+**Note before writing driven tests.** The harness carries objects exactly but releases imprecisely — IWER animates the pinch open over several frames and the object tracks the thumb throughout, so a driven release lands reproducibly ~6.5 cm / 39.5° off the held pose. Real pinches do the same thing; it is not an emulation artifact. Assert on the carry, not on the recorded release offset, and treat "drive a snapped docking trial" as out of reach until release timing is addressed. See [agent harness → known characteristics](./agent-harness.md#known-characteristics).
 
 *Value:* two audiences at once — researchers get tested measurement math; the team gets a safety net that makes the Phase 4 refactor low-risk instead of reckless.
 

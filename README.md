@@ -133,6 +133,17 @@ Then:
 - Test in desktop emulation first, then validate on Quest 3 via `adb reverse`.
 - Optimize for clarity and iteration speed before visual polish.
 
+## Driving the app from an agent
+
+`npm run dev:agent` boots the dev server with an emulated Quest 3, a headless browser, and an MCP relay, so an agent can move the headset and hands, pinch, screenshot from inside the session, and query the live scene:
+
+```bash
+npm run dev:agent
+node scripts/xr-agent.mjs get_session_status
+```
+
+`npm run dev` is unaffected. See `docs/agent-harness.md`.
+
 ## Session log workflow
 
 - Use the in-app Session Logger panel to record test notes while running labs.
@@ -148,3 +159,4 @@ Then:
 | `docs/roadmap.md` | Phased deliverables and editable near-term focus. |
 | `docs/pitfalls.md` | Bugs and footguns we have already hit. |
 | `docs/visual-capture.md` | Playwright screenshot workflow for shell and 3D scene review angles. |
+| `docs/agent-harness.md` | Driving the app from an agent: emulated headset and hands, in-session screenshots, scene queries. |
