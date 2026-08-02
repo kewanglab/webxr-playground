@@ -15,6 +15,11 @@ tsconfig.tsbuildinfo
 test-results/
 playwright-report/
 
+# Agent harness runtime state — `npm run dev:agent` writes a session
+# descriptor here (pid, port, managed-browser status) for MCP clients to
+# discover. Per-machine and per-run; never shared.
+.iwsdk/
+
 # Cursor — keep shared rules, ignore local plans/metadata
 .cursor/*
 !.cursor/rules/

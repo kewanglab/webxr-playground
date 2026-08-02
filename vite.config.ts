@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import { iwsdkDev } from '@iwsdk/vite-plugin-dev'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
@@ -188,10 +189,50 @@ function desktopLogApiPlugin(): Plugin {
   }
 }
 
-export default defineConfig({
-  plugins: [react(), desktopLogApiPlugin()],
+/**
+ * The agent harness (`npm run dev:agent` → `vite --mode agent`) is opt-in per
+ * dev session rather than always-on in development, for three reasons:
+ *
+ * 1. `iwsdkDev` launches a managed Playwright browser and an MCP server the
+ *    moment the dev server boots. `npm run dev` is also what
+ *    `playwright.config.ts` starts as its `webServer`, so an always-on plugin
+ *    would spawn a second browser and an MCP bridge on every
+ *    `capture:screenshots` / `test:visual` run.
+ * 2. Outside its managed page the plugin installs the IWER DevUI overlay. The
+ *    capture suite writes committed PNGs to `docs/mockups/captures/`; an
+ *    overlay in those frames is a silent quality regression that no assertion
+ *    would catch.
+ * 3. It keeps acceptance criterion 4 structural rather than incidental — the
+ *    plugin is never in the graph for `vite build`, so nothing it owns can
+ *    reach the hosted bundle.
+ *
+ * `--mode` is used instead of an env var so the flag works identically on
+ * Windows, and so client code can branch on the statically-known
+ * `import.meta.env.MODE` (see `src/xr/core/xrStore.ts`).
+ */
+const AGENT_MODE = 'agent'
+
+export default defineConfig(({ command, mode }) => ({
+  plugins: [
+    react(),
+    desktopLogApiPlugin(),
+    ...(command === 'serve' && mode === AGENT_MODE
+      ? [
+          iwsdkDev({
+            emulator: { device: 'metaQuest3', activation: 'localhost' },
+            // 'agent' → headless managed browser, fixed viewport, no DevUI.
+            ai: { mode: 'agent', screenshotSize: { width: 1024, height: 1024 } },
+            // The plugin defaults to HTTPS with a self-signed cert. This repo's
+            // dev loop is HTTP end to end (`playwright.config.ts` baseURL, the
+            // `adb reverse tcp:5173` Quest workflow, the `/api/logs`
+            // middleware), so opt back out rather than re-plumb all three.
+            https: false,
+          }),
+        ]
+      : []),
+  ],
   server: {
     port: Number(process.env.PORT) || 5173,
     host: true,
   },
-})
+}))
