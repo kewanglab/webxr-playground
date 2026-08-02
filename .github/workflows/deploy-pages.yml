@@ -23,11 +23,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      # Matches ci.yml so the deploy builds on the same runtime that verified
+      # the PR. The Pages-specific actions below stay on their current majors
+      # until someone confirms newer ones exist — a bad tag fails the deploy.
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: '24'
           cache: npm
 
       - run: npm ci
@@ -49,7 +52,14 @@ jobs:
         run: |
           rm -f dist/logs-viewer.html
           rm -f dist/assets/README.md
-          du -sh dist
+
+      # Same budget CI enforces on PRs, run here against the pruned artifact —
+      # so the number checked is exactly what Pages publishes, and a direct
+      # push to main can't ship a bundle nobody measured. The script resolves
+      # `index.html` refs by basename precisely so a `--base=` build still
+      # works.
+      - name: Bundle size budget
+        run: node scripts/check-bundle-size.mjs
 
       - uses: actions/configure-pages@v5
 

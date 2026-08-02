@@ -8,13 +8,12 @@ name: CI
 # docs/phase-1-2-execution-plan.md, which is what eventually makes that layer
 # assertable.
 #
-# Install uses `npm install`, not `npm ci`. The committed lockfile was
-# generated on macOS and so never walked the Linux-only optional branch of
-# the dependency graph — it lacks the `@emnapi/*` entries that
-# `@rolldown/binding-*` needs on a Linux runner, and `npm ci` refuses a
-# lockfile it considers out of sync. `npm install` honours the locked
-# versions and fills in only what is missing. Regenerating the lockfile so
-# `npm ci` works is worth its own PR; Phase 1's Pages deploy will need it.
+# Install uses `npm ci`, so a run installs exactly the locked tree and a
+# dependency cannot drift in underneath a green check. That needs the
+# lockfile to carry the Linux-only optional branch of the graph — the
+# `@emnapi/*` entries under `@rolldown/binding-wasm32-wasi` — which it now
+# does; see the Pages deploy commit for how they were added without moving
+# a single direct dependency.
 
 on:
   pull_request:
@@ -46,7 +45,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci
 
       # Split rather than `npm run build` so a red run names the failing stage.
       - name: Typecheck
@@ -96,7 +95,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci
 
       - name: Cache Playwright browsers
         uses: actions/cache@v6
